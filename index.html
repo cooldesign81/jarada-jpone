@@ -539,10 +539,12 @@
   svg.chart .ax{font-size:11px;fill:#767676}
   svg.chart .hit:hover{fill:rgba(34,34,34,.04)}
   .legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--text);margin-top:8px}
+  .legend + .legend{margin-top:4px}
   .legend i{display:inline-block;margin-right:6px;vertical-align:middle}
   .legend i.line{width:14px;height:3px;border-radius:2px}
   .legend i.box{width:10px;height:10px;border-radius:2px}
   .legend i.line.dash{background:repeating-linear-gradient(90deg,#767676 0 4px,transparent 4px 7px)}
+  .legend i.line.dash.ink{background:repeating-linear-gradient(90deg,#222 0 3px,transparent 3px 5px)}
   .tip{position:fixed;z-index:70;pointer-events:none;background:var(--ink);color:#fff;font-size:12px;line-height:1.55;padding:8px 10px;border-radius:var(--r-btn);
        white-space:pre;transform:translate(-50%,calc(-100% - 8px));box-shadow:0 6px 18px rgba(0,0,0,.2)}
   .tip::first-line{font-weight:800}
@@ -2589,6 +2591,7 @@ function buildSnapshot(rows, branch, base){
   // 작년 같은 달 월말 재원 (재원생 추이에 점선으로 비교)
   const ly = ym => { const [y, m] = ym.split("-"); return `${+y - 1}-${m}`; };
   const enrolledLY = months.map(ym => enrolledAt(monthEnd(ly(ym))));
+  const newcLY = months.map(ym => newIn(ly(ym))), leftLY = months.map(ym => leftIn(ly(ym)));
   const pYm = months[10], ppYm = months[9];
   const rate = (a, b) => b ? Math.round(a / b * 1000) / 10 : 0;
   const inqCur = sampleIn(curYm) + newc[11], inqPrev = sampleIn(pYm) + newc[10];
@@ -2621,7 +2624,7 @@ function buildSnapshot(rows, branch, base){
   const heat = {};
   for (const r of active.filter(isPure)) if (r.day && r.hour != null) { (heat[r.day] ||= {}); heat[r.day][r.hour] = (heat[r.day][r.hour] || 0) + 1; }
   return {
-    branch, base, rowCount: rows.length, months, enrolled, enrolledLY, newc, left,
+    branch, base, rowCount: rows.length, months, enrolled, enrolledLY, newc, left, newcLY, leftLY,
     cur:  { enrolled:enrolled[11], newc:newc[11], left:left[11], leftRate:rate(left[11], enrolled[10]),
             rest:rows.filter(r => /휴원/.test(r.status) || (isActive(r) && /휴원/.test(r.group))).length, inq:inqCur, sampleRate:rate(newc[11], inqCur),
             expiring:active.filter(r => r.end && r.end >= base && r.end <= until14).length,
@@ -2848,7 +2851,7 @@ function lineChart({ labels, series, fmtV = v => v, zero = false, aria }){
   </svg>`;
 }
 function barChart({ labels, series, fmtV = v => v, aria }){
-  const mx = Math.max(1, ...series.flatMap(s => s.values)), ticks = niceTicks(0, mx), y1 = ticks.at(-1);
+  const mx = Math.max(1, ...series.flatMap(s => [...s.values, ...(s.ly || []).filter(v => v != null)])), ticks = niceTicks(0, mx), y1 = ticks.at(-1);
   const y = v => CP.t + (CH - CP.t - CP.b) * (1 - v / y1);
   const n = labels.length, slot = (CW - CP.l - CP.r) / n, k = series.length, bw = Math.min(14, (slot * .7 - (k - 1) * 2) / k);
   const bar = (v, x0, c) => { const top = y(v), h = (CH - CP.b) - top, r = Math.min(3, h / 2);
@@ -2859,8 +2862,10 @@ function barChart({ labels, series, fmtV = v => v, aria }){
       const cx = CP.l + slot * i + slot / 2, x0 = cx - (k * bw + (k - 1) * 2) / 2;
       return `<text x="${cx}" y="${CH-6}" text-anchor="middle" class="ax">${esc(l)}</text>
         ${series.map((s, j) => bar(s.values[i], x0 + j * (bw + 2), s.color)).join("")}
+        ${series.map((s, j) => { if (!s.ly || s.ly[i] == null) return ""; const xa = x0 + j * (bw + 2) - 2, xb = xa + bw + 4, yy = y(s.ly[i]);
+            return `<line x1="${xa}" x2="${xb}" y1="${yy}" y2="${yy}" stroke="#fff" stroke-width="4"/><line x1="${xa}" x2="${xb}" y1="${yy}" y2="${yy}" stroke="#222" stroke-width="2" stroke-dasharray="3 2"/>`; }).join("")}
         <rect class="hit band" x="${CP.l + slot*i}" y="${CP.t}" width="${slot}" height="${CH-CP.t-CP.b}" fill="transparent"
-          data-tip="${esc(l + "\n" + series.map(s => `${s.name} ${fmtV(s.values[i])}`).join("\n"))}"/>`; }).join("")}
+          data-tip="${esc(l + "\n" + series.map(s => `${s.name} ${fmtV(s.values[i])}${s.ly && s.ly[i] != null ? ` (작년 ${fmtV(s.ly[i])})` : ""}`).join("\n"))}"/>`; }).join("")}
   </svg>`;
 }
 const legend = (series, kind = "line") => `<div class="legend">${series.filter(s => !s.dash).map(s => `<span><i class="${kind}" style="background:${s.color}"></i>${esc(s.name)}</span>`).join("")}${
@@ -3013,7 +3018,9 @@ function kpiPageHTML(){
   const enrSeries = [...snaps.filter(s => s.enrolledLY).map(s => ({ name:`${BRANCHES[s.branch]} 작년`, color:BRANCH_COLOR[s.branch], values:s.enrolledLY.map(v => v || null), dash:true })),
     ...snaps.map(s => ({ name:BRANCHES[s.branch], color:BRANCH_COLOR[s.branch], values:s.enrolled }))];
   const sum = k => ref.months.map((_, i) => snaps.reduce((t, s) => t + (s[k][i] || 0), 0));
-  const nlSeries = [{ name:"신규", color:"var(--c-new)", values:sum("newc") }, { name:"퇴원", color:"var(--c-left)", values:sum("left") }];
+  const hasLY = snaps.every(s => s.newcLY);
+  const nlSeries = [{ name:"신규", color:"var(--c-new)", values:sum("newc"), ly: hasLY ? sum("newcLY") : null },
+                    { name:"퇴원", color:"var(--c-left)", values:sum("left"), ly: hasLY ? sum("leftLY") : null }];
   /* 샘플 → 등록 */
   const funnel = snaps.map(s => { const inq = s.cur.inq || 0, reg = s.cur.newc || 0;
     return `<div class="fun"><div class="fun-h"><b>${esc(BRANCHES[s.branch])}</b><span>${s.cur.sampleRate}%</span></div>
@@ -3049,7 +3056,7 @@ function kpiPageHTML(){
     <section class="card"><h2>재원생 추이 <span class="sub">최근 12개월, 월말 기준</span></h2>
       ${lineChart({ labels, series:enrSeries, fmtV:v => v + "명", aria:"재원생 추이" })}${enrSeries.length > 1 ? legend(enrSeries) : ""}</section>
     <section class="card"><h2>신규와 퇴원 <span class="sub">최근 12개월${snaps.length > 1 ? ", 원 합계" : ""}</span></h2>
-      ${barChart({ labels, series:nlSeries, fmtV:v => v + "명", aria:"월별 신규와 퇴원" })}${legend(nlSeries, "box")}</section>
+      ${barChart({ labels, series:nlSeries, fmtV:v => v + "명", aria:"월별 신규와 퇴원" })}${legend(nlSeries, "box")}${hasLY ? `<div class="legend"><span><i class="line dash ink"></i>점선 = 작년 같은 달</span></div>` : ""}</section>
   </div>
   <div class="grid2 even">
     <section class="card"><h2>샘플에서 등록까지 <span class="sub">이번 달</span></h2>${funnel}</section>
