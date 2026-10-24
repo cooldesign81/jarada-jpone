@@ -191,6 +191,13 @@
   .day.out{background:#FBFBFB}
   .day .num{font-size:13px;font-weight:700;color:var(--ink);min-width:24px;height:24px;padding:0 4px;align-self:flex-start;display:flex;align-items:center;justify-content:center;border-radius:12px}
   .day.sun .num{color:var(--s-critical)} .day.sat .num{color:var(--s-info)}
+  .day.hol .num{color:var(--s-critical)}
+  .chip.bd{border-color:#1F7A4D;background:#F1F8F4}
+  .ev .k.bd{background:#1F7A4D}
+  .cal-legend i.bd{background:#1F7A4D}
+  .day .hn{font-size:11px;font-weight:700;color:var(--s-critical);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .day.out .hn{opacity:.5}
+  .ev .k.hol{background:#fff;color:var(--s-critical);box-shadow:inset 0 0 0 1px var(--s-critical)}
   .day.out .num{color:#BDBDBD}
   .day.today .num{background:var(--ink);color:var(--brand-yellow)}
   .day.sel{box-shadow:inset 0 0 0 2px var(--ink)}
@@ -725,8 +732,8 @@ const BRANCH_KEYS = ["pyeongchon","banpo","daechi"];
 const SHORT = { pyeongchon:"평촌", banpo:"반포", daechi:"대치" };
 
 /* Firestore 컬렉션 이름 */
-const COLL = { notices:"portalNotices", events:"portalEvents", todos:"portalTodos", files:"portalFiles", bookmarks:"portalBookmarks", bmGroups:"portalBmGroups", kpi:"portalKpi", kpiPriv:"portalKpiPrivate", folders:"portalFolders", members:"portalMembers" };
-const COLL_LABEL = { notices:"공지", events:"일정", todos:"할 일", files:"자료", bookmarks:"북마크", bmGroups:"북마크 구분", kpi:"운영지표", kpiPriv:"운영지표(금액)", folders:"자료실 폴더", members:"직원 계정" };
+const COLL = { notices:"portalNotices", events:"portalEvents", todos:"portalTodos", files:"portalFiles", bookmarks:"portalBookmarks", bmGroups:"portalBmGroups", kpi:"portalKpi", kpiPriv:"portalKpiPrivate", folders:"portalFolders", members:"portalMembers", birthdays:"portalBirthdays" };
+const COLL_LABEL = { notices:"공지", events:"일정", todos:"할 일", files:"자료", bookmarks:"북마크", bmGroups:"북마크 구분", kpi:"운영지표", kpiPriv:"운영지표(금액)", folders:"자료실 폴더", members:"직원 계정", birthdays:"생일" };
 /* 북마크 구분선 색 */
 const LINE_COLORS = [["#222222","검정"],["#DE8619","주황"],["#C98100","황토"],["#D1495B","빨강"],["#8B5CF6","보라"],["#2563A6","파랑"],["#1F7A4D","초록"],["#767676","회색"]];
 
@@ -853,7 +860,7 @@ function fileType(name){
 /* ========= 상태 ========= */
 const state = {
   user:null, isAdmin:false, wide:false, myBranch:null, myBranches:[], branch:"all", tab:"home",
-  notices:[], events:[], todos:[], files:[], bookmarks:[], bmGroups:[], kpi:{}, kpiPriv:{}, folders:[], members:[], member:null,
+  notices:[], events:[], todos:[], files:[], bookmarks:[], bmGroups:[], kpi:{}, kpiPriv:{}, folders:[], members:[], member:null, birthdays:[], bdLoaded:false,
   cal:{ y:new Date().getFullYear(), m:new Date().getMonth(), sel:todayISO() },
   openNotice:null, todoFilter:"open", folder:"all", fileQ:""
 };
@@ -924,6 +931,9 @@ function seed(){
     kpi: BRANCH_KEYS.map(b => ({ id:b, ...splitSnapshot(buildSnapshot(demoRows(b), b, t)).pub, fileName:"샘플 원생 목록.xlsx", uploadedAt:ago(1), uploadedBy:ADMIN, uploader:"대표" })),
     kpiPriv: BRANCH_KEYS.map(b => ({ id:b, ...splitSnapshot(buildSnapshot(demoRows(b), b, t)).priv, uploadedAt:ago(1), uploadedBy:ADMIN })),
     folders: DEFAULT_FOLDERS.map((f, i) => ({ ...f, order:i + 1, branch:"all", at:ago(60), createdBy:ADMIN, writer:"대표" })),
+    birthdays: (() => { const t = todayISO(), md = n => addDays(t, n).slice(5);
+      return [["b1","박지은",md(2),"pyeongchon"],["b2","한지민",md(9),"banpo"],["b3","서지호",md(-3),"daechi"],["b4","김민수",md(16),"pyeongchon"],["b4","김민수",md(16),"banpo"]]
+        .map(([e, name, m, branch]) => ({ id:`${e}_${branch}`, empId:e, name, md:m, branch, at:ago(5), createdBy:ADMIN, writer:"JP People" })); })(),
     members: DEMO_MEMBERS.map(m => ({ id:m.email, ...m, active:true, source:"people", at:ago(20), by:ADMIN })),
     bmGroups: [
       { id:"g1", name:"자주 쓰는 사이트", color:"#DE8619", branch:"all", order:1, at:ago(30), createdBy:ADMIN, writer:"대표" },
@@ -1167,7 +1177,8 @@ async function enter(user){
   renderApps(); renderTabs(); renderView();
 
   state.kpiPriv = {};
-  ["notices","events","todos","files","bookmarks","bmGroups","kpi","folders", ...(state.isAdmin ? ["kpiPriv","members"] : [])].forEach(name => {
+  state.bdLoaded = false;
+  ["notices","events","todos","files","bookmarks","bmGroups","kpi","folders","birthdays", ...(state.isAdmin ? ["kpiPriv","members"] : [])].forEach(name => {
     unsubs.push(DB.watch(name, list => {
       state[name] = name === "kpi" || name === "kpiPriv" ? Object.fromEntries(list.map(x => [x.id, x])) : list;
       onData(name);
@@ -1178,7 +1189,8 @@ async function enter(user){
 }
 function onData(name){
   if (name === "members") { renderMemList(); return; }
-  const uses = { home:["notices","events","todos","kpi"], notice:["notices","events"], todo:["todos"], files:["files","folders"], bm:["bookmarks","bmGroups"], kpi:["kpi","kpiPriv"] }[state.tab] || [];
+  if (name === "birthdays") { state.bdLoaded = true; if (bdPending) { const x = bdPending; bdPending = null; syncBirthdays(x); } }
+  const uses = { home:["notices","events","todos","kpi","birthdays"], notice:["notices","events","birthdays"], todo:["todos"], files:["files","folders"], bm:["bookmarks","bmGroups"], kpi:["kpi","kpiPriv"] }[state.tab] || [];
   if (uses.includes(name)) renderView({ keepFocus: true });
 }
 
@@ -1619,6 +1631,70 @@ function occurs(e, day){
   return day >= e.date && day <= end;
 }
 const KIND_ORDER = { off:0, edu:1, due:2, event:3 };
+
+/* ── 대한민국 공휴일 (모두에게 보임) ──
+   양력 공휴일은 매년 자동. 음력 공휴일(설날·부처님오신날·추석)과 선거일은 아래 표에 있는 해만.
+   표에 없는 해나 임시공휴일은 '일정 추가 → 휴원'으로 넣거나 여기 표에 한 줄 추가하세요.
+   2026년부터 노동절(5/1)·제헌절(7/17) 공휴일. 노동절은 근로기준법상 대체공휴일 없음(민간 기준) */
+const HOL_FIXED = [[1,1,"신정"],[3,1,"삼일절"],[5,1,"노동절",2026],[5,5,"어린이날"],[6,6,"현충일"],[7,17,"제헌절",2026],
+  [8,15,"광복절"],[10,3,"개천절"],[10,9,"한글날"],[12,25,"성탄절"]];
+const HOL_SUB = new Set(["삼일절","어린이날","제헌절","광복절","개천절","한글날","성탄절","부처님오신날"]);   // 토·일과 겹치면 대체공휴일
+const HOL_LUNAR = {
+  2026: { seollal:["2026-02-16","2026-02-17","2026-02-18"], buddha:"2026-05-24", chuseok:["2026-09-24","2026-09-25","2026-09-26"], extra:[["2026-06-03","지방선거"]] },
+  2027: { seollal:["2027-02-05","2027-02-06","2027-02-07"], buddha:"2027-05-13", chuseok:["2027-09-14","2027-09-15","2027-09-16"], extra:[] },
+  2028: { seollal:["2028-01-25","2028-01-26","2028-01-27"], buddha:"2028-05-02", chuseok:["2028-10-02","2028-10-03","2028-10-04"], extra:[["2028-04-12","국회의원 선거"]] }
+};
+const holCache = new Map();
+function holidaysOf(year){
+  if (holCache.has(year)) return holCache.get(year);
+  const map = new Map(), groups = [], dow = d => parse(d).getDay(), wkend = d => [0,6].includes(dow(d));
+  for (const [m, d, name, since] of HOL_FIXED){ if (since && year < since) continue; const k = iso(year, m - 1, d); map.set(k, name); groups.push({ dates:[k], name }); }
+  const L = HOL_LUNAR[year];
+  if (L){
+    for (const [d, n] of L.extra) map.set(d, n);
+    // 설날·추석은 일요일이나 다른 공휴일과 겹칠 때 대체공휴일
+    const clash = ds => ds.some(d => dow(d) === 0 || map.has(d));
+    groups.push({ dates:L.seollal, name:"설날", hit:clash(L.seollal) }, { dates:L.chuseok, name:"추석", hit:clash(L.chuseok) }, { dates:[L.buddha], name:"부처님오신날", hit:wkend(L.buddha) || map.has(L.buddha) });
+    L.seollal.forEach((d, i) => map.set(d, i === 1 ? "설날" : "설날 연휴"));
+    L.chuseok.forEach((d, i) => map.set(d, i === 1 ? "추석" : "추석 연휴"));
+    map.set(L.buddha, "부처님오신날");
+  }
+  groups.sort((a, b) => a.dates[0].localeCompare(b.dates[0]));
+  for (const g of groups){
+    const hit = g.hit ?? (HOL_SUB.has(g.name) && g.dates.some(wkend));
+    if (!hit) continue;
+    let d = addDays(g.dates[g.dates.length - 1], 1);
+    while (wkend(d) || map.has(d)) d = addDays(d, 1);
+    map.set(d, `${g.name} 대체공휴일`);
+  }
+  holCache.set(year, map);
+  return map;
+}
+const holidayOn = day => holidaysOf(+day.slice(0, 4)).get(day) || "";
+
+/* ── 직원 생일 (JP People에서 대표 화면이 열릴 때 자동으로 맞춤. 이름과 월·일만 저장, 태어난 해는 저장 안 함) ── */
+const isLeap = y => (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
+function birthdaysOn(day){
+  const md = day.slice(5), feb28 = md === "02-28" && !isLeap(+day.slice(0, 4)), seen = new Set();
+  return state.birthdays.filter(b => visible(b) && (b.md === md || (feb28 && b.md === "02-29")))
+    .filter(b => !seen.has(b.empId) && seen.add(b.empId)).sort((a, b) => a.name.localeCompare(b.name));
+}
+let bdPending = null;
+async function syncBirthdays(list){
+  if (!state.isAdmin || DEMO) return;
+  if (!state.bdLoaded) { bdPending = list; return; }
+  const want = new Map();
+  for (const e of list) for (const br of e.branches) want.set(`${e.id}_${br}`, { empId:e.id, name:e.name, md:e.md, branch:br });
+  const have = new Map(state.birthdays.map(b => [b.id, b]));
+  let n = 0;
+  for (const [id, w] of want){
+    const h = have.get(id);
+    if (!h) { await DB.addWithId("birthdays", id, w); n++; }
+    else if (h.name !== w.name || h.md !== w.md) { await DB.update("birthdays", id, { name:w.name, md:w.md }); n++; }
+  }
+  for (const id of have.keys()) if (!want.has(id)) { await DB.remove("birthdays", id); n++; }
+  if (n) toast(`JP People 생일 ${n}건을 맞췄어요.`);
+}
 const eventsOn = day => state.events.filter(e => visible(e) && occurs(e, day))
   .sort((a,b) => (KIND_ORDER[a.kind] ?? 9) - (KIND_ORDER[b.kind] ?? 9) || a.title.localeCompare(b.title));
 const whenLabel = e => e.repeat === "weekly" ? `매주 ${WD[parse(e.date).getDay()]}요일${e.until ? `, ${md(e.until)}까지` : ""}`
@@ -1640,19 +1716,19 @@ function calHTML(mode){
   const maxChips = wk ? 3 : 2, cells = [];
   for (let i = 0; i < weeks * 7; i++){
     const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
-    const key = isoOf(d), evs = eventsOn(key), mine = gcalOn(key), n = evs.length + mine.length, dow = d.getDay();
+    const key = isoOf(d), bds = birthdaysOn(key), evs = [...bds.map(b => ({ bd:true, title:`${b.name} 생일` })), ...eventsOn(key)], mine = gcalOn(key), n = evs.length + mine.length, dow = d.getDay(), hol = holidayOn(key);
     const numTxt = wk && (i === 0 || d.getDate() === 1) ? `${d.getMonth()+1}/${d.getDate()}` : d.getDate();
-    const cls = ["day", !wk && d.getMonth() !== m && "out", dow === 0 && "sun", dow === 6 && "sat", key === today && "today", key === sel && "sel"].filter(Boolean).join(" ");
+    const cls = ["day", !wk && d.getMonth() !== m && "out", dow === 0 && "sun", dow === 6 && "sat", hol && "hol", key === today && "today", key === sel && "sel"].filter(Boolean).join(" ");
     cells.push(`<button type="button" class="${cls}" data-act="cal-day" data-day="${key}" data-fk="day-${key}"
-        aria-label="${d.getMonth()+1}월 ${d.getDate()}일${n ? `, 일정 ${n}개` : ""}" aria-pressed="${key === sel}">
-      <span class="num">${numTxt}</span>
-      ${evs.slice(0, maxChips).map(e => `<span class="chip" style="border-color:${CAL_KIND[e.kind]?.color}">${esc(e.title)}</span>`).join("")}
+        aria-label="${d.getMonth()+1}월 ${d.getDate()}일${hol ? `, ${hol}` : ""}${n ? `, 일정 ${n}개` : ""}" aria-pressed="${key === sel}">
+      <span class="num">${numTxt}</span>${hol ? `<span class="hn">${esc(hol)}</span>` : ""}
+      ${evs.slice(0, maxChips).map(e => e.bd ? `<span class="chip bd">${esc(e.title)}</span>` : `<span class="chip" style="border-color:${CAL_KIND[e.kind]?.color}">${esc(e.title)}</span>`).join("")}
       ${mine.slice(0, Math.max(0, maxChips - evs.length)).map(e => `<span class="chip mine">${e.allDay ? "" : `<b>${e.time}</b> `}${esc(e.title)}</span>`).join("")}
       ${n > maxChips ? `<span class="more-n">+${n - maxChips}</span>` : ""}
-      ${n ? `<span class="dots">${evs.slice(0,3).map(e => `<i style="background:${CAL_KIND[e.kind]?.color}"></i>`).join("")}${mine.slice(0, Math.max(0, 3 - evs.length)).map(() => `<i class="mine"></i>`).join("")}</span>` : ""}
+      ${n ? `<span class="dots">${evs.slice(0,3).map(e => `<i style="background:${e.bd ? "#1F7A4D" : CAL_KIND[e.kind]?.color}"></i>`).join("")}${mine.slice(0, Math.max(0, 3 - evs.length)).map(() => `<i class="mine"></i>`).join("")}</span>` : ""}
     </button>`);
   }
-  const selEvs = eventsOn(sel), selMine = gcalOn(sel), canAdd = branchOptions("events").length > 0;
+  const selEvs = eventsOn(sel), selMine = gcalOn(sel), selHol = holidayOn(sel), selBd = birthdaysOn(sel), canAdd = branchOptions("events").length > 0;
   const gBtn = !gcalCanUse() ? "" : gcal.status === "on"
     ? `<button type="button" class="gc-on" data-act="gcal-set" data-tip="내 구글 일정은 나만 보여요. 눌러서 캘린더 고르기 · 연결 끊기">내 구글 ${gcal.loading.size ? "불러오는 중…" : "표시 중"}</button>`
     : `<button type="button" data-act="gcal-connect" data-tip="내 구글 캘린더 일정을 이 화면에 겹쳐 봐요. 나만 보이고 저장되지 않아요.">${gcal.status === "expired" ? "구글 다시 연결" : "내 구글 일정 보기"}</button>`;
@@ -1670,7 +1746,7 @@ function calHTML(mode){
         ${wk ? `<button type="button" data-act="go" data-tab="notice">전체 캘린더</button>` : ""}
       </div>
     </div>
-    <div class="cal-legend">${Object.values(CAL_KIND).map(k => `<span><i style="background:${k.color}"></i>${k.label}</span>`).join("")}${gcal.status === "on" ? `<span><i class="mine"></i>내 구글 일정 (나만 보여요)</span>` : ""}</div>
+    <div class="cal-legend">${Object.values(CAL_KIND).map(k => `<span><i style="background:${k.color}"></i>${k.label}</span>`).join("")}<span><i class="bd"></i>생일</span>${gcal.status === "on" ? `<span><i class="mine"></i>내 구글 일정 (나만 보여요)</span>` : ""}</div>
     ${gcal.err ? `<p class="gc-err">${esc(gcal.err)}</p>` : ""}
     <div class="cal">
       ${WD.map((w,i) => `<div class="dow ${i===0?"sun":i===6?"sat":""}">${w}</div>`).join("")}
@@ -1678,6 +1754,9 @@ function calHTML(mode){
     </div>
     <div class="cal-day">
       <h3>${selTitle}${sel === today ? " (오늘)" : ""}</h3>
+      ${selHol ? `<div class="ev"><span class="k hol">공휴일</span><span class="t">${esc(selHol)}</span></div>` : ""}
+      ${selBd.map(b => `<div class="ev"><span class="k bd">생일</span><span class="t">${esc(b.name)} 선생님 생일</span>
+          <span class="w">${esc(state.birthdays.filter(x => x.empId === b.empId).map(x => SHORT[x.branch]).join(" · "))}</span></div>`).join("")}
       ${selEvs.length ? selEvs.map(e => `<div class="ev">
           <span class="k" style="background:${CAL_KIND[e.kind]?.color}">${CAL_KIND[e.kind]?.label || ""}</span>
           <span class="t">${esc(e.title)}${whenLabel(e) ? `<small>${esc(whenLabel(e))}</small>` : ""}${e.memo ? `<small>${esc(e.memo)}</small>` : ""}</span>
@@ -1691,7 +1770,7 @@ function calHTML(mode){
           <span class="w">${esc(e.cal)}</span>
           ${e.link ? `<a class="icon-btn" href="${esc(e.link)}" target="_blank" rel="noopener">구글에서 보기</a>` : ""}
         </div>`).join("")}
-      ${selEvs.length || selMine.length ? "" : `<p class="cal-none">이날은 일정이 없어요.</p>`}
+      ${selEvs.length || selMine.length || selHol || selBd.length ? "" : `<p class="cal-none">이날은 일정이 없어요.</p>`}
     </div>`;
 }
 
@@ -2586,6 +2665,7 @@ async function extConnect(key, interactive){
         await fb.A.signInWithPopup(x.auth, new fb.A.GoogleAuthProvider());
       }
       ext[key] = { status:"ok", data: key === "pay" ? await loadPay(x.db) : await loadPeople(x.db), at: Date.now(), who: x.auth.currentUser?.email };
+      if (key === "people" && ext.people.data.bdays) syncBirthdays(ext.people.data.bdays).catch(err => toast("생일을 맞추지 못했어요. " + (err.code || "")));
     }
   } catch (err) {
     const code = err.code || "";
@@ -2608,8 +2688,13 @@ async function loadPeople(db){
   const F = fb.F;
   const [orgSnap, empSnap] = await Promise.all([F.getDocs(F.collection(db, "orgs")), F.getDocs(F.collection(db, "employees"))]);
   const orgBranch = {}; orgSnap.forEach(d => { orgBranch[d.id] = branchOfCenter(d.data().name || ""); });
-  const emps = [];
+  const emps = [], bdays = [];
   empSnap.forEach(d => { const e = d.data(); if (e.deleted) return;
+    const bd = String(e.birthDate || "");
+    if (e.status !== "resigned" && /^\d{4}-\d{2}-\d{2}$/.test(bd)) {
+      const brs = [...new Set((e.orgIds || [e.orgId]).map(o => orgBranch[o]).filter(Boolean))];
+      if (brs.length) bdays.push({ id:d.id, name:e.name || "", md:bd.slice(5), branches:brs });
+    }
     emps.push({ id:d.id, status:e.status || "active", joinedAt:e.joinedAt || "", position:e.position || "", level:e.level || "",
       branch: orgBranch[(e.orgIds || [e.orgId])[0]] || "", updatedAt: e.updatedAt?.toMillis ? e.updatedAt.toMillis() : 0 }); });
   // 퇴사일: 개인정보 대신 '발령·변경 기록'(상태 → 퇴직)의 적용일을 씀
@@ -2621,7 +2706,7 @@ async function loadPeople(db){
       e.resignedAt = recs.sort().pop() || (e.updatedAt ? isoOf(new Date(e.updatedAt)) : "");
     } catch { e.resignedAt = e.updatedAt ? isoOf(new Date(e.updatedAt)) : ""; }
   }));
-  return { emps: emps.map(({ updatedAt, ...e }) => e) };
+  return { emps: emps.map(({ updatedAt, ...e }) => e), bdays };
 }
 function hrStats(data, b){
   const t = todayISO(), ym = ymOf(t), y1 = addDays(t, -365);

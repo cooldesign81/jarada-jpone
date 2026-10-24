@@ -108,6 +108,14 @@ service cloud.firestore {
         && request.resource.data.active is bool && request.resource.data.name is string && request.resource.data.name.size() <= 20;
       allow delete: if isAdmin();
     }
+    // 직원 생일: JP People에서 대표 화면이 자동으로 맞춤(이름·월일·원만). 같은 원 사람 + 대표가 봄
+    match /portalBirthdays/{id} {
+      allow read: if okRead();
+      allow create, update: if isAdmin() && request.resource.data.branch in ['pyeongchon', 'banpo', 'daechi']
+        && request.resource.data.md is string && request.resource.data.md.matches('^[0-9]{2}-[0-9]{2}$')
+        && request.resource.data.name is string && request.resource.data.name.size() <= 30;
+      allow delete: if isAdmin();
+    }
     match /portalBmGroups/{id} {
       allow read: if okRead();
       allow create: if okCreate() && request.resource.data.name is string && request.resource.data.name.size() <= 20;
