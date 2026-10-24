@@ -120,6 +120,8 @@
   a.app:hover .ext{opacity:1}
   .app.off{color:#7A7A7A}
   .app.off .g{background:#3A3A3A;color:#8A8A8A}
+  .app .g.gi{background:none;padding:0;object-fit:cover;border-radius:7px}
+  .app.off .g.gi{filter:grayscale(1);opacity:.5}
 
   /* 노랑 앱바: 로고 + 회사 공통 메뉴 + 원 선택(오른쪽 끝) */
   .appbar{grid-column:1/-1;background:var(--brand-yellow);color:var(--ink);display:flex;align-items:center;gap:24px;padding:0 24px;height:64px}
@@ -746,16 +748,16 @@ const LINE_COLORS = [["#222222","검정"],["#DE8619","주황"],["#C98100","황�
 /* 왼쪽 업무 앱 — 여기만 고치면 메뉴가 바뀝니다. branches: 생략하면 모든 원 / status: "live" | "dev" | "planned" */
 const APP_GROUPS = [
   { title: "업무 앱", apps: [
-    { name: "스케줄 매니저", glyph: "출", note: "출결, 일일보고, 상담", url: "https://cooldesign81.github.io/jp-management/", status: "live" },
-    { name: "결제 매니저", glyph: "결", note: "결제 확인, 신규 등록", url: "https://cooldesign81.github.io/jarada-payment/", status: "live" },
+    { name: "스케줄 매니저", glyph: "출", icon: "icons/apps/jp-management.png", note: "출결, 일일보고, 상담", url: "https://cooldesign81.github.io/jp-management/", status: "live" },
+    { name: "결제 매니저", glyph: "결", icon: "icons/apps/jarada-payment.png", note: "결제 확인, 신규 등록", url: "https://cooldesign81.github.io/jarada-payment/", status: "live" },
     { name: "보강 예약", glyph: "보", note: "학부모 보강 예약", url: "https://jarada-makeup-booking.hisin0822.chatgpt.site/", status: "live" },
-    { name: "재료 요청", glyph: "재", note: "수업 재료 주문 요청", url: "https://cooldesign81.github.io/material/", status: "live" },
+    { name: "재료 요청", glyph: "재", icon: "icons/apps/material.png", note: "수업 재료 주문 요청", url: "https://cooldesign81.github.io/material/", status: "live" },
     { name: "자비스 업로더", glyph: "J", note: "관찰일지 사진 올리기", url: "https://jarvis-webapp-8yim.onrender.com/", status: "live" },
-    { name: "주차 쿠폰", glyph: "P", note: "평촌원 전용", url: "https://cooldesign81.github.io/iparking-web/admin/", status: "live", branches: ["pyeongchon"] },
-    { name: "JP People", glyph: "人", note: "인사, 교사 성장", url: "https://cooldesign81.github.io/jarada-people/", status: "live" }
+    { name: "주차 쿠폰", glyph: "P", icon: "icons/apps/iparking.png", note: "평촌원 전용", url: "https://cooldesign81.github.io/iparking-web/admin/", status: "live", branches: ["pyeongchon"] },
+    { name: "JP People", glyph: "人", icon: "icons/apps/jarada-people.png", note: "인사, 교사 성장", url: "https://cooldesign81.github.io/jarada-people/", status: "live" }
   ]},
   { title: "대표 전용", adminOnly: true, apps: [
-    { name: "JP DOC STUDIO", glyph: "급", note: "급여명세서, 인센티브", url: "https://cooldesign81.github.io/jarada-payslip-doc/", status: "live" }
+    { name: "JP DOC STUDIO", glyph: "급", icon: "icons/apps/jarada-payslip-doc.png", note: "급여명세서, 인센티브", url: "https://cooldesign81.github.io/jarada-payslip-doc/", status: "live" }
   ]}
 ];
 
@@ -1214,7 +1216,7 @@ function renderApps(){
     if (!apps.length) return "";
     return `<div><h3>${esc(g.title)}</h3><ul class="apps">${apps.map(a => {
       const live = a.status === "live" && safeUrl(a.url);
-      const inner = `<span class="g" aria-hidden="true">${esc(a.glyph)}</span>
+      const inner = `${a.icon ? `<img class="g gi" src="${esc(a.icon)}" alt="" aria-hidden="true">` : `<span class="g" aria-hidden="true">${esc(a.glyph)}</span>`}
         <span class="n">${esc(a.name)}<small>${esc(a.note)}</small></span>
         ${live ? `<svg class="ext" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>` : ""}`;
       return `<li>${live
