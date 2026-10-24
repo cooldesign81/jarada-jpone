@@ -571,6 +571,14 @@
   .ttable td small{display:block;font-size:11px;font-weight:600;margin-top:2px}
   .ttable .mut{color:var(--text-sub)}
   .ttable .sep{border-left:1px solid var(--line);padding-left:12px}
+  .sortb{border:0;background:none;padding:0;font:inherit;color:inherit;cursor:pointer;display:inline-flex;align-items:center;gap:3px;white-space:nowrap}
+  .sortb i{font-style:normal;font-size:10px;color:#BDBDBD}
+  .sortb.on{color:var(--ink);font-weight:700}.sortb.on i{color:var(--ink)}
+  .ttable th.num .sortb{justify-content:flex-end;width:100%}
+  .tfilter{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 8px}
+  .tfilter .fsearch{max-width:200px}
+  .tchk{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--ink);cursor:pointer}
+  .tcount{font-size:12px;color:var(--text-sub)}
   .tcard .card-h{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
   .tcard .seg2{margin-bottom:0}
   .tcard .card-h > div, .tcard .card-h .icon-btn{margin-left:auto}
@@ -601,12 +609,19 @@
   .money-br i{display:inline-block;width:12px;height:3px;border-radius:2px;margin-right:6px;vertical-align:middle}
   .money-br b{font-size:13px;margin-left:4px}
   .pv-wrap{overflow-x:auto}
+  .lms-files{display:grid;gap:6px}
+  .lms-files .lf{display:grid;grid-template-columns:minmax(0,1fr) 160px;gap:10px;align-items:center;font-size:13px;padding:6px 10px;background:#FAFAFA;border-radius:var(--r-btn)}
+  .lms-files .fn{color:var(--ink);font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .lms-files .ro{color:var(--text-sub);font-size:12px}
+  .lms-files select.inp{padding:6px 8px}
+  .pv .dupw{color:var(--s-warn);font-weight:700;font-size:12px}
   .pv{width:100%;border-collapse:collapse;font-size:13px}
   .pv th{font-size:11px;color:var(--text-sub);font-weight:600;text-align:right;padding:6px;border-bottom:1px solid var(--line);white-space:nowrap}
   .pv th:first-child,.pv td:first-child{text-align:left}
   .pv td{padding:8px 6px;text-align:right;border-bottom:1px solid var(--line);color:var(--ink)}
   .pv td small{display:block;color:var(--s-critical);font-size:11px}
   .pv tr.skip td{opacity:.5}
+  .pv td small.fnm{color:var(--text-sub);font-weight:500}
   .hint.small{font-size:12px;color:var(--text-sub)}
   .help{margin:0;padding-left:18px;display:grid;gap:8px;font-size:14px;line-height:1.6}
   .help b{color:var(--ink)}
@@ -711,7 +726,7 @@
 </dialog>
 <div class="toast hidden" id="toast" role="status" aria-live="polite"></div>
 <input type="file" id="filePick" multiple hidden>
-<input type="file" id="lmsPick" accept=".xlsx,.xls,.csv" hidden>
+<input type="file" id="lmsPick" accept=".xlsx,.xls,.csv" multiple hidden>
 <div class="tip hidden" id="tip" role="tooltip"></div>
 
 <script type="module">
@@ -877,7 +892,7 @@ function fileType(name){
 /* ========= 상태 ========= */
 const state = {
   user:null, isAdmin:false, wide:false, myBranch:null, myBranches:[], branch:"all", tab:"home",
-  notices:[], events:[], todos:[], files:[], bookmarks:[], bmGroups:[], kpi:{}, kpiPriv:{}, folders:[], members:[], member:null, birthdays:[], loaded:{}, teachers:[], kpiPeriod: +(store.get("portal.kpiPeriod") || 3),
+  notices:[], events:[], todos:[], files:[], bookmarks:[], bmGroups:[], kpi:{}, kpiPriv:{}, folders:[], members:[], member:null, birthdays:[], tSort:{ k:"enrolled", dir:-1 }, tQ:"", tWarn:false, loaded:{}, teachers:[], kpiPeriod: +(store.get("portal.kpiPeriod") || 3),
   cal:{ y:new Date().getFullYear(), m:new Date().getMonth(), sel:todayISO() },
   openNotice:null, todoFilter:"open", folder:"all", fileQ:""
 };
@@ -2085,6 +2100,9 @@ $("view").addEventListener("click", e => {
     case "lms-pick": $("lmsPick").click(); break;
     case "kpi-help": kpiHelp(); break;
     case "people-resync": extConnect("people", true).then(() => toast(state.teachers.length ? `선생님 입사월 ${new Set(state.teachers.map(t => t.empId)).size}명을 확인했어요.` : "JP People을 읽지 못했어요.")); break;
+    case "t-sort": { const k = el.dataset.k; state.tSort = state.tSort.k === k ? { k, dir: -state.tSort.dir } : { k, dir: k === "name" || k === "branch" ? 1 : -1 }; renderView(); $("view").querySelector(`[data-act="t-sort"][data-k="${k}"]`)?.focus(); break; }
+    case "t-warn": state.tWarn = el.checked; renderView(); break;
+    case "t-reset": state.tQ = ""; state.tWarn = false; state.tSort = { k:"enrolled", dir:-1 }; renderView(); break;
     case "kpi-period": state.kpiPeriod = +el.dataset.n; store.set("portal.kpiPeriod", el.dataset.n); renderView(); break;
     case "ext-connect": extConnect(el.dataset.key, true); break;
     case "folder-new": folderForm(null); break;
@@ -2106,6 +2124,7 @@ $("view").addEventListener("change", async e => {
   } catch (err) { cb.checked = !cb.checked; toast("바꾸지 못했어요. (" + (err.code || "") + ")"); }
 });
 $("view").addEventListener("input", e => {
+  if (e.target.id === "tQ"){ state.tQ = e.target.value; const pos = e.target.selectionStart; renderView(); const q = $("tQ"); if (q) { q.focus(); q.setSelectionRange(pos, pos); } return; }
   if (e.target.id !== "fileQ") return;
   state.fileQ = e.target.value; const pos = e.target.selectionStart;
   renderView(); const q = $("fileQ"); if (q) { q.focus(); q.setSelectionRange(pos, pos); }
@@ -2552,6 +2571,8 @@ function rowsFromSheet(aoa){
 const ACTIVE_ST = ["재원","퇴원대기"], NONREG_ST = ["샘플수업","등록취소","대기"];
 const isActive = r => ACTIVE_ST.includes(r.status) || /휴원/.test(r.status);
 const isReg = r => !NONREG_ST.includes(r.status);
+// 순수 재원 = 다니는 중이면서 휴원(상태나 관리그룹에 '휴원')이 아닌 원생. 재원생 숫자·추이·선생님별 재원에 씀
+const isPure = r => isActive(r) && !/휴원/.test(r.status) && !/휴원/.test(r.group || "");
 const ymOf = s => s.slice(0, 7);
 const monthEnd = ym => { const [y, m] = ym.split("-").map(Number); return iso(y, m, 0); };   // m은 1~12 → 다음 달 0일 = 이번 달 말일
 const prevYm = ym => { const [y, m] = ym.split("-").map(Number); return m === 1 ? `${y-1}-12` : `${y}-${pad2(m-1)}`; };
@@ -2563,7 +2584,7 @@ function buildSnapshot(rows, branch, base){
   const newIn = ym => rows.filter(r => isReg(r) && r.reg && ymOf(r.reg) === ym).length;
   const leftIn = ym => rows.filter(r => r.status === "퇴원" && r.end && ymOf(r.end) === ym).length;
   const sampleIn = ym => rows.filter(r => r.status === "샘플수업" && r.reg && ymOf(r.reg) === ym).length;
-  const enrolled = months.map((ym, i) => i === 11 ? rows.filter(isActive).length : enrolledAt(monthEnd(ym)));
+  const enrolled = months.map((ym, i) => i === 11 ? rows.filter(isPure).length : enrolledAt(monthEnd(ym)));
   const newc = months.map(newIn), left = months.map(leftIn);
   // 작년 같은 달 월말 재원 (재원생 추이에 점선으로 비교)
   const ly = ym => { const [y, m] = ym.split("-"); return `${+y - 1}-${m}`; };
@@ -2579,7 +2600,7 @@ function buildSnapshot(rows, branch, base){
     if (!r.teacher) continue;
     const t = tmap[r.teacher] ||= { name:r.teacher, enrolled:0, new3:0, left3:0, rows:[] };
     t.rows.push(r);
-    if (isActive(r)) t.enrolled++;
+    if (isPure(r)) t.enrolled++;
     if (isReg(r) && r.reg >= d90) t.new3++;
     if (r.status === "퇴원" && r.end >= d90 && r.end <= base) t.left3++;
   }
@@ -2589,7 +2610,7 @@ function buildSnapshot(rows, branch, base){
   for (const t of Object.values(tmap)){
     const L = t.rows;
     t.m = {
-      enr: months.map((ym, i) => i === 11 ? L.filter(isActive).length : enrAt(L, monthEnd(ym))),
+      enr: months.map((ym, i) => i === 11 ? L.filter(isPure).length : enrAt(L, monthEnd(ym))),
       enr0: enrAt(L, monthEnd(prevYm(months[0]))),
       new: months.map(ym => L.filter(r => isReg(r) && r.reg && ymOf(r.reg) === ym).length),
       left: months.map(ym => L.filter(r => r.status === "퇴원" && r.end && ymOf(r.end) === ym).length),
@@ -2598,7 +2619,7 @@ function buildSnapshot(rows, branch, base){
     delete t.rows;
   }
   const heat = {};
-  for (const r of active) if (r.day && r.hour != null) { (heat[r.day] ||= {}); heat[r.day][r.hour] = (heat[r.day][r.hour] || 0) + 1; }
+  for (const r of active.filter(isPure)) if (r.day && r.hour != null) { (heat[r.day] ||= {}); heat[r.day][r.hour] = (heat[r.day][r.hour] || 0) + 1; }
   return {
     branch, base, rowCount: rows.length, months, enrolled, enrolledLY, newc, left,
     cur:  { enrolled:enrolled[11], newc:newc[11], left:left[11], leftRate:rate(left[11], enrolled[10]),
@@ -2639,40 +2660,65 @@ async function readLMSFile(file){
   return rowsFromSheet(aoa);
 }
 $("lmsPick")?.addEventListener("change", async e => {
-  const f = e.target.files[0]; e.target.value = ""; if (!f) return;
-  try { const res = await readLMSFile(f); if (res.error) { toast(res.error); return; } lmsPreview(res.rows, f.name); }
-  catch (err) { toast(err.message || "파일을 읽지 못했어요."); }
+  const fs = [...e.target.files]; e.target.value = ""; if (!fs.length) return;
+  const ok = [];
+  for (const f of fs){
+    try { const res = await readLMSFile(f); if (res.error) toast(`${f.name}: ${res.error}`); else ok.push({ name: f.name, rows: res.rows }); }
+    catch (err) { toast(`${f.name}: ${err.message || "파일을 읽지 못했어요."}`); }
+  }
+  if (ok.length) lmsPreview(ok);
 });
-function lmsPreview(rows, fileName){
+/* 명단 여러 개를 한 번에: 센터명 열이 있으면 원별로 자동으로 나누고, 없으면 파일 이름(평촌·반포·대치)으로 원을 짐작. 모르면 직접 고름 */
+function lmsPreview(files){
   const opts = branchOptions("kpi").filter(b => b !== "all");
   if (!opts.length) { toast("원생 명단을 올릴 권한이 없어요."); return; }
-  // 센터명 열이 있으면 원별로 나누고, 없으면 고른 원으로
-  const byCenter = {}; let unknown = 0;
-  for (const r of rows){ const b = branchOfCenter(r.center); if (b) (byCenter[b] ||= []).push(r); else unknown++; }
-  const hasCenter = Object.keys(byCenter).length > 0;
-  const render = (base, pick) => {
-    const groups = hasCenter ? byCenter : { [pick]: rows };
-    return Object.entries(groups).map(([b, list]) => {
-      const ok = opts.includes(b), s = buildSnapshot(list, b, base);
-      return `<tr class="${ok ? "" : "skip"}"><td><b>${esc(BRANCHES[b])}</b>${ok ? "" : "<small>권한 없음, 건너뜀</small>"}</td><td>${list.length}</td><td>${s.cur.enrolled}</td>
-        <td>${s.cur.newc}</td><td>${s.cur.left}</td><td>${s.cur.rest}</td><td>${s.cur.unpaid}</td><td>${s.teachers.length}</td></tr>`; }).join("");
+  const items = files.map(f => {
+    const byCenter = {}; let unknown = 0;
+    for (const r of f.rows){ const b = branchOfCenter(r.center); if (b) (byCenter[b] ||= []).push(r); else unknown++; }
+    return { ...f, byCenter, unknown, hasCenter: Object.keys(byCenter).length > 0, guess: branchOfCenter(f.name) };
+  });
+  // 고를 원이 필요한 파일: 짐작한 원 → 지금 보고 있는 원 → 아직 안 쓴 원 순서로 기본값
+  const used = new Set(items.flatMap(it => it.hasCenter ? Object.keys(it.byCenter) : it.guess ? [it.guess] : []));
+  const pick0 = items.map(it => {
+    if (it.hasCenter) return "";
+    const d = it.guess && opts.includes(it.guess) ? it.guess : state.branch !== "all" && opts.includes(state.branch) && items.length === 1 ? state.branch : opts.find(b => !used.has(b)) || opts[0];
+    used.add(d); return d;
+  });
+  const groupsOf = picks => {
+    const g = {}, dup = [];
+    items.forEach((it, i) => {
+      const parts = it.hasCenter ? Object.entries(it.byCenter) : [[picks[i], it.rows]];
+      for (const [b, list] of parts){ if (g[b]) dup.push(BRANCHES[b]); g[b] = { list, fileName: it.name }; }
+    });
+    return { g, dup };
   };
-  const base0 = todayISO(), pick0 = opts.includes(state.branch) ? state.branch : opts[0];
+  const render = (base, picks) => {
+    const { g, dup } = groupsOf(picks);
+    return (dup.length ? `<tr><td colspan="9" class="dupw">${esc([...new Set(dup)].join(", "))} 명단이 두 번 들어왔어요. 뒤의 파일만 써요.</td></tr>` : "")
+      + BRANCH_KEYS.filter(b => g[b]).map(b => {
+        const { list, fileName } = g[b], ok = opts.includes(b), s = buildSnapshot(list, b, base);
+        return `<tr class="${ok ? "" : "skip"}"><td><b>${esc(BRANCHES[b])}</b>${ok ? "" : "<small>권한 없음, 건너뜀</small>"}<small class="fnm">${esc(fileName)}</small></td><td>${list.length}</td><td>${s.cur.enrolled}</td>
+          <td>${s.cur.newc}</td><td>${s.cur.left}</td><td>${s.cur.rest}</td><td>${s.cur.unpaid}</td><td>${s.teachers.length}</td></tr>`; }).join("");
+  };
+  const base0 = todayISO(), total = items.reduce((a, it) => a + it.rows.length, 0);
+  const missing = opts.filter(b => !groupsOf(pick0).g[b]);
   openForm({
     title: "원생 명단 적용 전 확인",
-    fields: `<p class="hint">'${esc(fileName)}'에서 원생 ${rows.length}명을 읽었어요. 숫자가 맞는지 확인하고 적용해 주세요. 원본 엑셀은 저장하지 않고 계산 결과만 저장해요.</p>
-      <div class="row2">${fDate("기준일", "base", base0, "required")}
-        ${hasCenter ? `<div class="fld"><span>원</span><div class="inp ro">센터명 열로 자동 구분${unknown ? `, ${unknown}명은 원을 몰라 제외` : ""}</div></div>`
-          : fSelect("이 명단의 원", "pick", opts.map(b => [b, BRANCHES[b]]), pick0)}</div>
+    fields: `<p class="hint">파일 ${items.length}개에서 원생 ${total}명을 읽었어요. 숫자가 맞는지 확인하고 적용해 주세요. 원본 엑셀은 저장하지 않고 계산 결과만 저장해요.</p>
+      ${fDate("기준일", "base", base0, "required")}
+      <div class="lms-files">${items.map((it, i) => `<div class="lf"><span class="fn">${esc(it.name)}</span>
+        ${it.hasCenter ? `<span class="ro">센터명 열로 자동 구분 (${Object.keys(it.byCenter).map(b => SHORT[b]).join("·")})${it.unknown ? `, ${it.unknown}명은 원을 몰라 제외` : ""}</span>`
+          : `<select class="inp" name="pick${i}" aria-label="${esc(it.name)}의 원">${opts.map(b => `<option value="${b}" ${b === pick0[i] ? "selected" : ""}>${BRANCHES[b]}</option>`).join("")}</select>`}</div>`).join("")}</div>
       <div class="pv-wrap"><table class="pv"><thead><tr><th>원</th><th>읽은 줄</th><th>재원</th><th>이번 달 신규</th><th>이번 달 퇴원</th><th>휴원</th><th>미납</th><th>선생님</th></tr></thead>
         <tbody id="pvBody">${render(base0, pick0)}</tbody></table></div>
+      ${missing.length && opts.length > 1 ? `<p class="hint small">${esc(missing.map(b => BRANCHES[b]).join(", "))} 명단은 없어요. 그 원은 이전 결과가 그대로 남아요.</p>` : ""}
       <p class="hint small">같은 원의 이전 결과는 이 결과로 바뀌어요. 지난 달 추이는 명단의 등록일·종료일로 다시 계산해요.</p>`,
     saveLabel: "적용",
     async onSave(form){
       const base = val(form, "base"); if (!base) return formErr("기준일을 골라 주세요.");
-      const groups = hasCenter ? byCenter : { [val(form, "pick")]: rows };
+      const { g } = groupsOf(items.map((it, i) => it.hasCenter ? "" : val(form, "pick" + i)));
       let n = 0;
-      for (const [b, list] of Object.entries(groups)){
+      for (const [b, { list, fileName }] of Object.entries(g)){
         if (!opts.includes(b)) continue;
         const { pub, priv } = splitSnapshot(buildSnapshot(list, b, base));
         const meta = { fileName, uploadedAt: Date.now(), uploadedBy: state.user.email, uploader: writerName() };
@@ -2684,7 +2730,7 @@ function lmsPreview(rows, fileName){
       toast(`${n}개 원의 운영지표를 새로 계산했어요.`);
     }
   });
-  const re = () => { const f = $("dlgForm"); $("pvBody").innerHTML = render(val(f, "base") || base0, f.elements.pick?.value || pick0); };
+  const re = () => { const f = $("dlgForm"); $("pvBody").innerHTML = render(val(f, "base") || base0, items.map((it, i) => it.hasCenter ? "" : f.elements["pick" + i]?.value)); };
   $("dlgBody").addEventListener("change", re);
 }
 
@@ -2864,17 +2910,41 @@ function teacherTableHTML(snaps){
   const all = rows.map(({ t, s }) => ({ t, s, p: teacherPeriod(t, s) })).sort((a, b) => b.t.enrolled - a.t.enrolled);
   // JP People에서 재직 중인 선생님만 보여 줌 (퇴직·휴직·JP People에 없는 이름은 숨김). JP People을 아직 못 불러왔으면 모두 보여 줌
   const known = state.teachers.length > 0;
-  const list = known ? all.filter(x => x.p.st && x.p.st.active) : all;
+  const active = known ? all.filter(x => x.p.st && x.p.st.active) : all;
+  // 필터: 이름 찾기 · 퇴원율 10% 이상만
+  const q = state.tQ.trim();
+  const list = active.filter(x => (!q || x.t.name.includes(q)) && (!state.tWarn || (x.p.months > 0 && x.p.leftRate >= 10)));
+  // 정렬: 머리글을 누르면 그 칸으로, 다시 누르면 반대로. 숫자가 없는(입사 직후) 선생님은 항상 아래
+  const SV = { name:x => x.t.name, branch:x => SHORT[x.s.branch], enrolled:x => x.t.enrolled, avg:x => x.p.avg, newc:x => x.p.newc, left:x => x.p.left,
+    leftRate:x => x.p.leftRate, avgRate:x => x.p.avgRate, smp:x => x.p.smp, reg:x => x.p.reg, regRate:x => x.p.regRate };
+  const { k: sk, dir } = state.tSort, get = SV[sk] || SV.enrolled, textKey = sk === "name" || sk === "branch";
+  list.sort((a, b) => {
+    const na = a.p.months === 0 && !textKey && sk !== "enrolled", nb = b.p.months === 0 && !textKey && sk !== "enrolled";
+    if (na !== nb) return na ? 1 : -1;
+    const va = get(a), vb = get(b);
+    return (textKey ? String(va).localeCompare(String(vb)) : (va ?? -1) - (vb ?? -1)) * dir || b.t.enrolled - a.t.enrolled;
+  });
   const hidden = known ? all.filter(x => !(x.p.st && x.p.st.active)) : [];
   const multi = state.kpiPeriod > 1;
   const tmax = Math.max(1, ...list.map(x => x.t.enrolled));
   const noPeople = list.filter(x => !x.p.st).length;
-  if (!list.length) return `<p class="empty">JP People에서 재직 중으로 확인된 선생님이 없어요.</p>`;
+  if (!active.length) return `<p class="empty">JP People에서 재직 중으로 확인된 선생님이 없어요.</p>`;
   const dash = `<span class="mut">–</span>`;
-  return `<div class="tbl-wrap"><table class="ttable"><thead><tr><th>선생님</th>${state.branch === "all" ? "<th>원</th>" : ""}
-      <th class="num">현재 재원</th><th class="barc"></th><th class="num">평균 재원</th>
-      <th class="num">신규</th><th class="num">퇴원</th><th class="num">퇴원율</th>${multi ? `<th class="num" data-tip="달마다 낸 퇴원율의 평균">월평균 퇴원율</th>` : ""}
-      <th class="num sep">샘플 수업</th><th class="num">샘플 등록</th><th class="num">등록율</th></tr></thead><tbody>
+  const th = (k, label, cls = "", tip = "") => { const on = state.tSort.k === k;
+    return `<th class="${cls}" aria-sort="${on ? (state.tSort.dir > 0 ? "ascending" : "descending") : "none"}"${tip ? ` data-tip="${esc(tip)}"` : ""}>
+      <button type="button" class="sortb${on ? " on" : ""}" data-act="t-sort" data-k="${k}">${label}<i>${on ? (state.tSort.dir > 0 ? "▲" : "▼") : "↕"}</i></button></th>`; };
+  const bar = `<div class="tfilter">
+      <label class="fsearch"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input type="search" id="tQ" placeholder="선생님 이름" value="${esc(state.tQ)}" data-fk="tQ" aria-label="선생님 이름으로 찾기"></label>
+      <label class="tchk"><input type="checkbox" data-act="t-warn" ${state.tWarn ? "checked" : ""}> 퇴원율 10% 이상만</label>
+      <span class="tcount">${list.length}명${list.length !== active.length ? ` / ${active.length}명` : ""}</span>
+      ${state.tQ || state.tWarn || state.tSort.k !== "enrolled" || state.tSort.dir !== -1 ? `<button type="button" class="linkish" data-act="t-reset">처음대로</button>` : ""}
+    </div>`;
+  if (!list.length) return bar + `<p class="empty">조건에 맞는 선생님이 없어요.</p>`;
+  return bar + `<div class="tbl-wrap"><table class="ttable"><thead><tr>${th("name", "선생님")}${state.branch === "all" ? th("branch", "원") : ""}
+      ${th("enrolled", "현재 재원", "num")}<th class="barc"></th>${th("avg", "평균 재원", "num")}
+      ${th("newc", "신규", "num")}${th("left", "퇴원", "num")}${th("leftRate", "퇴원율", "num")}${multi ? th("avgRate", "월평균 퇴원율", "num", "달마다 낸 퇴원율의 평균") : ""}
+      ${th("smp", "샘플 수업", "num sep")}${th("reg", "샘플 등록", "num")}${th("regRate", "등록율", "num")}</tr></thead><tbody>
     ${list.map(({ t, s, p }) => {
       const none = p.months === 0;
       const note = !p.st ? `<small class="mut" data-tip="JP People에서 '${esc(t.name)}' 이름을 찾지 못해 입사일을 몰라요. 기간 전체로 계산했어요. JP People의 이름을 반 이름의 선생님 이름과 똑같이 맞춰 주세요.">입사일 모름</small>`
@@ -2897,7 +2967,7 @@ function kpiPageHTML(){
   const bs = visBranches(), snaps = bs.map(b => state.kpi[b]).filter(Boolean), canUp = branchOptions("kpi").some(b => b !== "all");
   const metaLine = bs.map(b => state.kpi[b] ? `${BRANCHES[b]} ${md(state.kpi[b].base)} 기준` : `${BRANCHES[b]} 명단 없음`).join(", ");
   const head = `<div class="head"><h1>운영지표</h1>
-    <div class="acts">${canUp ? `<button type="button" class="btn btn-primary btn-sm" data-act="lms-pick">원생 명단 올리기</button>` : ""}</div></div>
+    <div class="acts">${canUp ? `<button type="button" class="btn btn-primary btn-sm" data-act="lms-pick" data-tip="${state.branch === "all" && branchOptions("kpi").filter(b => b !== "all").length > 1 ? "3개 원 명단을 한 번에 골라도 돼요 (Ctrl 또는 Shift를 누른 채 여러 파일 선택)" : "자라다 시스템에서 내려받은 원생 목록 엑셀"}">원생 명단 올리기${state.branch === "all" && branchOptions("kpi").filter(b => b !== "all").length > 1 ? " (여러 원 한 번에)" : ""}</button>` : ""}</div></div>
     <p class="kpi-meta left">${esc(metaLine)}. 화살표는 전월 대비 <button type="button" class="linkish" data-act="kpi-help">계산 기준</button></p>`;
   if (!snaps.length) return head + `<div class="soon"><h2>아직 올린 원생 명단이 없어요</h2>
       <p>자라다 시스템에서 원생 목록을 엑셀로 내려받아 '원생 명단 올리기'로 올리면 재원·신규·퇴원·샘플·미납·선생님별 지표가 계산돼요.</p>
@@ -3010,7 +3080,7 @@ function adminRowsHTML(bs){
 
 function kpiHelp(){
   openForm({ title:"운영지표 계산 기준", saveLabel:"닫기", async onSave(){ return true; }, fields:`<ul class="help">
-    <li><b>재원생</b>: 상태가 재원·퇴원대기·휴원인 원생. 지난 달은 등록(시작)일이 그달 말 이전이고 그 전에 퇴원하지 않은 원생으로 계산해요.</li>
+    <li><b>재원생</b>: 상태가 재원·퇴원대기인 원생(휴원생은 빼요. 휴원생은 따로 세요). 지난 달은 등록(시작)일이 그달 말 이전이고 그 전에 퇴원하지 않은 원생으로 계산해요.</li>
     <li><b>신규생</b>: 등록일이 그 달인 원생 중 샘플수업·등록취소·대기가 아닌 원생.</li>
     <li><b>퇴원 · 퇴원율</b>: 상태가 퇴원이고 종료일이 그 달인 원생 ÷ 전월 말 재원생.</li>
     <li><b>휴원생</b>: 상태나 관리그룹에 '휴원'이 들어간 원생.</li>
