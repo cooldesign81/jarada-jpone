@@ -6,9 +6,9 @@
 - 주소: https://cooldesign81.github.io/jarada-jpone/
 - 파일: `index.html` 하나 (빌드 도구 없음), 보안 규칙 `firestore.rules`, `storage.rules`
 
-## 처음 설정 (Firebase 프로젝트: jarada-favorites-f663d)
+## 처음 설정 (Firebase 프로젝트: jarada-jpone)
 
-1. `index.html` 위쪽 `FIREBASE_CONFIG.apiKey` 에 웹 API 키를 넣습니다. 비워 두면 로그인 없는 **미리보기 모드**로 열립니다(데이터는 그 브라우저에만 저장).
+1. `index.html` 위쪽 `FIREBASE_CONFIG` 에 jarada-jpone 웹 앱 설정이 들어 있습니다. `apiKey` 를 `"여기에_apiKey_붙여넣기"` 로 바꾸면 로그인 없는 **미리보기 모드**로 열립니다(데이터는 그 브라우저에만 저장).
 2. Authentication → 로그인 방법: 이메일/비밀번호, Google 사용. 설정 → 승인된 도메인에 `cooldesign81.github.io`.
 3. Authentication → 설정 → 사용자 작업: **가입 허용(Enable create) 끄기**.
 4. 원 공용 계정 3개 생성: `jarada_boys@naver.com`(평촌), `jarada-banpo@naver.com`(반포), `jarada-daechi@naver.com`(대치).

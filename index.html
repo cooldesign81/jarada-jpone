@@ -17,7 +17,8 @@
       매출은 결제 매니저(jarada-checkin), 선생님 현황은 JP People(jarada-people)을 대표 계정으로 직접 읽음 (저장 안 함)
     · Storage: portal-files/ 폴더 (자료실 파일)
     · 보안 규칙: 함께 드린 firestore.rules, storage.rules 를 그대로 배포
-  - FIREBASE_CONFIG.apiKey 가 "여기에..." 그대로면 미리보기 모드:
+  - Firebase 프로젝트: jarada-jpone
+  - FIREBASE_CONFIG.apiKey 를 "여기에..."로 바꾸면 미리보기 모드:
     로그인 없이 열리고, 데이터는 이 브라우저에만 저장됩니다. 위 검정 띠에서 계정을 바꿔 권한을 확인할 수 있어요.
   - 원생 명단을 올리기 전에는 홈 지표가 샘플 숫자 (SAMPLE 객체)로 보임
   ───────────────────────────────────────────────
@@ -636,12 +637,12 @@
 
 /* ========= 설정 ========= */
 const FIREBASE_CONFIG = {
-  apiKey: "여기에_apiKey_붙여넣기",
-  authDomain: "jarada-favorites-f663d.firebaseapp.com",
-  projectId: "jarada-favorites-f663d",
-  storageBucket: "jarada-favorites-f663d.firebasestorage.app",
-  messagingSenderId: "623440893632",
-  appId: "1:623440893632:web:f17f87970a2f70493fff25"
+  apiKey: "AIzaSyCqcuYGMUS_CxhqpHspqVK3ZPUXJMDFX9s",
+  authDomain: "jarada-jpone.firebaseapp.com",
+  projectId: "jarada-jpone",
+  storageBucket: "jarada-jpone.firebasestorage.app",
+  messagingSenderId: "383071680316",
+  appId: "1:383071680316:web:3f30f33a2aa267b3f89039"
 };
 
 const ADMIN_EMAILS = ["jinhyuck@gmail.com"];
