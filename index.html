@@ -267,6 +267,18 @@
   .swatches input:checked + i{box-shadow:0 0 0 2px #fff,0 0 0 4px var(--ink)}
   .swatches input:focus-visible + i{outline:3px solid var(--brand-orange);outline-offset:3px}
   @media (hover:none){ .bm .x{opacity:1} }
+  /* 끌어서 순서 바꾸기 */
+  .grip{flex:none;border:0;background:none;color:#BDBDBD;cursor:grab;padding:4px 2px;margin-left:-6px;border-radius:4px;
+        font-size:16px;line-height:1;touch-action:none;user-select:none;-webkit-user-select:none}
+  .grip:hover,.grip:focus-visible{color:var(--ink);background:#F2F2F2}
+  .bmline .grip{margin-left:0;margin-right:-4px}
+  .bms:empty{min-height:52px;border:1px dashed #D6D6D6;border-radius:var(--r-card);display:flex;align-items:center;justify-content:center}
+  .bms:empty::before{content:"아직 이 구분에 북마크가 없어요. 여기로 끌어다 놓을 수 있어요.";font-size:13px;color:var(--text-sub);padding:0 12px;text-align:center}
+  .drag-ph{border:2px dashed var(--ink);border-radius:var(--r-card);background:#FAFAFA;list-style:none}
+  .drag-ghost{position:fixed;z-index:1000;pointer-events:none;margin:0;opacity:.95;box-shadow:0 10px 28px rgba(0,0,0,.18);
+        border-radius:var(--r-card);background:#fff;transform:rotate(1deg)}
+  body.dragging,body.dragging *{cursor:grabbing !important;user-select:none;-webkit-user-select:none}
+  body.dragging .tip{display:none}
 
   .demo{font-size:12px;color:var(--text-sub);margin:24px 0 0}
   .scrim{display:none}
@@ -1120,8 +1132,8 @@ function renderApps(){
 
 /* ========= 북마크 (구분선별로 묶어서 보기) ========= */
 function bmPageHTML(){
-  const groups = state.bmGroups.filter(visible).sort((a,b) => (a.order ?? a.at ?? 0) - (b.order ?? b.at ?? 0));
-  const items = state.bookmarks.filter(b => visible(b) && safeUrl(b.url)).sort((a,b) => (a.at||0) - (b.at||0));
+  const groups = state.bmGroups.filter(visible).sort((a,b) => ordKey(a) - ordKey(b));
+  const items = state.bookmarks.filter(b => visible(b) && safeUrl(b.url)).sort((a,b) => ordKey(a) - ordKey(b));
   const gid = new Set(groups.map(g => g.id));
   const sections = groups.map(g => ({ g, list: items.filter(b => b.groupId === g.id) }));
   const loose = items.filter(b => !b.groupId || !gid.has(b.groupId));
@@ -1130,7 +1142,7 @@ function bmPageHTML(){
   const card = b => {
     let host = b.url; try { host = new URL(b.url).host.replace(/^www\./, ""); } catch {}
     const where = b.branch !== "all" && state.branch === "all" ? `, ${BRANCHES[b.branch] || ""}` : "";
-    return `<li class="bm"><a href="${esc(b.url)}" target="_blank" rel="noopener">
+    return `<li class="bm" data-id="${esc(b.id)}">${canEdit(b) ? `<button type="button" class="grip" aria-label="${esc(b.name)} 옮기기" data-tip="끌어서 순서·구분 바꾸기">⠿</button>` : ""}<a href="${esc(b.url)}" target="_blank" rel="noopener">
         <img class="fav" src="https://www.google.com/s2/favicons?sz=32&domain=${encodeURIComponent(host)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">
         <span class="bt"><span class="t">${esc(b.name)}</span><span class="u">${esc(host)}${esc(where)}</span></span></a>
       ${canEdit(b) ? `<button class="x" type="button" data-act="bm-edit" data-id="${esc(b.id)}" aria-label="${esc(b.name)} 수정">수정</button>` : ""}</li>`;
@@ -1139,19 +1151,151 @@ function bmPageHTML(){
   <div class="head"><h1>북마크</h1>
     <div class="acts">${canAdd ? `<button type="button" class="btn btn-ghost btn-sm" data-act="bmg-new">구분선 추가</button>
       <button type="button" class="btn btn-primary btn-sm" data-act="bm-new">북마크 추가</button>` : ""}</div></div>
-  <p class="bm-scope">${state.branch === "all" ? "모든 원의 북마크예요." : `${BRANCHES[state.branch]} 북마크와 모든 원에 공유된 북마크예요.`}</p>
+  <p class="bm-scope">${state.branch === "all" ? "모든 원의 북마크예요." : `${BRANCHES[state.branch]} 북마크와 모든 원에 공유된 북마크예요.`}
+    ⠿ 손잡이를 끌면 북마크 순서와 구분선 위치를 바꿀 수 있어요.</p>
+  <div id="bmSecs">
   ${sections.map(({ g, list }) => `
-    <section class="bmsec">
+    <section class="bmsec${g ? "" : " loose"}" data-gid="${esc(g?.id || "")}">
       <div class="bmline" style="--lc:${esc(g?.color || "#BDBDBD")}">
+        ${g && canEdit(g) ? `<button type="button" class="grip" aria-label="${esc(g.name)} 구분선 옮기기" data-tip="끌어서 구분선 위치 바꾸기">⠿</button>` : ""}
         <span class="nm">${esc(g ? g.name : "구분 없음")}</span>
         ${g && g.branch !== "all" && state.branch === "all" ? `<span class="tagb">${esc(BRANCHES[g.branch])}</span>` : ""}
         <span class="cnt">${list.length}</span><span class="rule"></span>
         ${g && canEdit(g) ? `<button type="button" class="icon-btn" data-act="bmg-edit" data-id="${esc(g.id)}">이름 · 색 바꾸기</button>` : ""}
         ${canAdd ? `<button type="button" class="icon-btn" data-act="bm-new" data-group="${esc(g?.id || "")}">여기에 추가</button>` : ""}
       </div>
-      ${list.length ? `<ul class="bms">${list.map(card).join("")}</ul>` : `<p class="empty">아직 이 구분에 북마크가 없어요.</p>`}
-    </section>`).join("")}`;
+      <ul class="bms" data-gid="${esc(g?.id || "")}">${list.map(card).join("")}</ul>
+    </section>`).join("")}
+  </div>`;
 }
+
+/* ── 끌어서 순서 바꾸기 ──
+   순서는 숫자 order 로 저장. 옮긴 항목 하나만 "앞뒤 항목의 가운데 값"으로 바꿔서 한 번만 저장함
+   (order 가 없는 예전 데이터는 만든 시각 at 을 대신 씀) */
+const ordKey = x => x.order ?? x.at ?? 0;
+function keyBetween(prev, next){
+  if (prev != null && next != null) return (prev + next) / 2;
+  if (prev != null) return prev + 1;
+  if (next != null) return next - 1;
+  return Date.now();
+}
+const drag = { on:false, pendingRender:false, endedAt:0 };
+addEventListener("click", e => { if (Date.now() - drag.endedAt < 300) { e.preventDefault(); e.stopPropagation(); } }, true);
+
+/* 손잡이(.grip)를 잡고 끄는 범용 정렬. 마우스·터치 모두 동작 */
+function startSort(e, { item, ghostOf, phHeight, findSpot, onDrop }){
+  const sx = e.clientX, sy = e.clientY;
+  const grip = e.target;
+  let started = false, ghost = null, ph = null, ox = 0, oy = 0, raf = 0, lastY = sy;
+  grip.setPointerCapture?.(e.pointerId);
+
+  const begin = () => {
+    started = true; drag.on = true; document.body.classList.add("dragging");
+    const src = ghostOf ? ghostOf(item) : item;
+    const r = src.getBoundingClientRect(), ir = item.getBoundingClientRect();
+    ox = sx - r.left; oy = sy - r.top;
+    ghost = src.cloneNode(true); ghost.classList.add("drag-ghost");
+    ghost.style.width = r.width + "px"; ghost.style.left = r.left + "px"; ghost.style.top = r.top + "px";
+    document.body.appendChild(ghost);
+    ph = document.createElement(item.tagName); ph.className = "drag-ph";
+    ph.style.height = (phHeight || ir.height) + "px";
+    item.after(ph); item.style.display = "none";
+  };
+  const autoscroll = () => {
+    const edge = 70, y = lastY, h = innerHeight;
+    const d = y < edge ? -(edge - y) / 3 : y > h - edge ? (y - (h - edge)) / 3 : 0;
+    if (d) scrollBy(0, d);
+    raf = drag.on ? requestAnimationFrame(autoscroll) : 0;
+  };
+  const move = ev => {
+    if (!started){
+      if (Math.hypot(ev.clientX - sx, ev.clientY - sy) < 5) return;
+      begin(); raf = requestAnimationFrame(autoscroll);
+    }
+    ev.preventDefault();
+    lastY = ev.clientY;
+    ghost.style.left = (ev.clientX - ox) + "px"; ghost.style.top = (ev.clientY - oy) + "px";
+    const spot = findSpot(document.elementFromPoint(ev.clientX, ev.clientY), ev.clientX, ev.clientY, ph);
+    if (spot) spot.list.insertBefore(ph, spot.before);
+  };
+  const end = async (ev, cancel) => {
+    grip.removeEventListener("pointermove", move);
+    grip.removeEventListener("pointerup", up);
+    grip.removeEventListener("pointercancel", cx);
+    removeEventListener("keydown", esc_);
+    if (!started) return;
+    cancelAnimationFrame(raf);
+    ghost.remove(); document.body.classList.remove("dragging");
+    const list = ph.parentNode, moved = !cancel && !(ph.previousSibling === item || ph.nextSibling === item);
+    if (!cancel) ph.replaceWith(item); else ph.remove();
+    item.style.display = "";
+    drag.on = false;
+    drag.endedAt = Date.now();   // 끌고 난 직후의 click 이 링크를 열지 않게 함
+    try { if (moved) await onDrop(item, list); }
+    catch (err) { toast("순서를 저장하지 못했어요. " + (err.code || err.message || "")); }
+    finally { if (drag.pendingRender || cancel || !moved) { drag.pendingRender = false; renderView(); } }
+  };
+  const up = ev => end(ev, false);
+  const cx = ev => end(ev, true);
+  const esc_ = ev => { if (ev.key === "Escape") end(ev, true); };
+  grip.addEventListener("pointermove", move);
+  grip.addEventListener("pointerup", up);
+  grip.addEventListener("pointercancel", cx);
+  addEventListener("keydown", esc_);
+}
+
+/* 이웃 항목에서 새 order 계산 */
+function neighborKey(el, sel, lookup){
+  const sib = (n, dir) => { while ((n = n[dir])) if (n.matches?.(sel) && n.style.display !== "none") return n; return null; };
+  const k = n => { const x = n && lookup(n.dataset.id ?? n.dataset.gid); return x ? ordKey(x) : null; };
+  return keyBetween(k(sib(el, "previousElementSibling")), k(sib(el, "nextElementSibling")));
+}
+
+$("view").addEventListener("pointerdown", e => {
+  if (state.tab !== "bm" || e.button > 0) return;
+  const grip = e.target.closest(".grip"); if (!grip) return;
+  e.preventDefault();
+  const card = grip.closest(".bm");
+  if (card){
+    startSort(e, {
+      item: card,
+      findSpot(el, x, y, ph){
+        if (!el) return null;
+        const over = el.closest(".bm");
+        if (over && over !== ph){
+          const r = over.getBoundingClientRect();
+          return { list: over.parentNode, before: x < r.left + r.width / 2 ? over : over.nextSibling };
+        }
+        const ul = el.closest(".bms") || el.closest(".bmsec")?.querySelector(".bms");
+        if (ul && !el.closest(".drag-ph")) return { list: ul, before: null };
+        return null;
+      },
+      async onDrop(it, ul){
+        const b = state.bookmarks.find(x => x.id === it.dataset.id); if (!b) return;
+        const order = neighborKey(it, ".bm", id => state.bookmarks.find(x => x.id === id));
+        await DB.update("bookmarks", b.id, { order, groupId: ul.dataset.gid || "" });
+      }
+    });
+    return;
+  }
+  const sec = grip.closest(".bmsec");
+  if (sec){
+    startSort(e, {
+      item: sec, ghostOf: s => s.querySelector(".bmline"), phHeight: 48,
+      findSpot(el, x, y){
+        const box = $("bmSecs"); if (!el || !box.contains(el) && el !== box) return null;
+        const loose = box.querySelector(".bmsec.loose");
+        const secs = [...box.querySelectorAll(".bmsec:not(.loose)")].filter(s => s.style.display !== "none");
+        for (const s of secs){ const r = s.getBoundingClientRect(); if (y < r.top + Math.min(r.height / 2, 40)) return { list: box, before: s }; }
+        return { list: box, before: loose };
+      },
+      async onDrop(it){
+        const order = neighborKey(it, ".bmsec:not(.loose)", id => state.bmGroups.find(x => x.id === id));
+        await DB.update("bmGroups", it.dataset.gid, { order });
+      }
+    });
+  }
+});
 
 function bmForm(b, groupId){
   const groups = state.bmGroups.filter(g => visible(g)).sort((x,y) => (x.order ?? 0) - (y.order ?? 0));
@@ -1253,6 +1397,7 @@ document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("dlg").
 function renderTabs(){ [...$("tabs").children].forEach(b => b.setAttribute("aria-selected", b.dataset.tab === state.tab)); }
 
 function renderView({ keepFocus = false } = {}){
+  if (drag.on) { drag.pendingRender = true; return; }   // 끄는 도중에는 화면을 다시 그리지 않음
   const v = $("view");
   const focusKey = keepFocus && document.activeElement?.closest?.("#view") ? document.activeElement.dataset.fk : null;
   v.innerHTML = state.tab === "home" ? homeHTML()
