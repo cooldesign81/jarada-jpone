@@ -572,6 +572,8 @@
   .ttable .sep{border-left:1px solid var(--line);padding-left:12px}
   .tcard .card-h{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
   .tcard .seg2{margin-bottom:0}
+  .tcard .card-h > div, .tcard .card-h .icon-btn{margin-left:auto}
+  .tcard .card-h .icon-btn + .seg2{margin-left:0}
   .seg2.sm button{padding:6px 12px;font-size:12px}
   .tb-bar{display:block;height:8px;background:#F0F0F0;border-radius:4px;overflow:hidden}
   .tb-bar i{display:block;height:100%;background:var(--c-enrolled);border-radius:4px}
@@ -2081,6 +2083,7 @@ $("view").addEventListener("click", e => {
     case "bm-new": bmForm(null, el.dataset.group); break;
     case "lms-pick": $("lmsPick").click(); break;
     case "kpi-help": kpiHelp(); break;
+    case "people-resync": extConnect("people", true).then(() => toast(state.teachers.length ? `선생님 입사월 ${new Set(state.teachers.map(t => t.empId)).size}명을 확인했어요.` : "JP People을 읽지 못했어요.")); break;
     case "kpi-period": state.kpiPeriod = +el.dataset.n; store.set("portal.kpiPeriod", el.dataset.n); renderView(); break;
     case "ext-connect": extConnect(el.dataset.key, true); break;
     case "folder-new": folderForm(null); break;
@@ -2730,7 +2733,8 @@ async function loadPeople(db){
     const bd = String(e.birthDate || ""), ja = String(e.joinedAt || "");
     if (/^\d{4}-\d{2}/.test(ja) && e.name) {
       const brs = [...new Set((e.orgIds || [e.orgId]).map(o => orgBranch[o]).filter(Boolean))];
-      if (brs.length) starts.push({ id:d.id, name:e.name, startYm:ja.slice(0, 7), branches:brs });
+      // 본사(지점 없음) 소속이면 세 원 모두에 넣어 이름으로 찾을 수 있게 함
+      starts.push({ id:d.id, name:e.name, startYm:ja.slice(0, 7), branches: brs.length ? brs : [...BRANCH_KEYS] });
     }
     if (e.status !== "resigned" && /^\d{4}-\d{2}-\d{2}$/.test(bd)) {
       const brs = [...new Set((e.orgIds || [e.orgId]).map(o => orgBranch[o]).filter(Boolean))];
@@ -2858,7 +2862,7 @@ function teacherTableHTML(snaps){
       <th class="num sep">샘플 수업</th><th class="num">샘플 등록</th><th class="num">등록율</th></tr></thead><tbody>
     ${list.map(({ t, s, p }) => {
       const none = p.months === 0;
-      const note = !p.st ? `<small class="mut" data-tip="JP People에서 같은 이름을 찾지 못해 입사일을 몰라요. 기간 전체로 계산했어요.">입사일 모름</small>`
+      const note = !p.st ? `<small class="mut" data-tip="JP People에서 '${esc(t.name)}' 이름을 찾지 못해 입사일을 몰라요. 기간 전체로 계산했어요. JP People의 이름을 반 이름의 선생님 이름과 똑같이 맞춰 주세요.">입사일 모름</small>`
         : none ? `<small class="mut">${md(p.st.startYm + "-01").replace(/\.1$/, "월")} 입사, 다음 달부터 계산</small>`
         : p.partial ? `<small class="mut" data-tip="입사한 달은 빼고 계산해요">${p.months}개월치</small>` : "";
       return `<tr><td><b>${esc(t.name)}</b>${note}</td>${state.branch === "all" ? `<td>${esc(SHORT[s.branch])}</td>` : ""}
@@ -2945,6 +2949,7 @@ function kpiPageHTML(){
     <section class="card"><h2>요일 · 시간대별 재원생 <span class="sub">${snaps.length > 1 ? "원 합계, " : ""}반 이름 기준</span></h2>${heatHTML}</section>
   </div>
   <section class="card tcard"><div class="card-h"><h2>선생님별 운영지표 <span class="sub">${esc(periodLabel())}</span></h2>
+      ${state.isAdmin ? `<button type="button" class="icon-btn" data-act="people-resync" data-tip="JP People에서 입사일을 고쳤다면 눌러서 다시 맞춰요">JP People 다시 불러오기</button>` : ""}
       <div class="seg2 sm" role="group" aria-label="기간">${KPI_PERIODS.map(([n, l]) => `<button type="button" data-act="kpi-period" data-n="${n}" aria-pressed="${state.kpiPeriod === n}">${l}</button>`).join("")}</div></div>
     ${teacherHTML}</section>
   <section class="card"><h2>지금 확인이 필요한 것</h2>${checkHTML}</section>
