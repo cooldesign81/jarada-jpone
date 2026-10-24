@@ -116,6 +116,14 @@ service cloud.firestore {
         && request.resource.data.name is string && request.resource.data.name.size() <= 30;
       allow delete: if isAdmin();
     }
+    // 선생님 입사월: JP People에서 대표 화면이 자동으로 맞춤(이름·입사 연월·원만). 선생님별 운영지표에서 입사한 달을 빼는 데 씀
+    match /portalTeachers/{id} {
+      allow read: if okRead();
+      allow create, update: if isAdmin() && request.resource.data.branch in ['pyeongchon', 'banpo', 'daechi']
+        && request.resource.data.startYm is string && request.resource.data.startYm.matches('^[0-9]{4}-[0-9]{2}$')
+        && request.resource.data.name is string && request.resource.data.name.size() <= 30;
+      allow delete: if isAdmin();
+    }
     match /portalBmGroups/{id} {
       allow read: if okRead();
       allow create: if okCreate() && request.resource.data.name is string && request.resource.data.name.size() <= 20;

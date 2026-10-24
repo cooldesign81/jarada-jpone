@@ -566,7 +566,13 @@
   .ttable td b{color:var(--ink)}
   .ttable .num{text-align:right}
   .ttable .warn{color:var(--s-critical);font-weight:700}
-  .ttable .barc{width:28%;min-width:80px}
+  .ttable .barc{width:18%;min-width:70px}
+  .ttable td small{display:block;font-size:11px;font-weight:600;margin-top:2px}
+  .ttable .mut{color:var(--text-sub)}
+  .ttable .sep{border-left:1px solid var(--line);padding-left:12px}
+  .tcard .card-h{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  .tcard .seg2{margin-bottom:0}
+  .seg2.sm button{padding:6px 12px;font-size:12px}
   .tb-bar{display:block;height:8px;background:#F0F0F0;border-radius:4px;overflow:hidden}
   .tb-bar i{display:block;height:100%;background:var(--c-enrolled);border-radius:4px}
   .chk-d{border-left:4px solid;border-radius:var(--r-btn);margin-bottom:8px;padding:0 14px}
@@ -740,8 +746,8 @@ const BRANCH_KEYS = ["pyeongchon","banpo","daechi"];
 const SHORT = { pyeongchon:"평촌", banpo:"반포", daechi:"대치" };
 
 /* Firestore 컬렉션 이름 */
-const COLL = { notices:"portalNotices", events:"portalEvents", todos:"portalTodos", files:"portalFiles", bookmarks:"portalBookmarks", bmGroups:"portalBmGroups", kpi:"portalKpi", kpiPriv:"portalKpiPrivate", folders:"portalFolders", members:"portalMembers", birthdays:"portalBirthdays" };
-const COLL_LABEL = { notices:"공지", events:"일정", todos:"할 일", files:"자료", bookmarks:"북마크", bmGroups:"북마크 구분", kpi:"운영지표", kpiPriv:"운영지표(금액)", folders:"자료실 폴더", members:"직원 계정", birthdays:"생일" };
+const COLL = { notices:"portalNotices", events:"portalEvents", todos:"portalTodos", files:"portalFiles", bookmarks:"portalBookmarks", bmGroups:"portalBmGroups", kpi:"portalKpi", kpiPriv:"portalKpiPrivate", folders:"portalFolders", members:"portalMembers", birthdays:"portalBirthdays", teachers:"portalTeachers" };
+const COLL_LABEL = { notices:"공지", events:"일정", todos:"할 일", files:"자료", bookmarks:"북마크", bmGroups:"북마크 구분", kpi:"운영지표", kpiPriv:"운영지표(금액)", folders:"자료실 폴더", members:"직원 계정", birthdays:"생일", teachers:"선생님 입사월" };
 /* 북마크 구분선 색 */
 const LINE_COLORS = [["#222222","검정"],["#DE8619","주황"],["#C98100","황토"],["#D1495B","빨강"],["#8B5CF6","보라"],["#2563A6","파랑"],["#1F7A4D","초록"],["#767676","회색"]];
 
@@ -868,7 +874,7 @@ function fileType(name){
 /* ========= 상태 ========= */
 const state = {
   user:null, isAdmin:false, wide:false, myBranch:null, myBranches:[], branch:"all", tab:"home",
-  notices:[], events:[], todos:[], files:[], bookmarks:[], bmGroups:[], kpi:{}, kpiPriv:{}, folders:[], members:[], member:null, birthdays:[], bdLoaded:false,
+  notices:[], events:[], todos:[], files:[], bookmarks:[], bmGroups:[], kpi:{}, kpiPriv:{}, folders:[], members:[], member:null, birthdays:[], loaded:{}, teachers:[], kpiPeriod: +(store.get("portal.kpiPeriod") || 3),
   cal:{ y:new Date().getFullYear(), m:new Date().getMonth(), sel:todayISO() },
   openNotice:null, todoFilter:"open", folder:"all", fileQ:""
 };
@@ -942,6 +948,8 @@ function seed(){
     birthdays: (() => { const t = todayISO(), md = n => addDays(t, n).slice(5);
       return [["b1","박지은",md(2),"pyeongchon"],["b2","한지민",md(9),"banpo"],["b3","서지호",md(-3),"daechi"],["b4","김민수",md(16),"pyeongchon"],["b4","김민수",md(16),"banpo"]]
         .map(([e, name, m, branch]) => ({ id:`${e}_${branch}`, empId:e, name, md:m, branch, at:ago(5), createdBy:ADMIN, writer:"JP People" })); })(),
+    teachers: BRANCH_KEYS.flatMap(b => DEMO_TEACH[b].map((n, i) => ({ id:`${b}${i}_${b}`, empId:b + i, name:n, branch:b,
+      startYm: (i === 4 ? addDays(todayISO(), -5) : addDays(todayISO(), -(60 + i * 240))).slice(0, 7), at:ago(5), createdBy:ADMIN, writer:"JP People" }))),
     members: DEMO_MEMBERS.map(m => ({ id:m.email, ...m, active:true, source:"people", at:ago(20), by:ADMIN })),
     bmGroups: [
       { id:"g1", name:"자주 쓰는 사이트", color:"#DE8619", branch:"all", order:1, at:ago(30), createdBy:ADMIN, writer:"대표" },
@@ -1185,8 +1193,8 @@ async function enter(user){
   renderApps(); renderTabs(); renderView();
 
   state.kpiPriv = {};
-  state.bdLoaded = false;
-  ["notices","events","todos","files","bookmarks","bmGroups","kpi","folders","birthdays", ...(state.isAdmin ? ["kpiPriv","members"] : [])].forEach(name => {
+  state.loaded = {};
+  ["notices","events","todos","files","bookmarks","bmGroups","kpi","folders","birthdays","teachers", ...(state.isAdmin ? ["kpiPriv","members"] : [])].forEach(name => {
     unsubs.push(DB.watch(name, list => {
       state[name] = name === "kpi" || name === "kpiPriv" ? Object.fromEntries(list.map(x => [x.id, x])) : list;
       onData(name);
@@ -1197,8 +1205,8 @@ async function enter(user){
 }
 function onData(name){
   if (name === "members") { renderMemList(); return; }
-  if (name === "birthdays") { state.bdLoaded = true; if (bdPending) { const x = bdPending; bdPending = null; syncBirthdays(x); } }
-  const uses = { home:["notices","events","todos","kpi","birthdays"], notice:["notices","events","birthdays"], todo:["todos"], files:["files","folders"], bm:["bookmarks","bmGroups"], kpi:["kpi","kpiPriv"] }[state.tab] || [];
+  if (name === "birthdays" || name === "teachers") { state.loaded[name] = true; if (bdPending && state.loaded.birthdays && state.loaded.teachers) { const x = bdPending; bdPending = null; syncPeople(x); } }
+  const uses = { home:["notices","events","todos","kpi","birthdays"], notice:["notices","events","birthdays"], todo:["todos"], files:["files","folders"], bm:["bookmarks","bmGroups"], kpi:["kpi","kpiPriv","teachers"] }[state.tab] || [];
   if (uses.includes(name)) renderView({ keepFocus: true });
 }
 
@@ -1688,20 +1696,25 @@ function birthdaysOn(day){
     .filter(b => !seen.has(b.empId) && seen.add(b.empId)).sort((a, b) => a.name.localeCompare(b.name));
 }
 let bdPending = null;
-async function syncBirthdays(list){
-  if (!state.isAdmin || DEMO) return;
-  if (!state.bdLoaded) { bdPending = list; return; }
-  const want = new Map();
-  for (const e of list) for (const br of e.branches) want.set(`${e.id}_${br}`, { empId:e.id, name:e.name, md:e.md, branch:br });
-  const have = new Map(state.birthdays.map(b => [b.id, b]));
-  let n = 0;
+/* JP People → JP ONE: 생일(이름·월일)과 선생님 입사월(이름·연월). 바뀐 것만 쓰고, 없어진 것은 지움 */
+async function syncColl(coll, want){
+  const have = new Map(state[coll].map(b => [b.id, b])); let n = 0;
   for (const [id, w] of want){
     const h = have.get(id);
-    if (!h) { await DB.addWithId("birthdays", id, w); n++; }
-    else if (h.name !== w.name || h.md !== w.md) { await DB.update("birthdays", id, { name:w.name, md:w.md }); n++; }
+    if (!h) { await DB.addWithId(coll, id, w); n++; }
+    else if (Object.keys(w).some(k => h[k] !== w[k])) { await DB.update(coll, id, w); n++; }
   }
-  for (const id of have.keys()) if (!want.has(id)) { await DB.remove("birthdays", id); n++; }
-  if (n) toast(`JP People 생일 ${n}건을 맞췄어요.`);
+  for (const id of have.keys()) if (!want.has(id)) { await DB.remove(coll, id); n++; }
+  return n;
+}
+async function syncPeople(data){
+  if (!state.isAdmin || DEMO) return;
+  if (!state.loaded.birthdays || !state.loaded.teachers) { bdPending = data; return; }
+  const bd = new Map(), tc = new Map();
+  for (const e of data.bdays || []) for (const br of e.branches) bd.set(`${e.id}_${br}`, { empId:e.id, name:e.name, md:e.md, branch:br });
+  for (const e of data.starts || []) for (const br of e.branches) tc.set(`${e.id}_${br}`, { empId:e.id, name:e.name, startYm:e.startYm, branch:br });
+  const n = await syncColl("birthdays", bd) + await syncColl("teachers", tc);
+  if (n) toast(`JP People 생일·입사월 ${n}건을 맞췄어요.`);
 }
 const eventsOn = day => state.events.filter(e => visible(e) && occurs(e, day))
   .sort((a,b) => (KIND_ORDER[a.kind] ?? 9) - (KIND_ORDER[b.kind] ?? 9) || a.title.localeCompare(b.title));
@@ -2068,6 +2081,7 @@ $("view").addEventListener("click", e => {
     case "bm-new": bmForm(null, el.dataset.group); break;
     case "lms-pick": $("lmsPick").click(); break;
     case "kpi-help": kpiHelp(); break;
+    case "kpi-period": state.kpiPeriod = +el.dataset.n; store.set("portal.kpiPeriod", el.dataset.n); renderView(); break;
     case "ext-connect": extConnect(el.dataset.key, true); break;
     case "folder-new": folderForm(null); break;
     case "folder-seed": seedFolders(); break;
@@ -2556,10 +2570,25 @@ function buildSnapshot(rows, branch, base){
   const tmap = {};
   for (const r of rows){
     if (!r.teacher) continue;
-    const t = tmap[r.teacher] ||= { name:r.teacher, enrolled:0, new3:0, left3:0 };
+    const t = tmap[r.teacher] ||= { name:r.teacher, enrolled:0, new3:0, left3:0, rows:[] };
+    t.rows.push(r);
     if (isActive(r)) t.enrolled++;
     if (isReg(r) && r.reg >= d90) t.new3++;
     if (r.status === "퇴원" && r.end >= d90 && r.end <= base) t.left3++;
+  }
+  // 선생님별 월별 기록 (기간 선택용): 월말 재원 · 신규 · 퇴원 · 샘플(아직 등록 안 한 샘플수업)
+  const enrAt = (list, day) => list.filter(r => isReg(r) && (r.start || r.reg) && (r.start || r.reg) <= day
+    && !(r.status === "퇴원" && r.end && r.end < day) && r.status !== "등록취소").length;
+  for (const t of Object.values(tmap)){
+    const L = t.rows;
+    t.m = {
+      enr: months.map((ym, i) => i === 11 ? L.filter(isActive).length : enrAt(L, monthEnd(ym))),
+      enr0: enrAt(L, monthEnd(prevYm(months[0]))),
+      new: months.map(ym => L.filter(r => isReg(r) && r.reg && ymOf(r.reg) === ym).length),
+      left: months.map(ym => L.filter(r => r.status === "퇴원" && r.end && ymOf(r.end) === ym).length),
+      smp: months.map(ym => L.filter(r => r.status === "샘플수업" && r.reg && ymOf(r.reg) === ym).length)
+    };
+    delete t.rows;
   }
   const heat = {};
   for (const r of active) if (r.day && r.hour != null) { (heat[r.day] ||= {}); heat[r.day][r.hour] = (heat[r.day][r.hour] || 0) + 1; }
@@ -2673,7 +2702,7 @@ async function extConnect(key, interactive){
         await fb.A.signInWithPopup(x.auth, new fb.A.GoogleAuthProvider());
       }
       ext[key] = { status:"ok", data: key === "pay" ? await loadPay(x.db) : await loadPeople(x.db), at: Date.now(), who: x.auth.currentUser?.email };
-      if (key === "people" && ext.people.data.bdays) syncBirthdays(ext.people.data.bdays).catch(err => toast("생일을 맞추지 못했어요. " + (err.code || "")));
+      if (key === "people") syncPeople(ext.people.data).catch(err => toast("JP People 정보를 맞추지 못했어요. " + (err.code || "")));
     }
   } catch (err) {
     const code = err.code || "";
@@ -2696,9 +2725,13 @@ async function loadPeople(db){
   const F = fb.F;
   const [orgSnap, empSnap] = await Promise.all([F.getDocs(F.collection(db, "orgs")), F.getDocs(F.collection(db, "employees"))]);
   const orgBranch = {}; orgSnap.forEach(d => { orgBranch[d.id] = branchOfCenter(d.data().name || ""); });
-  const emps = [], bdays = [];
+  const emps = [], bdays = [], starts = [];
   empSnap.forEach(d => { const e = d.data(); if (e.deleted) return;
-    const bd = String(e.birthDate || "");
+    const bd = String(e.birthDate || ""), ja = String(e.joinedAt || "");
+    if (/^\d{4}-\d{2}/.test(ja) && e.name) {
+      const brs = [...new Set((e.orgIds || [e.orgId]).map(o => orgBranch[o]).filter(Boolean))];
+      if (brs.length) starts.push({ id:d.id, name:e.name, startYm:ja.slice(0, 7), branches:brs });
+    }
     if (e.status !== "resigned" && /^\d{4}-\d{2}-\d{2}$/.test(bd)) {
       const brs = [...new Set((e.orgIds || [e.orgId]).map(o => orgBranch[o]).filter(Boolean))];
       if (brs.length) bdays.push({ id:d.id, name:e.name || "", md:bd.slice(5), branches:brs });
@@ -2714,7 +2747,7 @@ async function loadPeople(db){
       e.resignedAt = recs.sort().pop() || (e.updatedAt ? isoOf(new Date(e.updatedAt)) : "");
     } catch { e.resignedAt = e.updatedAt ? isoOf(new Date(e.updatedAt)) : ""; }
   }));
-  return { emps: emps.map(({ updatedAt, ...e }) => e), bdays };
+  return { emps: emps.map(({ updatedAt, ...e }) => e), bdays, starts };
 }
 function hrStats(data, b){
   const t = todayISO(), ym = ymOf(t), y1 = addDays(t, -365);
@@ -2788,6 +2821,57 @@ const KPI_TILES = [
   { key:"unpaid", label:"미납 원생", unit:"명", good:"down" }
 ];
 const visBranches = () => state.branch === "all" ? BRANCH_KEYS : [state.branch];
+/* ── 선생님별 운영지표: 기간(1·3·6·12개월) 선택 ──
+   JP People의 입사일을 보고 '입사한 다음 달'부터만 계산에 넣음 (입사한 달은 반을 받는 중이라 숫자가 왜곡됨)
+   샘플 = 그 기간 샘플수업으로 남아 있는 원생 + 그 기간 신규 등록(샘플을 거쳐 등록한 것으로 봄), 등록 = 신규 등록 */
+const KPI_PERIODS = [[1, "1개월"], [3, "3개월"], [6, "6개월"], [12, "1년"]];
+const periodLabel = () => { const n = state.kpiPeriod; return n === 1 ? "이번 달" : n === 12 ? "최근 1년" : `최근 ${n}개월`; };
+const ymNext = ym => { const [y, m] = ym.split("-").map(Number); return m === 12 ? `${y+1}-01` : `${y}-${pad2(m+1)}`; };
+// 선생님 이름 → 계산 시작 달(입사 다음 달). 같은 원 우선, 없으면 다른 원
+function teacherStart(name, branch){
+  const hit = state.teachers.find(t => t.name === name && t.branch === branch) || state.teachers.find(t => t.name === name);
+  return hit ? { from: ymNext(hit.startYm), startYm: hit.startYm } : null;
+}
+function teacherPeriod(t, snap){
+  const n = state.kpiPeriod, months = snap.months, first = 12 - n;
+  const st = teacherStart(t.name, snap.branch);
+  const idx = []; for (let i = first; i < 12; i++) if (!st || months[i] >= st.from) idx.push(i);
+  const sum = k => idx.reduce((a, i) => a + (t.m[k][i] || 0), 0);
+  const pre = idx.length ? (idx[0] === 0 ? t.m.enr0 : t.m.enr[idx[0] - 1]) : 0;   // 기간 시작 직전 월말 재원
+  const newc = sum("new"), left = sum("left"), smp = sum("smp") + newc;
+  return { st, months:idx.length, partial: idx.length > 0 && idx.length < n,
+    avg: idx.length ? Math.round(idx.reduce((a, i) => a + t.m.enr[i], 0) / idx.length * 10) / 10 : null,
+    newc, left, leftRate: (pre + newc) ? Math.round(left / (pre + newc) * 1000) / 10 : 0,
+    smp, reg: newc, regRate: smp ? Math.round(newc / smp * 1000) / 10 : 0 };
+}
+function teacherTableHTML(snaps){
+  const rows = snaps.flatMap(s => (s.teachers || []).map(t => ({ t, s })));
+  if (!rows.length) return `<p class="empty">반 이름에서 선생님을 읽지 못했어요.</p>`;
+  if (rows.some(({ t }) => !t.m)) return `<p class="warn-note">기간별로 보려면 원생 명단을 한 번 다시 올려 주세요. (예전에 올린 명단에는 월별 기록이 없어요)</p>`;
+  const list = rows.map(({ t, s }) => ({ t, s, p: teacherPeriod(t, s) })).sort((a, b) => b.t.enrolled - a.t.enrolled);
+  const tmax = Math.max(1, ...list.map(x => x.t.enrolled));
+  const noPeople = list.filter(x => !x.p.st).length;
+  const dash = `<span class="mut">–</span>`;
+  return `<div class="tbl-wrap"><table class="ttable"><thead><tr><th>선생님</th>${state.branch === "all" ? "<th>원</th>" : ""}
+      <th class="num">현재 재원</th><th class="barc"></th><th class="num">평균 재원</th>
+      <th class="num">신규</th><th class="num">퇴원</th><th class="num">퇴원율</th>
+      <th class="num sep">샘플 수업</th><th class="num">샘플 등록</th><th class="num">등록율</th></tr></thead><tbody>
+    ${list.map(({ t, s, p }) => {
+      const none = p.months === 0;
+      const note = !p.st ? `<small class="mut" data-tip="JP People에서 같은 이름을 찾지 못해 입사일을 몰라요. 기간 전체로 계산했어요.">입사일 모름</small>`
+        : none ? `<small class="mut">${md(p.st.startYm + "-01").replace(/\.1$/, "월")} 입사, 다음 달부터 계산</small>`
+        : p.partial ? `<small class="mut" data-tip="입사한 달은 빼고 계산해요">${p.months}개월치</small>` : "";
+      return `<tr><td><b>${esc(t.name)}</b>${note}</td>${state.branch === "all" ? `<td>${esc(SHORT[s.branch])}</td>` : ""}
+        <td class="num">${t.enrolled}</td><td class="barc"><span class="tb-bar"><i style="width:${t.enrolled / tmax * 100}%"></i></span></td>
+        <td class="num">${none ? dash : p.avg}</td>
+        <td class="num">${none ? dash : p.newc}</td><td class="num">${none ? dash : p.left}</td>
+        <td class="num ${!none && p.leftRate >= 10 ? "warn" : ""}">${none ? dash : p.leftRate + "%"}</td>
+        <td class="num sep">${none ? dash : p.smp}</td><td class="num">${none ? dash : p.reg}</td><td class="num">${none ? dash : p.regRate + "%"}</td></tr>`; }).join("")}
+    </tbody></table></div>
+    <p class="fnote">평균 재원 = 기간 동안 매달 말 재원생의 평균(이번 달은 지금 기준). 퇴원율 = 퇴원 ÷ (기간 시작 재원 + 신규).
+      샘플 수업 = 샘플 후 아직 등록 안 한 원생 + 신규 등록, 등록율 = 신규 ÷ 샘플 수업. 입사한 달은 빼고 다음 달부터 계산해요${noPeople ? ` (입사일 모름 ${noPeople}명은 기간 전체)` : ""}.</p>`;
+}
+
 function kpiPageHTML(){
   const bs = visBranches(), snaps = bs.map(b => state.kpi[b]).filter(Boolean), canUp = branchOptions("kpi").some(b => b !== "all");
   const metaLine = bs.map(b => state.kpi[b] ? `${BRANCHES[b]} ${md(state.kpi[b].base)} 기준` : `${BRANCHES[b]} 명단 없음`).join(", ");
@@ -2833,16 +2917,8 @@ function kpiPageHTML(){
       ${days.map(d => `<span class="hd">${d}</span>${hours.map(h => { const n = heat[d][h] || 0, a = n / hmax;
         return `<span class="hc" style="background:${n ? `rgba(37,99,166,${(0.12 + a * 0.88).toFixed(2)})` : "#F4F4F4"};color:${a > .55 ? "#fff" : "var(--ink)"}" data-tip="${esc(`${d}요일 ${h}시\n재원 ${n}명`)}">${n || ""}</span>`; }).join("")}`).join("")}
     </div><div class="heat-scale"><span>적음</span><i></i><span>많음</span></div>` : `<p class="empty">반 이름에서 요일·시간을 읽지 못했어요.</p>`;
-  /* 선생님별 */
-  const trows = snaps.flatMap(s => s.teachers.map(t => ({ ...t, branch:s.branch })));
-  trows.sort((a,b) => b.enrolled - a.enrolled);
-  const tmax = Math.max(1, ...trows.map(t => t.enrolled));
-  const teacherHTML = trows.length ? `<div class="tbl-wrap"><table class="ttable"><thead><tr><th>선생님</th>${state.branch === "all" ? "<th>원</th>" : ""}<th class="num">재원</th><th class="barc"></th>
-      <th class="num">최근 3개월 신규</th><th class="num">최근 3개월 퇴원</th><th class="num">퇴원율</th></tr></thead><tbody>
-      ${trows.map(t => { const lr = (t.enrolled + t.left3) ? Math.round(t.left3 / (t.enrolled + t.left3) * 1000) / 10 : 0;
-        return `<tr><td><b>${esc(t.name)}</b></td>${state.branch === "all" ? `<td>${esc(SHORT[t.branch])}</td>` : ""}<td class="num">${t.enrolled}</td>
-        <td class="barc"><span class="tb-bar"><i style="width:${t.enrolled / tmax * 100}%"></i></span></td><td class="num">${t.new3}</td><td class="num">${t.left3}</td>
-        <td class="num ${lr >= 10 ? "warn" : ""}">${lr}%</td></tr>`; }).join("")}</tbody></table></div>` : `<p class="empty">반 이름에서 선생님을 읽지 못했어요.</p>`;
+  /* 선생님별 (기간 선택) */
+  const teacherHTML = teacherTableHTML(snaps);
   /* 확인 목록 */
   const L = k => snaps.flatMap(s => (s.lists?.[k] || []).map((x, i) => ({ ...x, branch:s.branch, amt: k === "unpaid" ? privAmts(s.branch)[i] || 0 : 0 })));
   const lists = [
@@ -2868,10 +2944,10 @@ function kpiPageHTML(){
     <section class="card"><h2>샘플에서 등록까지 <span class="sub">이번 달</span></h2>${funnel}</section>
     <section class="card"><h2>요일 · 시간대별 재원생 <span class="sub">${snaps.length > 1 ? "원 합계, " : ""}반 이름 기준</span></h2>${heatHTML}</section>
   </div>
-  <div class="grid2">
-    <section class="card"><h2>선생님별 운영지표</h2>${teacherHTML}</section>
-    <section class="card"><h2>지금 확인이 필요한 것</h2>${checkHTML}</section>
-  </div>
+  <section class="card tcard"><div class="card-h"><h2>선생님별 운영지표 <span class="sub">${esc(periodLabel())}</span></h2>
+      <div class="seg2 sm" role="group" aria-label="기간">${KPI_PERIODS.map(([n, l]) => `<button type="button" data-act="kpi-period" data-n="${n}" aria-pressed="${state.kpiPeriod === n}">${l}</button>`).join("")}</div></div>
+    ${teacherHTML}</section>
+  <section class="card"><h2>지금 확인이 필요한 것</h2>${checkHTML}</section>
   ${state.isAdmin ? adminRowsHTML(bs) : ""}`;
 }
 
