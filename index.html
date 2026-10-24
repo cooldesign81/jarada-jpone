@@ -951,7 +951,7 @@ function seed(){
       return [["b1","박지은",md(2),"pyeongchon"],["b2","한지민",md(9),"banpo"],["b3","서지호",md(-3),"daechi"],["b4","김민수",md(16),"pyeongchon"],["b4","김민수",md(16),"banpo"]]
         .map(([e, name, m, branch]) => ({ id:`${e}_${branch}`, empId:e, name, md:m, branch, at:ago(5), createdBy:ADMIN, writer:"JP People" })); })(),
     teachers: BRANCH_KEYS.flatMap(b => DEMO_TEACH[b].map((n, i) => ({ id:`${b}${i}_${b}`, empId:b + i, name:n, branch:b,
-      startYm: (i === 4 ? addDays(todayISO(), -5) : addDays(todayISO(), -(60 + i * 240))).slice(0, 7), at:ago(5), createdBy:ADMIN, writer:"JP People" }))),
+      startYm: (i === 4 ? addDays(todayISO(), -5) : addDays(todayISO(), -(60 + i * 240))).slice(0, 7), active: !(b === "banpo" && i === 3), at:ago(5), createdBy:ADMIN, writer:"JP People" }))),
     members: DEMO_MEMBERS.map(m => ({ id:m.email, ...m, active:true, source:"people", at:ago(20), by:ADMIN })),
     bmGroups: [
       { id:"g1", name:"자주 쓰는 사이트", color:"#DE8619", branch:"all", order:1, at:ago(30), createdBy:ADMIN, writer:"대표" },
@@ -1714,7 +1714,7 @@ async function syncPeople(data){
   if (!state.loaded.birthdays || !state.loaded.teachers) { bdPending = data; return; }
   const bd = new Map(), tc = new Map();
   for (const e of data.bdays || []) for (const br of e.branches) bd.set(`${e.id}_${br}`, { empId:e.id, name:e.name, md:e.md, branch:br });
-  for (const e of data.starts || []) for (const br of e.branches) tc.set(`${e.id}_${br}`, { empId:e.id, name:e.name, startYm:e.startYm, branch:br });
+  for (const e of data.starts || []) for (const br of e.branches) tc.set(`${e.id}_${br}`, { empId:e.id, name:e.name, startYm:e.startYm, active:e.active, branch:br });
   const n = await syncColl("birthdays", bd) + await syncColl("teachers", tc);
   if (n) toast(`JP People 생일·입사월 ${n}건을 맞췄어요.`);
 }
@@ -2734,7 +2734,7 @@ async function loadPeople(db){
     if (/^\d{4}-\d{2}/.test(ja) && e.name) {
       const brs = [...new Set((e.orgIds || [e.orgId]).map(o => orgBranch[o]).filter(Boolean))];
       // 본사(지점 없음) 소속이면 세 원 모두에 넣어 이름으로 찾을 수 있게 함
-      starts.push({ id:d.id, name:e.name, startYm:ja.slice(0, 7), branches: brs.length ? brs : [...BRANCH_KEYS] });
+      starts.push({ id:d.id, name:e.name, startYm:ja.slice(0, 7), active:(e.status || "active") === "active", branches: brs.length ? brs : [...BRANCH_KEYS] });
     }
     if (e.status !== "resigned" && /^\d{4}-\d{2}-\d{2}$/.test(bd)) {
       const brs = [...new Set((e.orgIds || [e.orgId]).map(o => orgBranch[o]).filter(Boolean))];
@@ -2834,7 +2834,7 @@ const ymNext = ym => { const [y, m] = ym.split("-").map(Number); return m === 12
 // 선생님 이름 → 계산 시작 달(입사 다음 달). 같은 원 우선, 없으면 다른 원
 function teacherStart(name, branch){
   const hit = state.teachers.find(t => t.name === name && t.branch === branch) || state.teachers.find(t => t.name === name);
-  return hit ? { from: ymNext(hit.startYm), startYm: hit.startYm } : null;
+  return hit ? { from: ymNext(hit.startYm), startYm: hit.startYm, active: hit.active !== false } : null;
 }
 function teacherPeriod(t, snap){
   const n = state.kpiPeriod, months = snap.months, first = 12 - n;
@@ -2843,7 +2843,10 @@ function teacherPeriod(t, snap){
   const sum = k => idx.reduce((a, i) => a + (t.m[k][i] || 0), 0);
   const pre = idx.length ? (idx[0] === 0 ? t.m.enr0 : t.m.enr[idx[0] - 1]) : 0;   // 기간 시작 직전 월말 재원
   const newc = sum("new"), left = sum("left"), smp = sum("smp") + newc;
-  return { st, months:idx.length, partial: idx.length > 0 && idx.length < n,
+  // 월별 퇴원율 = 그 달 퇴원 ÷ (전달 말 재원 + 그 달 신규), 기간 평균
+  const mr = idx.map(i => { const b = (i === 0 ? t.m.enr0 : t.m.enr[i - 1]) + t.m.new[i]; return b ? t.m.left[i] / b * 100 : 0; });
+  const avgRate = mr.length ? Math.round(mr.reduce((a, x) => a + x, 0) / mr.length * 10) / 10 : 0;
+  return { st, months:idx.length, partial: idx.length > 0 && idx.length < n, avgRate,
     avg: idx.length ? Math.round(idx.reduce((a, i) => a + t.m.enr[i], 0) / idx.length * 10) / 10 : null,
     newc, left, leftRate: (pre + newc) ? Math.round(left / (pre + newc) * 1000) / 10 : 0,
     smp, reg: newc, regRate: smp ? Math.round(newc / smp * 1000) / 10 : 0 };
@@ -2852,13 +2855,19 @@ function teacherTableHTML(snaps){
   const rows = snaps.flatMap(s => (s.teachers || []).map(t => ({ t, s })));
   if (!rows.length) return `<p class="empty">반 이름에서 선생님을 읽지 못했어요.</p>`;
   if (rows.some(({ t }) => !t.m)) return `<p class="warn-note">기간별로 보려면 원생 명단을 한 번 다시 올려 주세요. (예전에 올린 명단에는 월별 기록이 없어요)</p>`;
-  const list = rows.map(({ t, s }) => ({ t, s, p: teacherPeriod(t, s) })).sort((a, b) => b.t.enrolled - a.t.enrolled);
+  const all = rows.map(({ t, s }) => ({ t, s, p: teacherPeriod(t, s) })).sort((a, b) => b.t.enrolled - a.t.enrolled);
+  // JP People에서 재직 중인 선생님만 보여 줌 (퇴직·휴직·JP People에 없는 이름은 숨김). JP People을 아직 못 불러왔으면 모두 보여 줌
+  const known = state.teachers.length > 0;
+  const list = known ? all.filter(x => x.p.st && x.p.st.active) : all;
+  const hidden = known ? all.filter(x => !(x.p.st && x.p.st.active)) : [];
+  const multi = state.kpiPeriod > 1;
   const tmax = Math.max(1, ...list.map(x => x.t.enrolled));
   const noPeople = list.filter(x => !x.p.st).length;
+  if (!list.length) return `<p class="empty">JP People에서 재직 중으로 확인된 선생님이 없어요.</p>`;
   const dash = `<span class="mut">–</span>`;
   return `<div class="tbl-wrap"><table class="ttable"><thead><tr><th>선생님</th>${state.branch === "all" ? "<th>원</th>" : ""}
       <th class="num">현재 재원</th><th class="barc"></th><th class="num">평균 재원</th>
-      <th class="num">신규</th><th class="num">퇴원</th><th class="num">퇴원율</th>
+      <th class="num">신규</th><th class="num">퇴원</th><th class="num">퇴원율</th>${multi ? `<th class="num" data-tip="달마다 낸 퇴원율의 평균">월평균 퇴원율</th>` : ""}
       <th class="num sep">샘플 수업</th><th class="num">샘플 등록</th><th class="num">등록율</th></tr></thead><tbody>
     ${list.map(({ t, s, p }) => {
       const none = p.months === 0;
@@ -2870,10 +2879,12 @@ function teacherTableHTML(snaps){
         <td class="num">${none ? dash : p.avg}</td>
         <td class="num">${none ? dash : p.newc}</td><td class="num">${none ? dash : p.left}</td>
         <td class="num ${!none && p.leftRate >= 10 ? "warn" : ""}">${none ? dash : p.leftRate + "%"}</td>
+        ${multi ? `<td class="num ${!none && p.avgRate >= 5 ? "warn" : ""}">${none ? dash : p.avgRate + "%"}</td>` : ""}
         <td class="num sep">${none ? dash : p.smp}</td><td class="num">${none ? dash : p.reg}</td><td class="num">${none ? dash : p.regRate + "%"}</td></tr>`; }).join("")}
     </tbody></table></div>
     <p class="fnote">평균 재원 = 기간 동안 매달 말 재원생의 평균(이번 달은 지금 기준). 퇴원율 = 퇴원 ÷ (기간 시작 재원 + 신규).
-      샘플 수업 = 샘플 후 아직 등록 안 한 원생 + 신규 등록, 등록율 = 신규 ÷ 샘플 수업. 입사한 달은 빼고 다음 달부터 계산해요${noPeople ? ` (입사일 모름 ${noPeople}명은 기간 전체)` : ""}.</p>`;
+      ${multi ? "월평균 퇴원율 = 달마다 (퇴원 ÷ 전달 말 재원 + 그 달 신규)의 평균. " : ""}샘플 수업 = 샘플 후 아직 등록 안 한 원생 + 신규 등록, 등록율 = 신규 ÷ 샘플 수업. 입사한 달은 빼고 다음 달부터 계산해요${noPeople ? ` (입사일 모름 ${noPeople}명은 기간 전체)` : ""}.
+      ${hidden.length ? `<br>JP People에서 재직 중이 아니라 숨긴 이름 ${hidden.length}명: ${esc([...new Set(hidden.map(x => x.t.name))].join(", "))}` : ""}</p>`;
 }
 
 function kpiPageHTML(){
