@@ -2903,11 +2903,29 @@ function teacherPeriod(t, snap){
     newc, left, leftRate: (pre + newc) ? Math.round(left / (pre + newc) * 1000) / 10 : 0,
     smp, reg: newc, regRate: smp ? Math.round(newc / smp * 1000) / 10 : 0 };
 }
+/* 전체 원을 볼 때 두 원 이상에서 일하는 선생님은 한 줄로 합침 (월별 숫자를 같은 달끼리 더함) */
+const brLabel = s => (s.branches || [s.branch]).map(b => SHORT[b]).join("·");
+function mergeTeachers(rows){
+  if (state.branch !== "all") return rows;
+  const by = new Map();
+  for (const r of rows) (by.get(r.t.name) || by.set(r.t.name, []).get(r.t.name)).push(r);
+  return [...by.values()].map(g => {
+    if (g.length === 1) return g[0];
+    const ref = g.map(x => x.s).sort((a, b) => b.base.localeCompare(a.base))[0].months, pre = prevYm(ref[0]);
+    const m = { enr: ref.map(() => 0), new: ref.map(() => 0), left: ref.map(() => 0), smp: ref.map(() => 0), enr0: 0 };
+    for (const { t, s } of g){
+      ref.forEach((ym, i) => { const j = s.months.indexOf(ym); if (j >= 0) for (const k of ["enr","new","left","smp"]) m[k][i] += t.m[k][j] || 0; });
+      const j0 = s.months.indexOf(pre); m.enr0 += j0 >= 0 ? t.m.enr[j0] : s.months[0] === ref[0] ? t.m.enr0 : 0;
+    }
+    const branches = BRANCH_KEYS.filter(b => g.some(x => x.s.branch === b));
+    return { t: { name: g[0].t.name, enrolled: g.reduce((a, x) => a + x.t.enrolled, 0), m }, s: { branch: branches[0], branches, months: ref } };
+  });
+}
 function teacherTableHTML(snaps){
   const rows = snaps.flatMap(s => (s.teachers || []).map(t => ({ t, s })));
   if (!rows.length) return `<p class="empty">반 이름에서 선생님을 읽지 못했어요.</p>`;
   if (rows.some(({ t }) => !t.m)) return `<p class="warn-note">기간별로 보려면 원생 명단을 한 번 다시 올려 주세요. (예전에 올린 명단에는 월별 기록이 없어요)</p>`;
-  const all = rows.map(({ t, s }) => ({ t, s, p: teacherPeriod(t, s) })).sort((a, b) => b.t.enrolled - a.t.enrolled);
+  const all = mergeTeachers(rows).map(({ t, s }) => ({ t, s, p: teacherPeriod(t, s) })).sort((a, b) => b.t.enrolled - a.t.enrolled);
   // JP People에서 재직 중인 선생님만 보여 줌 (퇴직·휴직·JP People에 없는 이름은 숨김). JP People을 아직 못 불러왔으면 모두 보여 줌
   const known = state.teachers.length > 0;
   const active = known ? all.filter(x => x.p.st && x.p.st.active) : all;
@@ -2915,7 +2933,7 @@ function teacherTableHTML(snaps){
   const q = state.tQ.trim();
   const list = active.filter(x => (!q || x.t.name.includes(q)) && (!state.tWarn || (x.p.months > 0 && x.p.leftRate >= 10)));
   // 정렬: 머리글을 누르면 그 칸으로, 다시 누르면 반대로. 숫자가 없는(입사 직후) 선생님은 항상 아래
-  const SV = { name:x => x.t.name, branch:x => SHORT[x.s.branch], enrolled:x => x.t.enrolled, avg:x => x.p.avg, newc:x => x.p.newc, left:x => x.p.left,
+  const SV = { name:x => x.t.name, branch:x => brLabel(x.s), enrolled:x => x.t.enrolled, avg:x => x.p.avg, newc:x => x.p.newc, left:x => x.p.left,
     leftRate:x => x.p.leftRate, avgRate:x => x.p.avgRate, smp:x => x.p.smp, reg:x => x.p.reg, regRate:x => x.p.regRate };
   const { k: sk, dir } = state.tSort, get = SV[sk] || SV.enrolled, textKey = sk === "name" || sk === "branch";
   list.sort((a, b) => {
@@ -2950,7 +2968,7 @@ function teacherTableHTML(snaps){
       const note = !p.st ? `<small class="mut" data-tip="JP People에서 '${esc(t.name)}' 이름을 찾지 못해 입사일을 몰라요. 기간 전체로 계산했어요. JP People의 이름을 반 이름의 선생님 이름과 똑같이 맞춰 주세요.">입사일 모름</small>`
         : none ? `<small class="mut">${md(p.st.startYm + "-01").replace(/\.1$/, "월")} 입사, 다음 달부터 계산</small>`
         : p.partial ? `<small class="mut" data-tip="입사한 달은 빼고 계산해요">${p.months}개월치</small>` : "";
-      return `<tr><td><b>${esc(t.name)}</b>${note}</td>${state.branch === "all" ? `<td>${esc(SHORT[s.branch])}</td>` : ""}
+      return `<tr><td><b>${esc(t.name)}</b>${note}</td>${state.branch === "all" ? `<td>${esc(brLabel(s))}</td>` : ""}
         <td class="num">${t.enrolled}</td><td class="barc"><span class="tb-bar"><i style="width:${t.enrolled / tmax * 100}%"></i></span></td>
         <td class="num">${none ? dash : p.avg}</td>
         <td class="num">${none ? dash : p.newc}</td><td class="num">${none ? dash : p.left}</td>
@@ -2960,6 +2978,7 @@ function teacherTableHTML(snaps){
     </tbody></table></div>
     <p class="fnote">평균 재원 = 기간 동안 매달 말 재원생의 평균(이번 달은 지금 기준). 퇴원율 = 퇴원 ÷ (기간 시작 재원 + 신규).
       ${multi ? "월평균 퇴원율 = 달마다 (퇴원 ÷ 전달 말 재원 + 그 달 신규)의 평균. " : ""}샘플 수업 = 샘플 후 아직 등록 안 한 원생 + 신규 등록, 등록율 = 신규 ÷ 샘플 수업. 입사한 달은 빼고 다음 달부터 계산해요${noPeople ? ` (입사일 모름 ${noPeople}명은 기간 전체)` : ""}.
+      ${state.branch === "all" && list.some(x => x.s.branches) ? "두 원 이상에서 일하는 선생님은 원별 숫자를 합쳐 한 줄로 보여요. " : ""}
       ${hidden.length ? `<br>JP People에서 재직 중이 아니라 숨긴 이름 ${hidden.length}명: ${esc([...new Set(hidden.map(x => x.t.name))].join(", "))}` : ""}</p>`;
 }
 
