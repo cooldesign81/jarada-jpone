@@ -1,0 +1,96 @@
+rules_version = '2';
+// 자라다 JP ONE — Firestore 보안 규칙
+// 대표: 모든 원 읽기/쓰기.  원 공용 계정: "모든 원" + 자기 원 읽기, 자기 원만 쓰기.
+// 원 계정 목록은 index.html 의 BRANCH_BY_EMAIL 과 반드시 같게 유지하세요.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn()  { return request.auth != null; }
+    function email()     { return request.auth.token.email; }
+    function isAdmin()   { return signedIn() && email() == 'jinhyuck@gmail.com' && request.auth.token.email_verified == true; }
+    function myBranch()  {
+      return {
+        'jarada_boys@naver.com':   'pyeongchon',
+        'jarada-banpo@naver.com':  'banpo',
+        'jarada-daechi@naver.com': 'daechi'
+      }.get(email(), 'none');
+    }
+    // JP ONE 회원 = 대표 또는 등록된 원 계정. 아무 Google 계정으로 로그인해도 읽을 수 없게 함
+    function isMember()     { return isAdmin() || myBranch() != 'none'; }
+    function validBranch(b) { return b in ['all', 'pyeongchon', 'banpo', 'daechi']; }
+    function canSee(b)      { return isAdmin() || b == 'all' || b == myBranch(); }
+    function canWrite(b)    { return isAdmin() || (b == myBranch() && b != 'none'); }
+
+    // 새 문서: 작성자 이메일이 본인이어야 하고, 쓸 수 있는 원이어야 함
+    function okCreate() {
+      let d = request.resource.data;
+      return isMember() && validBranch(d.branch) && canWrite(d.branch) && d.createdBy == email();
+    }
+    // 수정: 원래 원과 바뀐 원 모두 쓸 수 있어야 하고, 작성자는 못 바꿈
+    function okUpdate() {
+      return isMember() && canWrite(resource.data.branch)
+        && validBranch(request.resource.data.branch) && canWrite(request.resource.data.branch)
+        && request.resource.data.createdBy == resource.data.createdBy;
+    }
+    function okDelete() { return isMember() && canWrite(resource.data.branch); }
+    function okRead()   { return isMember() && canSee(resource.data.branch); }
+
+    match /portalNotices/{id} {
+      allow read: if okRead();
+      allow create: if okCreate() && request.resource.data.title is string && request.resource.data.title.size() <= 100;
+      allow update: if okUpdate() && request.resource.data.title.size() <= 100;
+      allow delete: if okDelete();
+    }
+    match /portalEvents/{id} {
+      allow read: if okRead();
+      allow create: if okCreate() && request.resource.data.date is string && request.resource.data.date.matches('^\\d{4}-\\d{2}-\\d{2}$');
+      allow update: if okUpdate();
+      allow delete: if okDelete();
+    }
+    match /portalTodos/{id} {
+      allow read: if okRead();
+      // 할 일은 반드시 한 원에 속함
+      allow create: if okCreate() && request.resource.data.branch != 'all';
+      allow update: if okUpdate() && request.resource.data.branch != 'all';
+      allow delete: if okDelete();
+    }
+    match /portalFiles/{id} {
+      allow read: if okRead();
+      allow create: if okCreate();
+      allow update: if okUpdate();
+      allow delete: if okDelete();
+    }
+    match /portalBookmarks/{id} {
+      allow read: if okRead();
+      allow create: if okCreate() && request.resource.data.url.matches('^https?://.*');
+      allow update: if okUpdate() && request.resource.data.url.matches('^https?://.*');
+      allow delete: if okDelete();
+    }
+    // 자료실 폴더: 모두 읽고, 대표만 추가·수정·삭제
+    match /portalFolders/{id} {
+      allow read: if isMember();
+      allow create, update: if isAdmin() && request.resource.data.name is string && request.resource.data.name.size() <= 20;
+      allow delete: if isAdmin();
+    }
+    // 운영지표 계산 결과: 문서 ID = 원 (pyeongchon / banpo / daechi)
+    match /portalKpi/{branch} {
+      allow read: if isMember() && (isAdmin() || resource.data.branch == myBranch());
+      allow create, update: if isMember() && canWrite(branch) && branch != 'all'
+        && request.resource.data.branch == branch && request.resource.data.uploadedBy == email();
+      allow delete: if isAdmin();
+    }
+    // 운영지표 금액(미납액): 원 계정은 올리기만 하고, 읽기는 대표만
+    match /portalKpiPrivate/{branch} {
+      allow read: if isAdmin();
+      allow create, update: if isMember() && canWrite(branch) && branch != 'all'
+        && request.resource.data.branch == branch && request.resource.data.uploadedBy == email();
+      allow delete: if isAdmin();
+    }
+    match /portalBmGroups/{id} {
+      allow read: if okRead();
+      allow create: if okCreate() && request.resource.data.name is string && request.resource.data.name.size() <= 20;
+      allow update: if okUpdate() && request.resource.data.name.size() <= 20;
+      allow delete: if okDelete();
+    }
+  }
+}

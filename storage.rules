@@ -1,0 +1,17 @@
+rules_version = '2';
+// 자라다 JP ONE — Storage 보안 규칙 (자료실 파일)
+// JP ONE 회원(대표 + 등록된 원 계정)만 읽고 올릴 수 있고, 파일 하나는 100MB까지.
+// 원 계정 목록은 firestore.rules · index.html 의 목록과 같게 유지하세요.
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isMember() {
+      return request.auth != null && request.auth.token.email in
+        ['jinhyuck@gmail.com', 'jarada_boys@naver.com', 'jarada-banpo@naver.com', 'jarada-daechi@naver.com'];
+    }
+    match /portal-files/{fileId}/{name} {
+      allow read: if isMember();
+      allow create: if isMember() && request.resource.size < 100 * 1024 * 1024;
+      allow delete: if isMember();
+    }
+  }
+}
