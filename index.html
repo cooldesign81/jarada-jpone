@@ -442,6 +442,7 @@
   .fname{background:none;border:0;padding:0;font-weight:700;color:var(--ink);cursor:pointer;text-align:left;font-size:14px}
   .fname:hover{text-decoration:underline;text-underline-offset:3px}
   .fsub{display:block;font-size:12px;color:var(--text-sub);margin-top:2px}
+  .fdesc{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:13px;color:var(--text);margin-top:4px;line-height:1.5;max-width:560px;white-space:pre-line}
   .nofile{font-size:12px;color:var(--text-sub)}
   .fnote{font-size:12px;color:var(--text-sub);margin:16px 0 0}
   .uplist{list-style:none;margin:0;padding:0;display:grid;gap:8px;max-height:220px;overflow:auto}
@@ -458,6 +459,7 @@
   .vlist{list-style:none;margin:0;padding:0}
   .vlist li{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-top:1px solid var(--line);font-size:13px}
   .vlist li:first-child{border-top:0}
+  .vlist .vnote{display:block;color:var(--text);margin-top:2px;white-space:pre-line}
   .vlist a{color:var(--s-info);font-weight:700}
 
   @media (max-width:1180px){ .files{grid-template-columns:220px minmax(0,1fr)} }
@@ -863,14 +865,14 @@ function seed(){
       { id:"t7", title:"지난달 일일보고 정리", due:d(-3), branch:"pyeongchon", assignee:"", done:true, doneAt:ago(2), doneBy:"평촌원", at:ago(6), createdBy:PC, writer:"평촌원" }
     ],
     files: [
-      { id:"f1", name:"재료 주문 양식 (2026 개정).xlsx", folder:"forms", branch:"all", size:48213, at:ago(40), updatedAt:ago(8), createdBy:ADMIN, writer:"대표",
-        versions:[ { size:45120, at:ago(40), by:"대표" }, { size:48213, at:ago(8), by:"재료 담당" } ] },
+      { id:"f1", name:"재료 주문 양식 (2026 개정).xlsx", desc:"매달 25일까지 재료 담당에게 보내는 주문 양식이에요. 품목 시트에서 고르고 수량만 적으면 돼요.", folder:"forms", branch:"all", size:48213, at:ago(40), updatedAt:ago(8), createdBy:ADMIN, writer:"대표",
+        versions:[ { size:45120, at:ago(40), by:"대표" }, { size:48213, at:ago(8), by:"재료 담당", note:"점토·물감 품목 추가" } ] },
       { id:"f2", name:"수업 결석 안내문.hwp", folder:"forms", branch:"all", size:30210, at:ago(22), createdBy:ADMIN, writer:"대표", versions:[ { size:30210, at:ago(22), by:"대표" } ] },
       { id:"f3", name:"학부모 동의서 (보강·샘플).pdf", folder:"docs", branch:"all", size:182330, at:ago(29), createdBy:ADMIN, writer:"대표", versions:[ { size:182330, at:ago(29), by:"대표" } ] },
       { id:"f4", name:"직원 근무 확인서.hwp", folder:"legal", branch:"all", size:25100, at:ago(44), createdBy:ADMIN, writer:"대표", versions:[ { size:25100, at:ago(44), by:"대표" } ] },
       { id:"f5", name:"사업자등록증 사본.pdf", folder:"branch", branch:"daechi", size:310440, at:ago(57), createdBy:DC, writer:"대치원", versions:[ { size:310440, at:ago(57), by:"대치원" } ] },
       { id:"f6", name:"정산 증빙 제출 체크리스트.xlsx", folder:"forms", branch:"all", size:19870, at:ago(73), createdBy:ADMIN, writer:"대표", versions:[ { size:19870, at:ago(73), by:"대표" } ] },
-      { id:"f7", name:"신규 교사 교육 1주차.pdf", folder:"edu", branch:"all", size:2410330, at:ago(12), createdBy:ADMIN, writer:"대표", versions:[ { size:2410330, at:ago(12), by:"대표" } ] },
+      { id:"f7", name:"신규 교사 교육 1주차.pdf", desc:"입사 첫 주에 보는 교육 자료. 수업 흐름, 아들 코칭 기본, 학부모 응대 순서로 되어 있어요.", folder:"edu", branch:"all", size:2410330, at:ago(12), createdBy:ADMIN, writer:"대표", versions:[ { size:2410330, at:ago(12), by:"대표" } ] },
       { id:"f8", name:"할로윈 행사 사진.zip", folder:"photo", branch:"banpo", size:48230110, at:ago(1), createdBy:BP, writer:"반포원", versions:[ { size:48230110, at:ago(1), by:"반포원" } ] }
     ],
     kpi: BRANCH_KEYS.map(b => ({ id:b, ...splitSnapshot(buildSnapshot(demoRows(b), b, t)).pub, fileName:"샘플 원생 목록.xlsx", uploadedAt:ago(1), uploadedBy:ADMIN, uploader:"대표" })),
@@ -1662,7 +1664,7 @@ function filesPageHTML(){
   const fl = folderList(), known = new Set(fl.map(f => f.id)), loose = vis.filter(f => !known.has(f.folder));
   if (state.folder !== "all" && state.folder !== "_none" && !known.has(state.folder)) state.folder = "all";
   const inFolder = state.folder === "all" ? vis : state.folder === "_none" ? loose : vis.filter(f => f.folder === state.folder);
-  const list = inFolder.filter(f => !q || f.name.toLowerCase().includes(q)).sort((a,b) => (b.updatedAt || b.at || 0) - (a.updatedAt || a.at || 0));
+  const list = inFolder.filter(f => !q || f.name.toLowerCase().includes(q) || (f.desc || "").toLowerCase().includes(q)).sort((a,b) => (b.updatedAt || b.at || 0) - (a.updatedAt || a.at || 0));
   const canUp = branchOptions("files").length > 0, folderName = state.folder === "all" ? "전체 자료" : state.folder === "_none" ? "분류 안 됨" : fl.find(x => x.id === state.folder)?.name;
   return `
   <div class="files">
@@ -1682,7 +1684,7 @@ function filesPageHTML(){
       <div class="card-h">
         <h2>${esc(folderName)}<span class="sub">최근 수정순</span></h2>
         <label class="fsearch"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-          <input type="search" id="fileQ" placeholder="파일 이름 찾기" value="${esc(state.fileQ)}" data-fk="fileQ" aria-label="파일 이름 찾기"></label>
+          <input type="search" id="fileQ" placeholder="이름·설명으로 찾기" value="${esc(state.fileQ)}" data-fk="fileQ" aria-label="파일 이름이나 설명으로 찾기"></label>
         ${canUp ? `<button type="button" class="btn btn-primary btn-sm" data-act="pick">파일 올리기</button>` : ""}
       </div>
       ${list.length ? `<table class="ftable">
@@ -1691,6 +1693,7 @@ function filesPageHTML(){
           const last = f.versions?.[f.versions.length - 1] || {}, url = DB.fileUrl(last), vcount = f.versions?.length || 1;
           return `<tr>
             <td><button type="button" class="fname" data-act="file-open" data-id="${esc(f.id)}">${esc(f.name)}</button>
+              ${f.desc ? `<span class="fdesc">${esc(f.desc)}</span>` : ""}
               <span class="fsub">${sizeLabel(f.size || last.size || 0)}${vcount > 1 ? `, 버전 ${vcount}개` : ""}</span></td>
             <td class="c-type">${esc(fileType(f.name))}</td>
             ${state.branch === "all" ? `<td class="c-br">${esc(f.branch === "all" ? "공통" : SHORT[f.branch] || "")}</td>` : ""}
@@ -1891,25 +1894,30 @@ function uploadForm(files, target){
     title: target ? "새 버전 올리기" : `파일 올리기 (${files.length}개)`,
     fields: `<ul class="uplist">${files.map((f,i) => `<li><span class="un">${esc(f.name)}</span><span class="us">${sizeLabel(f.size)}</span>
         <span class="bar"><i id="up-${i}"></i></span></li>`).join("")}</ul>
-      ${target ? `<p class="hint">'${esc(target.name)}'의 새 버전으로 올라가요. 이전 버전은 그대로 남아요.</p>`
-        : `<div class="row2">${fSelect("폴더", "folder", folderList().map(f => [f.id, f.name]), folder0)}${fBranch("files", state.branch)}</div>
+      ${target ? `<p class="hint">'${esc(target.name)}'의 새 버전으로 올라가요. 이전 버전은 그대로 남아요.</p>
+           ${fArea("이번 버전에서 바뀐 점 (선택)", "note", "", 'rows="2" maxlength="200" placeholder="예: 3월 일정 반영, 오타 수정"')}`
+        : `${fArea("설명", "desc", "", `rows="3" maxlength="500" required placeholder="어떤 자료인지, 언제·어떻게 쓰는지 적어 주세요.${files.length > 1 ? " (올리는 파일 모두에 같은 설명이 붙어요)" : ""}"`)}
+           <div class="row2">${fSelect("폴더", "folder", folderList().map(f => [f.id, f.name]), folder0)}${fBranch("files", state.branch)}</div>
            ${fWriter()}`}`,
     saveLabel: "올리기",
     async onSave(form){
       const folder = target ? target.folder : val(form,"folder"), branch = target ? target.branch : val(form,"branch");
       if (!target && !branchOptions("files").includes(branch)) return formErr("이 범위에는 파일을 올릴 수 없어요.");
+      const desc = target ? "" : val(form,"desc").trim(), note = target ? val(form,"note").trim() : "";
+      if (!target && !desc) return formErr("자료 설명을 적어 주세요.");
       if (!target) keepWriter(form);
       for (let i = 0; i < files.length; i++){
         const f = files[i], bar = $(`up-${i}`), prog = p => { if (bar) bar.style.width = p + "%"; };
         if (target){
           const ver = await DB.putFile(target.id, f, prog);
+          if (note) ver.note = note;
           await DB.update("files", target.id, { versions:[...(target.versions || []), ver], size:f.size });
         } else {
           // 같은 폴더·범위에 같은 이름이 있으면 새 버전으로 쌓기
           const same = state.files.find(x => x.name === f.name && x.folder === folder && x.branch === branch);
           const id = same ? same.id : DB.newId(), ver = await DB.putFile(id, f, prog);
-          if (same) await DB.update("files", id, { versions:[...(same.versions || []), ver], size:f.size });
-          else await DB.addWithId("files", id, { name:f.name, folder, branch, size:f.size, versions:[ver] });
+          if (same) await DB.update("files", id, { versions:[...(same.versions || []), ver], size:f.size, desc });
+          else await DB.addWithId("files", id, { name:f.name, desc, folder, branch, size:f.size, versions:[ver] });
         }
       }
       toast(target ? "새 버전을 올렸어요." : `파일 ${files.length}개를 올렸어요.`);
@@ -1924,13 +1932,20 @@ function fileDetail(f){
     title: "파일 정보",
     fields: `<div class="fdet"><b>${esc(f.name)}</b>
         <span>${esc(fileType(f.name))}, ${sizeLabel(f.size || 0)}, ${esc(folderList().find(x => x.id === f.folder)?.name || "분류 안 됨")}, ${esc(scopeLabel(f.branch))}</span></div>
+      ${editable ? fArea("설명", "desc", f.desc || "", 'rows="3" maxlength="500" placeholder="어떤 자료인지, 언제·어떻게 쓰는지 적어 주세요."')
+        : `<p class="fdesc" style="-webkit-line-clamp:unset">${f.desc ? esc(f.desc) : "설명이 없어요."}</p>`}
       <h3 class="vh">버전 ${vs.length}개 <small>위가 최신</small></h3>
       <ul class="vlist">${vs.map((v,i) => { const url = DB.fileUrl(v);
-        return `<li><span>${i === 0 ? "<b>최신</b> " : ""}${new Date(v.at).toLocaleDateString("ko-KR")} ${esc(v.by || "")}, ${sizeLabel(v.size || 0)}</span>
+        return `<li><span>${i === 0 ? "<b>최신</b> " : ""}${new Date(v.at).toLocaleDateString("ko-KR")} ${esc(v.by || "")}, ${sizeLabel(v.size || 0)}${v.note ? `<span class="vnote">${esc(v.note)}</span>` : ""}</span>
           ${url ? `<a href="${esc(url)}" download="${esc(f.name)}" target="_blank" rel="noopener">받기</a>` : `<span class="nofile">샘플</span>`}</li>`; }).join("")}</ul>
       ${editable ? `<button type="button" class="btn btn-ghost btn-sm" id="newVerBtn">새 버전 올리기</button>` : ""}`,
-    saveLabel: "닫기",
-    async onSave(){ return true; },
+    saveLabel: editable ? "저장" : "닫기",
+    async onSave(form){
+      if (!editable) return true;
+      const desc = val(form,"desc").trim();
+      if (desc !== (f.desc || "")) { await DB.update("files", f.id, { desc }); toast("설명을 저장했어요."); }
+      return true;
+    },
     onDelete: editable && (async () => { await DB.dropFiles(f.versions || []); await DB.remove("files", f.id); toast("파일을 삭제했어요."); }),
     deleteLabel: "파일 삭제"
   });
