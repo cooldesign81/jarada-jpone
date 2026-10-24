@@ -12,7 +12,7 @@
   - 배포: GitHub Pages (이 index.html 하나)
   - Firebase 프로젝트 하나에 세 원의 공지/일정/할 일/자료/북마크를 같이 저장 (각 문서의 branch 필드로 구분)
     · Authentication: 이메일/비밀번호 + Google
-    · Firestore 컬렉션: portalNotices, portalEvents, portalTodos, portalFiles, portalFolders, portalBookmarks, portalBmGroups, portalKpi
+    · Firestore 컬렉션: portalNotices, portalEvents, portalTodos, portalFiles, portalFolders, portalBookmarks, portalBmGroups, portalKpi, portalMembers(직원 계정)
     · 운영지표: 원생 명단 엑셀 → 계산 결과만 portalKpi/{원}에 저장
       매출은 결제 매니저(jarada-checkin), 선생님 현황은 JP People(jarada-people)을 대표 계정으로 직접 읽음 (저장 안 함)
     · Storage: portal-files/ 폴더 (자료실 파일)
@@ -207,6 +207,33 @@
   .ev .t{flex:1;color:var(--ink);font-weight:600}
   .ev .w{flex:none;font-size:12px;color:var(--text-sub)}
   .cal-none{font-size:13px;color:var(--text-sub);margin:0}
+  /* 내 구글 일정 (본인 화면에만) — 공유 일정과 헷갈리지 않게 점선 */
+  .chip.mine{background:#fff;border:1px dashed #BDBDBD;border-left:3px solid var(--text-sub)}
+  .chip.mine b{font-weight:700;color:var(--text-sub)}
+  .dots i.mine{background:#fff !important;box-shadow:inset 0 0 0 1.5px var(--text-sub)}
+  .cal-legend i.mine{background:#fff;box-shadow:inset 0 0 0 1.5px var(--text-sub)}
+  .ev .k.mine{background:#fff;color:var(--text);box-shadow:inset 0 0 0 1px #9E9E9E}
+  .cal-nav .gc-on{border-color:var(--ink);font-weight:700}
+  .gc-err{font-size:12px;color:var(--s-critical);margin:-4px 0 10px}
+  .gc-pick{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:14px;color:var(--ink);cursor:pointer}
+  .gc-pick i{width:12px;height:12px;border-radius:3px;flex:none}
+  fieldset.fld{border:0;padding:0;margin:0}
+  /* 직원 계정 */
+  .mtable{width:100%;border-collapse:collapse;font-size:13px}
+  .mtable th{text-align:left;font-size:12px;color:var(--text-sub);font-weight:700;padding:6px 6px;border-bottom:1px solid var(--line)}
+  .mtable td{padding:6px;border-bottom:1px solid var(--line);color:var(--ink);vertical-align:middle}
+  .mtable td small{display:block;font-size:11px;color:var(--text-sub)}
+  .mtable .em{word-break:break-all;color:var(--text)}
+  .mtable tr.off td{color:#AAA}
+  .mtable select.inp{padding:4px 6px;width:auto}
+  .mem-wrap{max-height:320px;overflow:auto}
+  .mem-add{display:grid;grid-template-columns:1fr 1.6fr auto auto;gap:8px;align-items:end}
+  .mem-add .fld span{font-size:12px}
+  .imp-sum{font-size:13px;color:var(--text);margin:0}
+  .tagk{display:inline-block;font-size:11px;font-weight:700;padding:1px 6px;border-radius:4px;background:#F2F2F2;color:var(--ink)}
+  @media (max-width:768px){ .mem-add{grid-template-columns:1fr 1fr} }
+  .login-or{display:flex;align-items:center;gap:10px;margin:18px 0 10px;font-size:12px;color:var(--text-sub)}
+  .login-or::before,.login-or::after{content:"";flex:1;height:1px;background:var(--line)}
 
   /* 체크포인트 */
   .checks{list-style:none;margin:0;padding:0;display:grid;gap:8px}
@@ -586,13 +613,14 @@
   </div>
   <div class="login-card">
     <h2>직원 로그인</h2>
-    <p>원에서 사용하는 계정으로 로그인해 주세요.</p>
+    <p>선생님은 본인 구글 계정으로 로그인해 주세요.</p>
+    <button id="googleBtn" class="btn btn-primary" type="button">Google 계정으로 로그인</button>
+    <div class="login-or">원 공용 계정</div>
     <form id="loginForm">
       <label class="field"><input class="inp" id="email" type="email" placeholder="이메일" autocomplete="username" required></label>
       <label class="field"><input class="inp" id="pw" type="password" placeholder="비밀번호" autocomplete="current-password" required></label>
-      <button class="btn btn-primary" type="submit">로그인</button>
+      <button class="btn btn-sub" type="submit">공용 계정으로 로그인</button>
     </form>
-    <button id="googleBtn" class="btn btn-sub" type="button">Google 계정으로 로그인 (관리자)</button>
     <div id="loginErr" class="err" role="alert"></div>
   </div>
 </div>
@@ -605,6 +633,7 @@
     <span class="demo-box hidden" id="demoBox"><span>미리보기 계정</span><select id="demoAs" aria-label="미리보기 계정"></select><button type="button" id="demoReset">샘플로 되돌리기</button></span>
     <span class="date" id="today"></span>
     <span class="email" id="whoEmail"></span>
+    <button class="lo hidden" id="membersBtn" type="button">직원 계정</button>
     <button class="lo" id="logoutBtn" type="button">로그아웃</button>
   </div>
 
@@ -674,6 +703,11 @@ const FIREBASE_CONFIG = {
 };
 
 const ADMIN_EMAILS = ["jinhyuck@gmail.com"];
+/* 미리보기 전용 샘플 선생님 계정 (실제 직원 계정은 Firestore portalMembers 에 있음) */
+const DEMO_MEMBERS = [
+  { email:"minsu.teacher@gmail.com", name:"김민수", branch:"pyeongchon" },
+  { email:"jimin.teacher@gmail.com", name:"한지민", branch:"banpo" }
+];
 /* 원 공용 계정 → 소속 원. 보안 규칙(firestore.rules)의 목록과 반드시 같아야 해요 */
 const BRANCH_BY_EMAIL = {
   "jarada_boys@naver.com": "pyeongchon",
@@ -685,8 +719,8 @@ const BRANCH_KEYS = ["pyeongchon","banpo","daechi"];
 const SHORT = { pyeongchon:"평촌", banpo:"반포", daechi:"대치" };
 
 /* Firestore 컬렉션 이름 */
-const COLL = { notices:"portalNotices", events:"portalEvents", todos:"portalTodos", files:"portalFiles", bookmarks:"portalBookmarks", bmGroups:"portalBmGroups", kpi:"portalKpi", kpiPriv:"portalKpiPrivate", folders:"portalFolders" };
-const COLL_LABEL = { notices:"공지", events:"일정", todos:"할 일", files:"자료", bookmarks:"북마크", bmGroups:"북마크 구분", kpi:"운영지표", kpiPriv:"운영지표(금액)", folders:"자료실 폴더" };
+const COLL = { notices:"portalNotices", events:"portalEvents", todos:"portalTodos", files:"portalFiles", bookmarks:"portalBookmarks", bmGroups:"portalBmGroups", kpi:"portalKpi", kpiPriv:"portalKpiPrivate", folders:"portalFolders", members:"portalMembers" };
+const COLL_LABEL = { notices:"공지", events:"일정", todos:"할 일", files:"자료", bookmarks:"북마크", bmGroups:"북마크 구분", kpi:"운영지표", kpiPriv:"운영지표(금액)", folders:"자료실 폴더", members:"직원 계정" };
 /* 북마크 구분선 색 */
 const LINE_COLORS = [["#222222","검정"],["#DE8619","주황"],["#C98100","황토"],["#D1495B","빨강"],["#8B5CF6","보라"],["#2563A6","파랑"],["#1F7A4D","초록"],["#767676","회색"]];
 
@@ -813,13 +847,13 @@ function fileType(name){
 /* ========= 상태 ========= */
 const state = {
   user:null, isAdmin:false, myBranch:null, branch:"all", tab:"home",
-  notices:[], events:[], todos:[], files:[], bookmarks:[], bmGroups:[], kpi:{}, kpiPriv:{}, folders:[],
+  notices:[], events:[], todos:[], files:[], bookmarks:[], bmGroups:[], kpi:{}, kpiPriv:{}, folders:[], members:[], member:null,
   cal:{ y:new Date().getFullYear(), m:new Date().getMonth(), sel:todayISO() },
   openNotice:null, todoFilter:"open", folder:"all", fileQ:""
 };
 let fb = null, unsubs = [];
 
-const writerName = () => store.get("portal.writer") || (state.isAdmin ? "대표" : (BRANCHES[state.myBranch] || "직원"));
+const writerName = () => state.member?.name || store.get("portal.writer") || (state.isAdmin ? "대표" : (BRANCHES[state.myBranch] || "직원"));
 const visible = it => state.branch === "all" || it.branch === "all" || it.branch === state.branch;
 const canEdit = it => state.isAdmin || (!!state.myBranch && it.branch === state.myBranch);
 /* 쓰기 가능한 원 목록. 할 일은 반드시 한 원에 속함("모든 원" 없음) */
@@ -878,6 +912,7 @@ function seed(){
     kpi: BRANCH_KEYS.map(b => ({ id:b, ...splitSnapshot(buildSnapshot(demoRows(b), b, t)).pub, fileName:"샘플 원생 목록.xlsx", uploadedAt:ago(1), uploadedBy:ADMIN, uploader:"대표" })),
     kpiPriv: BRANCH_KEYS.map(b => ({ id:b, ...splitSnapshot(buildSnapshot(demoRows(b), b, t)).priv, uploadedAt:ago(1), uploadedBy:ADMIN })),
     folders: DEFAULT_FOLDERS.map((f, i) => ({ ...f, order:i + 1, branch:"all", at:ago(60), createdBy:ADMIN, writer:"대표" })),
+    members: DEMO_MEMBERS.map(m => ({ id:m.email, ...m, active:true, source:"people", at:ago(20), by:ADMIN })),
     bmGroups: [
       { id:"g1", name:"자주 쓰는 사이트", color:"#DE8619", branch:"all", order:1, at:ago(30), createdBy:ADMIN, writer:"대표" },
       { id:"g2", name:"문자 · 알림", color:"#2563A6", branch:"all", order:2, at:ago(30), createdBy:ADMIN, writer:"대표" },
@@ -940,6 +975,12 @@ const DB = (() => {
       delete doc.id;
       if (DEMO){ ensure(); mem[name] = mem[name].filter(x => x.id !== id).concat([{ id, ...doc }]); save(); emit(name); return; }
       await fb.F.setDoc(fb.F.doc(fb.db, COLL[name], id), doc);
+    },
+    /* 직원 계정 한 명 읽기 (로그인할 때 본인 것만) */
+    async getMember(email){
+      if (DEMO){ ensure(); return (mem.members || []).find(m => m.id === email) || null; }
+      const s = await fb.F.getDoc(fb.F.doc(fb.db, COLL.members, email));
+      return s.exists() ? { id: s.id, ...s.data() } : null;
     },
     async remove(name, id){
       if (DEMO){ ensure(); mem[name] = mem[name].filter(x => x.id !== id); save(); emit(name); return; }
@@ -1009,7 +1050,7 @@ $("dlgFoot").addEventListener("click", async e => {
   const a = e.target.closest("[data-dlg]")?.dataset.dlg;
   if (a === "cancel") $("dlg").close();
   if (a === "delete" && dlgCtx.onDelete){
-    if (await confirmBox(dlgCtx.deleteMsg || "삭제하면 되돌릴 수 없어요. 삭제할까요?")) {
+    if (await confirmBox(dlgCtx.deleteMsg || "삭제하면 되돌릴 수 없어요. 삭제할까요?", dlgCtx.deleteOk || "삭제")) {
       try { await dlgCtx.onDelete(); $("dlg").close(); } catch (err) { $("dlgErr").textContent = "삭제하지 못했어요. " + (err.code || ""); }
     }
   }
@@ -1043,15 +1084,17 @@ const fBranch = (kind, value) => {
   if (opts.length < 2) return `<div class="fld"><span>${label}</span><div class="inp ro">${esc(scopeLabel(v))}</div><input type="hidden" name="branch" value="${esc(v)}"></div>`;
   return fSelect(label, "branch", opts.map(b => [b, scopeLabel(b)]), v);
 };
-const fWriter = () => fText("작성자 이름 <small>이 기기에 기억돼요</small>", "writer", writerName(), 'maxlength="20"');
+// 개인 구글 계정(직원)은 이름이 정해져 있으니 묻지 않음
+const fWriter = () => state.member ? `<input type="hidden" name="writer" value="${esc(writerName())}">` : fText("작성자 이름 <small>이 기기에 기억돼요</small>", "writer", writerName(), 'maxlength="20"');
 const val = (form, n) => (form.elements[n]?.value ?? "").trim();
-function keepWriter(form){ const w = val(form, "writer"); if (w) store.set("portal.writer", w); }
+function keepWriter(form){ if (state.member) return; const w = val(form, "writer"); if (w) store.set("portal.writer", w); }
 
 /* ========= 로그인 · 권한 ========= */
 function loginMsg(code){
   if (["auth/invalid-credential","auth/wrong-password","auth/user-not-found","auth/invalid-email"].includes(code)) return "이메일 또는 비밀번호가 맞지 않아요. 다시 확인해 주세요.";
   if (code === "auth/too-many-requests") return "로그인 시도가 너무 많아요. 몇 분 뒤에 다시 해 주세요.";
   if (code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request") return "";
+  if (code === "auth/admin-restricted-operation") return "처음 로그인하는 구글 계정은 지금 막혀 있어요. 대표님이 Firebase 콘솔에서 '사용자 계정 생성'을 켜야 해요.";
   if (code === "auth/unauthorized-domain") return "이 주소가 Firebase 승인 도메인에 없어요. 콘솔에서 도메인을 추가해 주세요.";
   return "로그인하지 못했어요. (" + code + ")";
 }
@@ -1064,24 +1107,36 @@ function showLogin(){
   $("login").classList.remove("hidden");
 }
 
-function enter(user){
+async function enter(user){
   $("boot")?.remove();
   stopWatching();
   const email = (user.email || "").toLowerCase();
-  if (!DEMO && !ADMIN_EMAILS.includes(email) && !BRANCH_BY_EMAIL[email]) {
-    // 등록되지 않은 계정(예: 아무 Google 계정)은 들어오지 못하게 함 — 보안 규칙도 같은 기준으로 막음
-    fb.A.signOut(fb.auth); showLogin(); $("loginErr").textContent = `${user.email || "이 계정"}은(는) JP ONE에 등록된 계정이 아니에요.`; return;
+  let member = null;
+  if (!ADMIN_EMAILS.includes(email) && !BRANCH_BY_EMAIL[email]) {
+    // 대표·원 공용 계정이 아니면 '직원 계정' 목록(portalMembers)에 있는 구글 계정만 들어올 수 있음 — 보안 규칙도 같은 기준
+    try { member = await DB.getMember(email); } catch { member = null; }
+    const google = DEMO || !!user.providerData?.some(p => p.providerId === "google.com");
+    if (!member || member.active === false || !BRANCH_KEYS.includes(member.branch) || !google) {
+      if (!DEMO) fb.A.signOut(fb.auth);
+      showLogin();
+      $("loginErr").textContent = member && member.active === false ? `${email} 계정은 사용이 중지됐어요. 대표님께 문의해 주세요.`
+        : `${user.email || "이 계정"}은(는) 아직 JP ONE 직원 목록에 없어요. 대표님께 이 구글 이메일로 등록을 요청해 주세요.`;
+      return;
+    }
   }
   state.user = user;
+  state.member = member;
   state.isAdmin = ADMIN_EMAILS.includes(email);
-  state.myBranch = BRANCH_BY_EMAIL[email] || null;
+  state.myBranch = BRANCH_BY_EMAIL[email] || member?.branch || null;
+  gcalRestore();
   // 원 계정은 자기 원으로 고정, 대표는 마지막 선택 기억
   state.branch = state.isAdmin ? (store.get("portal.branch") || "all") : (state.myBranch || "all");
   if (!BRANCHES[state.branch]) state.branch = "all";
   state.tab = store.get("portal.tab") || "home";
   if (!TABS.some(t => t.id === state.tab)) state.tab = "home";
 
-  $("whoEmail").textContent = user.email || "";
+  $("whoEmail").textContent = member ? `${member.name} (${user.email})` : (user.email || "");
+  $("membersBtn").classList.toggle("hidden", !state.isAdmin);
   $("boot")?.remove();
   $("login").classList.add("hidden");
   $("app").classList.remove("hidden");
@@ -1094,7 +1149,7 @@ function enter(user){
   renderApps(); renderTabs(); renderView();
 
   state.kpiPriv = {};
-  ["notices","events","todos","files","bookmarks","bmGroups","kpi","folders", ...(state.isAdmin ? ["kpiPriv"] : [])].forEach(name => {
+  ["notices","events","todos","files","bookmarks","bmGroups","kpi","folders", ...(state.isAdmin ? ["kpiPriv","members"] : [])].forEach(name => {
     unsubs.push(DB.watch(name, list => {
       state[name] = name === "kpi" || name === "kpiPriv" ? Object.fromEntries(list.map(x => [x.id, x])) : list;
       onData(name);
@@ -1104,6 +1159,7 @@ function enter(user){
   if (state.isAdmin) { extConnect("pay", false); extConnect("people", false); }
 }
 function onData(name){
+  if (name === "members") { renderMemList(); return; }
   const uses = { home:["notices","events","todos","kpi"], notice:["notices","events"], todo:["todos"], files:["files","folders"], bm:["bookmarks","bmGroups"], kpi:["kpi","kpiPriv"] }[state.tab] || [];
   if (uses.includes(name)) renderView({ keepFocus: true });
 }
@@ -1111,7 +1167,7 @@ function onData(name){
 function syncBranch(){
   $("branchSel").value = state.branch;
   $("branchNow").textContent = state.branch === "all" ? "자라다 전체" : "자라다 " + BRANCHES[state.branch];
-  $("roleTag").textContent = state.isAdmin ? "관리자" : (state.myBranch ? "원 계정" : "");
+  $("roleTag").textContent = state.isAdmin ? "관리자" : state.member ? "선생님" : (state.myBranch ? "원 계정" : "");
 }
 
 /* ========= 왼쪽: 업무 앱 ========= */
@@ -1566,18 +1622,22 @@ function calHTML(mode){
   const maxChips = wk ? 3 : 2, cells = [];
   for (let i = 0; i < weeks * 7; i++){
     const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
-    const key = isoOf(d), evs = eventsOn(key), dow = d.getDay();
+    const key = isoOf(d), evs = eventsOn(key), mine = gcalOn(key), n = evs.length + mine.length, dow = d.getDay();
     const numTxt = wk && (i === 0 || d.getDate() === 1) ? `${d.getMonth()+1}/${d.getDate()}` : d.getDate();
     const cls = ["day", !wk && d.getMonth() !== m && "out", dow === 0 && "sun", dow === 6 && "sat", key === today && "today", key === sel && "sel"].filter(Boolean).join(" ");
     cells.push(`<button type="button" class="${cls}" data-act="cal-day" data-day="${key}" data-fk="day-${key}"
-        aria-label="${d.getMonth()+1}월 ${d.getDate()}일${evs.length ? `, 일정 ${evs.length}개` : ""}" aria-pressed="${key === sel}">
+        aria-label="${d.getMonth()+1}월 ${d.getDate()}일${n ? `, 일정 ${n}개` : ""}" aria-pressed="${key === sel}">
       <span class="num">${numTxt}</span>
       ${evs.slice(0, maxChips).map(e => `<span class="chip" style="border-color:${CAL_KIND[e.kind]?.color}">${esc(e.title)}</span>`).join("")}
-      ${evs.length > maxChips ? `<span class="more-n">+${evs.length - maxChips}</span>` : ""}
-      ${evs.length ? `<span class="dots">${evs.slice(0,3).map(e => `<i style="background:${CAL_KIND[e.kind]?.color}"></i>`).join("")}</span>` : ""}
+      ${mine.slice(0, Math.max(0, maxChips - evs.length)).map(e => `<span class="chip mine">${e.allDay ? "" : `<b>${e.time}</b> `}${esc(e.title)}</span>`).join("")}
+      ${n > maxChips ? `<span class="more-n">+${n - maxChips}</span>` : ""}
+      ${n ? `<span class="dots">${evs.slice(0,3).map(e => `<i style="background:${CAL_KIND[e.kind]?.color}"></i>`).join("")}${mine.slice(0, Math.max(0, 3 - evs.length)).map(() => `<i class="mine"></i>`).join("")}</span>` : ""}
     </button>`);
   }
-  const selEvs = eventsOn(sel), canAdd = branchOptions("events").length > 0;
+  const selEvs = eventsOn(sel), selMine = gcalOn(sel), canAdd = branchOptions("events").length > 0;
+  const gBtn = !gcalCanUse() ? "" : gcal.status === "on"
+    ? `<button type="button" class="gc-on" data-act="gcal-set" data-tip="내 구글 일정은 나만 보여요. 눌러서 캘린더 고르기 · 연결 끊기">내 구글 ${gcal.loading.size ? "불러오는 중…" : "표시 중"}</button>`
+    : `<button type="button" data-act="gcal-connect" data-tip="내 구글 캘린더 일정을 이 화면에 겹쳐 봐요. 나만 보이고 저장되지 않아요.">${gcal.status === "expired" ? "구글 다시 연결" : "내 구글 일정 보기"}</button>`;
   const selTitle = parse(sel).toLocaleDateString("ko-KR", { month:"long", day:"numeric", weekday:"short" });
   const arrow = d => `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="${d}"/></svg>`;
   return `
@@ -1587,11 +1647,13 @@ function calHTML(mode){
         ${wk ? "" : `<button type="button" data-act="cal-prev" data-fk="cal-prev" aria-label="이전 달">${arrow("m15 6-6 6 6 6")}</button>
           <button type="button" data-act="cal-today" data-fk="cal-today">오늘</button>
           <button type="button" data-act="cal-next" data-fk="cal-next" aria-label="다음 달">${arrow("m9 6 6 6-6 6")}</button>`}
+        ${gBtn}
         ${canAdd ? `<button type="button" data-act="event-new" data-date="${sel}">일정 추가</button>` : ""}
         ${wk ? `<button type="button" data-act="go" data-tab="notice">전체 캘린더</button>` : ""}
       </div>
     </div>
-    <div class="cal-legend">${Object.values(CAL_KIND).map(k => `<span><i style="background:${k.color}"></i>${k.label}</span>`).join("")}</div>
+    <div class="cal-legend">${Object.values(CAL_KIND).map(k => `<span><i style="background:${k.color}"></i>${k.label}</span>`).join("")}${gcal.status === "on" ? `<span><i class="mine"></i>내 구글 일정 (나만 보여요)</span>` : ""}</div>
+    ${gcal.err ? `<p class="gc-err">${esc(gcal.err)}</p>` : ""}
     <div class="cal">
       ${WD.map((w,i) => `<div class="dow ${i===0?"sun":i===6?"sat":""}">${w}</div>`).join("")}
       ${cells.join("")}
@@ -1604,8 +1666,176 @@ function calHTML(mode){
           <span class="w">${esc(scopeLabel(e.branch))}</span>
           <a class="icon-btn" href="${esc(gcalUrl(e))}" target="_blank" rel="noopener" title="내 구글 캘린더에 이 일정 넣기">구글 캘린더</a>
           ${canEdit(e) ? `<button type="button" class="icon-btn" data-act="event-edit" data-id="${esc(e.id)}">수정</button>` : ""}
-        </div>`).join("") : `<p class="cal-none">이날은 일정이 없어요.</p>`}
+        </div>`).join("") : ""}
+      ${selMine.map(e => `<div class="ev">
+          <span class="k mine">내 일정</span>
+          <span class="t">${esc(e.title)}<small>${esc(e.allDay ? (e.end > e.date ? `${md(e.date)} ~ ${md(e.end)}, 하루 종일` : "하루 종일") : `${e.time} ~ ${e.endTime}`)}${e.place ? ", " + esc(e.place) : ""}</small></span>
+          <span class="w">${esc(e.cal)}</span>
+          ${e.link ? `<a class="icon-btn" href="${esc(e.link)}" target="_blank" rel="noopener">구글에서 보기</a>` : ""}
+        </div>`).join("")}
+      ${selEvs.length || selMine.length ? "" : `<p class="cal-none">이날은 일정이 없어요.</p>`}
     </div>`;
+}
+
+/* ========= 내 구글 캘린더 겹쳐 보기 =========
+   로그인한 본인의 구글 캘린더 일정을 이 화면에만 보여 줌.
+   일정은 JP ONE 데이터베이스에 저장하지 않으므로 다른 사람(대표 포함)은 볼 수 없음.
+   구글이 주는 열쇠(토큰)는 1시간짜리이고 이 탭에만 보관 — 탭을 닫거나 로그아웃하면 사라짐. */
+const GCAL_SCOPE = "https://www.googleapis.com/auth/calendar.readonly";
+const GCAL_API = "https://www.googleapis.com/calendar/v3";
+const gcal = { status:"off", token:"", exp:0, cals:[], months:new Map(), loading:new Set(), err:"" };
+const ses = {
+  get(k){ try { return sessionStorage.getItem(k); } catch { return null; } },
+  set(k,v){ try { sessionStorage.setItem(k,v); } catch {} },
+  del(k){ try { sessionStorage.removeItem(k); } catch {} }
+};
+const gcalKey = () => "portal.gcal." + (state.user?.email || "").toLowerCase();
+// 개인 구글 계정으로 로그인한 사람만 (원 공용 계정은 여러 사람이 같이 쓰므로 제외)
+const gcalCanUse = () => DEMO ? (state.isAdmin || !!state.member) : !!state.user?.providerData?.some(p => p.providerId === "google.com");
+const rerenderCal = () => { if (state.tab === "home" || state.tab === "notice") renderView({ keepFocus:true }); };
+function gcalReset(){ Object.assign(gcal, { status:"off", token:"", exp:0, cals:[], months:new Map(), loading:new Set(), err:"" }); }
+function gcalRestore(){
+  gcalReset();
+  if (!gcalCanUse()) return;
+  try {
+    const j = JSON.parse(ses.get(gcalKey()) || "null");
+    if (j && j.exp > Date.now() + 60e3) { gcal.token = j.token; gcal.exp = j.exp; gcal.status = "on"; gcalLoadCals(); return; }
+  } catch {}
+  if (store.get(gcalKey() + ".on")) gcal.status = "expired";
+}
+function gcalLogout(){ ses.del(gcalKey()); gcalReset(); }
+function gcalExpire(){ ses.del(gcalKey()); gcal.token = ""; gcal.status = "expired"; gcal.months = new Map(); }
+
+async function gcalConnect(){
+  gcal.err = "";
+  try {
+    if (DEMO) { gcal.token = "demo"; gcal.exp = Date.now() + 3600e3; }
+    else {
+      // 이미 로그인한 구글 계정에 '캘린더 보기' 권한만 더 받음 (다른 계정을 고르면 막힘)
+      const p = new fb.A.GoogleAuthProvider();
+      p.addScope(GCAL_SCOPE); p.setCustomParameters({ login_hint: state.user.email });
+      const r = await fb.A.reauthenticateWithPopup(fb.auth.currentUser, p);
+      const tok = fb.A.GoogleAuthProvider.credentialFromResult(r)?.accessToken;
+      if (!tok) throw new Error("구글에서 캘린더 열쇠를 받지 못했어요.");
+      gcal.token = tok; gcal.exp = Date.now() + 55 * 60e3;
+    }
+    ses.set(gcalKey(), JSON.stringify({ token: gcal.token, exp: gcal.exp }));
+    store.set(gcalKey() + ".on", "1");
+    gcal.status = "on"; gcal.months = new Map();
+    await gcalLoadCals();
+    if (!gcal.err) toast("내 구글 일정을 불러왔어요. 이 화면에서 나만 보여요.");
+  } catch (err) {
+    const c = err.code || "";
+    if (c === "auth/popup-closed-by-user" || c === "auth/cancelled-popup-request") return;
+    toast(c === "auth/user-mismatch" ? `JP ONE에 로그인한 구글 계정(${state.user.email})을 골라 주세요.`
+      : c === "auth/popup-blocked" ? "팝업이 막혔어요. 주소창 오른쪽에서 팝업을 허용해 주세요."
+      : "구글 캘린더를 연결하지 못했어요. " + (c || err.message || ""));
+  } finally { rerenderCal(); }
+}
+async function gapi(path){
+  if (Date.now() > gcal.exp) { gcalExpire(); throw new Error("expired"); }
+  const r = await fetch(GCAL_API + path, { headers:{ Authorization: "Bearer " + gcal.token } });
+  if (r.status === 401) { gcalExpire(); throw new Error("expired"); }
+  if (!r.ok) {
+    const j = await r.json().catch(() => ({}));
+    const e = new Error(j.error?.message || String(r.status)); e.status = r.status;
+    e.reason = (j.error?.errors?.[0]?.reason || "") + " " + (j.error?.status || "") + " " + JSON.stringify(j.error?.details || ""); throw e;
+  }
+  return r.json();
+}
+function gcalErr(e){
+  if (e.message === "expired") return;
+  gcal.err = e.status === 403 && /accessNotConfigured|SERVICE_DISABLED|has not been used/i.test(e.reason + e.message)
+      ? "구글 캘린더 API가 아직 꺼져 있어요. 대표님이 Google Cloud 콘솔에서 켜야 해요."
+    : e.status === 403 ? "캘린더를 볼 권한을 받지 못했어요. 다시 연결할 때 '캘린더 보기'에 체크해 주세요."
+    : "구글 일정을 불러오지 못했어요. (" + (e.status || e.message) + ")";
+}
+async function gcalLoadCals(){
+  try {
+    if (DEMO) gcal.cals = [{ id:"me", name:"내 캘린더", color:"#4285F4", primary:true, selected:true }, { id:"fam", name:"가족", color:"#33B679", selected:true }];
+    else {
+      const j = await gapi("/users/me/calendarList?minAccessRole=reader&fields=items(id,summary,summaryOverride,backgroundColor,selected,primary,hidden)");
+      gcal.cals = (j.items || []).filter(c => !c.hidden).map(c => ({ id:c.id, name:c.summaryOverride || c.summary || "캘린더",
+        color:c.backgroundColor || "#767676", primary:!!c.primary, selected:!!c.selected }));
+    }
+    gcal.months = new Map();
+  } catch (e) { gcalErr(e); }
+  rerenderCal();
+}
+// 보여 줄 캘린더: 직접 고른 게 있으면 그것, 없으면 구글 캘린더 화면에서 체크해 둔 것
+function gcalShown(){
+  let pick = null; try { pick = JSON.parse(store.get(gcalKey() + ".cals") || "null"); } catch {}
+  return gcal.cals.filter(c => Array.isArray(pick) ? pick.includes(c.id) : (c.selected || c.primary));
+}
+function gcalConv(it, c){
+  if (it.status === "cancelled" || !it.start) return null;
+  const allDay = !!it.start.date;
+  let date, end, time = "", endTime = "";
+  if (allDay) { date = it.start.date; end = addDays(it.end?.date || addDays(date, 1), -1); }
+  else {
+    const a = new Date(it.start.dateTime), b = new Date(it.end?.dateTime || it.start.dateTime);
+    date = isoOf(a); end = isoOf(new Date(Math.max(+a, +b - 1)));
+    time = `${pad2(a.getHours())}:${pad2(a.getMinutes())}`; endTime = `${pad2(b.getHours())}:${pad2(b.getMinutes())}`;
+  }
+  if (end < date) end = date;
+  return { id: c.id + "/" + it.id, title: it.summary || "(제목 없음)", allDay, date, end, time, endTime,
+    place: it.location || "", link: safeUrl(it.htmlLink) || "", cal: c.name };
+}
+async function gcalMonth(mk){
+  if (gcal.status !== "on" || gcal.loading.has(mk) || gcal.months.has(mk)) return;
+  gcal.loading.add(mk);
+  await Promise.resolve();   // 화면을 그리는 도중에 다시 그리지 않도록 한 박자 쉼
+  const [y, m] = mk.split("-").map(Number), from = new Date(y, m - 1, 1), to = new Date(y, m, 1), out = [];
+  try {
+    for (const c of gcalShown()){
+      const items = DEMO ? demoGcal(c, y, m - 1)
+        : (await gapi(`/calendars/${encodeURIComponent(c.id)}/events?singleEvents=true&orderBy=startTime&maxResults=250`
+            + `&timeMin=${encodeURIComponent(from.toISOString())}&timeMax=${encodeURIComponent(to.toISOString())}`
+            + `&fields=items(id,summary,start,end,location,htmlLink,status)`)).items || [];
+      for (const it of items){ const e = gcalConv(it, c); if (e) out.push(e); }
+    }
+    if (gcal.status === "on") gcal.months.set(mk, out);
+  } catch (e) { gcalErr(e); if (gcal.status === "on") gcal.months.set(mk, []); }
+  finally { gcal.loading.delete(mk); rerenderCal(); }
+}
+function gcalOn(day){
+  if (gcal.status !== "on") return [];
+  const list = gcal.months.get(day.slice(0, 7));
+  if (!list) { gcalMonth(day.slice(0, 7)); return []; }
+  return list.filter(e => day >= e.date && day <= e.end)
+    .sort((a,b) => (b.allDay - a.allDay) || a.time.localeCompare(b.time) || a.title.localeCompare(b.title));
+}
+function gcalSettings(){
+  const shown = new Set(gcalShown().map(c => c.id));
+  openForm({
+    title: "내 구글 캘린더",
+    fields: `<p class="hint">여기 일정은 <b>지금 로그인한 본인 화면에만</b> 보여요. JP ONE에 저장되지 않아서 다른 선생님이나 대표는 볼 수 없어요.</p>
+      <fieldset class="fld"><span>보여 줄 캘린더</span>
+        ${gcal.cals.map(c => `<label class="gc-pick"><input type="checkbox" name="gc" value="${esc(c.id)}" ${shown.has(c.id) ? "checked" : ""}><i style="background:${esc(c.color)}"></i>${esc(c.name)}</label>`).join("")
+          || `<p class="hint">불러온 캘린더가 없어요.</p>`}
+      </fieldset>`,
+    saveLabel: "적용",
+    async onSave(form){
+      store.set(gcalKey() + ".cals", JSON.stringify([...form.querySelectorAll("input[name=gc]:checked")].map(x => x.value)));
+      gcal.months = new Map(); rerenderCal(); return true;
+    },
+    onDelete: async () => {
+      if (!DEMO && gcal.token) fetch("https://oauth2.googleapis.com/revoke?token=" + encodeURIComponent(gcal.token), { method:"POST", mode:"no-cors" }).catch(() => {});
+      ses.del(gcalKey()); store.del(gcalKey() + ".on"); gcalReset(); rerenderCal(); toast("구글 캘린더 연결을 끊었어요.");
+    },
+    deleteLabel: "연결 끊기"
+  });
+  dlgCtx.deleteMsg = "구글 캘린더 연결을 끊을까요? 내 일정이 이 화면에서 사라져요. 구글 캘린더 자체는 그대로예요.";
+  dlgCtx.deleteOk = "연결 끊기";
+}
+/* 미리보기용 가짜 개인 일정 */
+function demoGcal(c, y, m){
+  const d = n => iso(y, m, n), at = (n, h, mi, len) => ({ dateTime: new Date(y, m, n, h, mi).toISOString(), _e: new Date(y, m, n, h, mi + len).toISOString() });
+  const t = new Date(), tn = t.getFullYear() === y && t.getMonth() === m ? t.getDate() : 0;
+  const ev = (id, summary, s) => ({ id, summary, start: s.date ? { date: s.date } : { dateTime: s.dateTime }, end: s.date ? { date: s.end } : { dateTime: s._e }, htmlLink:"https://calendar.google.com" });
+  if (c.id === "fam") return [ev("f1", "부모님 생신", { date: d(8), end: d(9) })];
+  return [ev("a", "치과 예약", at(3, 14, 0, 60)), ev("b", "은행 업무", at(12, 10, 30, 30)), ev("c", "가족 여행", { date: d(20), end: d(22) }),
+    ...(tn ? [ev("d", "저녁 약속", at(tn, 19, 0, 120)), ...(tn < 27 ? [ev("e", "운동", at(tn + 1, 7, 0, 60))] : [])] : [])];
 }
 
 /* ── 공지 · 캘린더 화면 ── */
@@ -1740,6 +1970,8 @@ $("view").addEventListener("click", e => {
     case "bm-edit": bmForm(state.bookmarks.find(x => x.id === id)); break;
     case "bmg-new": bmGroupForm(null); break;
     case "bmg-edit": bmGroupForm(state.bmGroups.find(x => x.id === id)); break;
+    case "gcal-connect": gcalConnect(); break;
+    case "gcal-set": gcalSettings(); break;
   }
 });
 $("view").addEventListener("change", async e => {
@@ -1957,6 +2189,153 @@ function fileDetail(f){
   });
 }
 
+
+/* =====================================================================
+   직원 계정 (대표 전용)
+   여기 등록된 구글 계정만 JP ONE에 로그인할 수 있음. 문서 ID = 구글 이메일(소문자)
+   보안 규칙(firestore.rules · storage.rules)이 이 목록을 보고 권한을 판단함
+   ===================================================================== */
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+function membersDialog(){
+  if (!state.isAdmin) return;
+  openForm({
+    title: "직원 계정",
+    fields: `<p class="hint">여기 있는 구글 계정만 JP ONE에 로그인할 수 있어요. 선생님은 <b>본인 구글 계정</b>으로 로그인해서 소속 원의 공지·일정·자료를 보고 써요.
+        원 공용 계정(네이버 메일)도 지금처럼 쓸 수 있어요.</p>
+      <div><button type="button" class="btn btn-ghost btn-sm" id="memImport">JP People에서 불러오기</button></div>
+      <div class="mem-wrap" id="memList"></div>
+      <h3 class="vh">직접 추가</h3>
+      <div class="mem-add">${fText("이름", "mName", "", 'maxlength="20"')}${fText("구글 이메일", "mEmail", "", 'type="email" placeholder="example@gmail.com"')}
+        ${fSelect("원", "mBranch", BRANCH_KEYS.map(b => [b, BRANCHES[b]]), state.branch !== "all" ? state.branch : "pyeongchon")}
+        <button type="button" class="btn btn-sub btn-sm" id="memAdd">추가</button></div>`,
+    saveLabel: "닫기",
+    async onSave(){ return true; }
+  });
+  dlgCtx.kind = "members";
+  renderMemList();
+  const body = $("dlgBody");
+  body.addEventListener("keydown", e => { if (e.key === "Enter" && e.target.closest(".mem-add")) { e.preventDefault(); $("memAdd").click(); } });
+  body.addEventListener("click", async e => {
+    const t = e.target;
+    try {
+      if (t.id === "memAdd"){
+        const f = $("dlgForm"), name = val(f, "mName"), email = val(f, "mEmail").toLowerCase(), branch = val(f, "mBranch");
+        if (!name || !EMAIL_RE.test(email)) return formErr("이름과 올바른 구글 이메일을 넣어 주세요.");
+        if (ADMIN_EMAILS.includes(email) || BRANCH_BY_EMAIL[email]) return formErr("대표나 원 공용 계정은 따로 등록하지 않아도 돼요.");
+        if (state.members.some(m => m.id === email)) return formErr("이미 등록된 이메일이에요.");
+        await DB.set("members", email, { email, name, branch, active:true, source:"manual", at:Date.now(), by:state.user.email });
+        f.elements.mName.value = ""; f.elements.mEmail.value = ""; $("dlgErr").textContent = "";
+        toast(`${name} 선생님을 등록했어요.`);
+      }
+      if (t.id === "memImport") memImport();
+      const del = t.closest("[data-mem-del]")?.dataset.memDel;
+      if (del){
+        const m = state.members.find(x => x.id === del);
+        if (await confirmBox(`${m?.name || del} 계정을 목록에서 지울까요? 지우면 JP ONE에 로그인할 수 없어요.`)) { await DB.remove("members", del); toast("지웠어요."); }
+      }
+    } catch (err) { formErr("저장하지 못했어요. " + (err.code || err.message || "")); }
+  });
+  body.addEventListener("change", async e => {
+    const t = e.target;
+    try {
+      if (t.dataset.memBranch) await DB.update("members", t.dataset.memBranch, { branch: t.value });
+      if (t.dataset.memActive) await DB.update("members", t.dataset.memActive, { active: t.checked });
+    } catch (err) { formErr("바꾸지 못했어요. " + (err.code || "")); }
+  });
+}
+function renderMemList(){
+  const box = $("memList"); if (!box) return;
+  const list = [...state.members].sort((a,b) => BRANCH_KEYS.indexOf(a.branch) - BRANCH_KEYS.indexOf(b.branch) || (a.name || "").localeCompare(b.name || ""));
+  box.innerHTML = list.length ? `<table class="mtable"><thead><tr><th>이름</th><th>구글 이메일</th><th>원</th><th>로그인</th><th></th></tr></thead><tbody>
+    ${list.map(m => `<tr class="${m.active === false ? "off" : ""}">
+      <td>${esc(m.name || "")}${m.source === "people" ? "<small>JP People</small>" : ""}</td>
+      <td class="em">${esc(m.id)}</td>
+      <td><select class="inp" data-mem-branch="${esc(m.id)}" aria-label="${esc(m.name)} 소속 원">${BRANCH_KEYS.map(b => `<option value="${b}" ${m.branch === b ? "selected" : ""}>${SHORT[b]}</option>`).join("")}</select></td>
+      <td><input type="checkbox" data-mem-active="${esc(m.id)}" ${m.active !== false ? "checked" : ""} aria-label="${esc(m.name)} 로그인 허용"></td>
+      <td><button type="button" class="icon-btn" data-mem-del="${esc(m.id)}">삭제</button></td></tr>`).join("")}</tbody></table>`
+    : `<p class="empty">아직 등록된 직원 계정이 없어요. JP People에서 불러오거나 아래에서 직접 추가해 주세요.</p>`;
+}
+/* JP People 직원 목록(이름·구글 이메일·소속·재직 상태만) → 바뀔 내용 미리보기 → 고른 것만 적용 */
+async function loadPeopleAccounts(db){
+  const F = fb.F;
+  const [orgSnap, empSnap] = await Promise.all([F.getDocs(F.collection(db, "orgs")), F.getDocs(F.collection(db, "employees"))]);
+  const orgBranch = {}; orgSnap.forEach(d => { orgBranch[d.id] = branchOfCenter(d.data().name || ""); });
+  const out = [];
+  empSnap.forEach(d => { const e = d.data(); if (e.deleted) return;
+    out.push({ name: e.name || "", email: String(e.email || "").trim().toLowerCase(), status: e.status || "active",
+      branch: (e.orgIds || [e.orgId]).map(o => orgBranch[o]).find(Boolean) || "" }); });
+  return out;
+}
+function demoPeopleAccounts(){
+  return [
+    { name:"김민수", email:"minsu.teacher@gmail.com", status:"active", branch:"pyeongchon" },
+    { name:"박지은", email:"jieun.teacher@gmail.com", status:"active", branch:"pyeongchon" },
+    { name:"한지민", email:"jimin.teacher@gmail.com", status:"resigned", branch:"banpo" },
+    { name:"서지호", email:"jiho.teacher@gmail.com", status:"active", branch:"daechi" },
+    { name:"이도윤", email:"", status:"active", branch:"pyeongchon" },
+    { name:"본사 직원", email:"hq.staff@gmail.com", status:"active", branch:"" }
+  ];
+}
+async function memImport(){
+  const btn = $("memImport"); if (btn) { btn.disabled = true; btn.textContent = "JP People 읽는 중…"; }
+  try {
+    let people;
+    if (DEMO) people = demoPeopleAccounts();
+    else {
+      const x = await extInit("people");
+      if (!x.auth.currentUser) await fb.A.signInWithPopup(x.auth, new fb.A.GoogleAuthProvider());
+      people = await loadPeopleAccounts(x.db);
+    }
+    memImportPreview(people);
+  } catch (err) {
+    if (btn) { btn.disabled = false; btn.textContent = "JP People에서 불러오기"; }
+    const c = err.code || "";
+    if (c === "auth/popup-closed-by-user") return;
+    formErr(c === "permission-denied" ? "JP People에서 이 계정의 읽기 권한이 없어요." : "JP People을 읽지 못했어요. " + (c || err.message || ""));
+  }
+}
+function memImportPreview(people){
+  const have = Object.fromEntries(state.members.map(m => [m.id, m]));
+  const rows = [], skip = [];
+  for (const p of people){
+    const working = p.status !== "resigned", m = have[p.email];
+    if (!p.email || !EMAIL_RE.test(p.email)) { if (working) skip.push(`${p.name}: JP People에 이메일이 없어요`); continue; }
+    if (ADMIN_EMAILS.includes(p.email) || BRANCH_BY_EMAIL[p.email]) continue;
+    if (!working){ if (m && m.active !== false) rows.push({ p, kind:"stop", label:"퇴직 → 로그인 중지", patch:{ active:false }, on:true }); continue; }
+    if (!p.branch) { skip.push(`${p.name}: 소속 원이 없어요 (본사 등)`); continue; }
+    if (!m) rows.push({ p, kind:"add", label:"새로 등록", on:true });
+    else {
+      const ch = [];
+      if (m.branch !== p.branch) ch.push(`원 ${SHORT[m.branch] || "?"} → ${SHORT[p.branch]}`);
+      if ((m.name || "") !== p.name) ch.push(`이름 ${m.name || "-"} → ${p.name}`);
+      if (ch.length) rows.push({ p, kind:"upd", label: ch.join(", "), patch:{ branch:p.branch, name:p.name }, on:true });
+      if (m.active === false) rows.push({ p, kind:"re", label:"로그인 중지됨 → 다시 허용", patch:{ active:true }, on:false });
+    }
+  }
+  openForm({
+    title: "JP People에서 불러오기",
+    fields: `<p class="imp-sum">JP People 직원 ${people.length}명을 확인했어요. <b>바뀔 내용 ${rows.length}건</b>${skip.length ? `, 건너뛴 ${skip.length}명` : ""}.
+        체크한 것만 적용돼요.</p>
+      ${rows.length ? `<div class="mem-wrap"><table class="mtable"><thead><tr><th></th><th>이름</th><th>구글 이메일</th><th>원</th><th>바뀌는 내용</th></tr></thead><tbody>
+        ${rows.map((r, i) => `<tr><td><input type="checkbox" name="imp" value="${i}" ${r.on ? "checked" : ""} aria-label="${esc(r.p.name)} 적용"></td>
+          <td>${esc(r.p.name)}</td><td class="em">${esc(r.p.email)}</td><td>${esc(SHORT[r.p.branch] || "-")}</td>
+          <td><span class="tagk">${esc(r.label)}</span></td></tr>`).join("")}</tbody></table></div>`
+        : `<p class="empty">직원 계정 목록이 JP People과 이미 같아요.</p>`}
+      ${skip.length ? `<h3 class="vh">건너뜀</h3><ul class="hint">${skip.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}`,
+    saveLabel: rows.length ? "적용" : "닫기",
+    async onSave(form){
+      const pick = [...form.querySelectorAll("input[name=imp]:checked")].map(x => rows[+x.value]);
+      for (const r of pick){
+        if (r.kind === "add") await DB.set("members", r.p.email, { email:r.p.email, name:r.p.name, branch:r.p.branch, active:true, source:"people", at:Date.now(), by:state.user.email });
+        else await DB.update("members", r.p.email, r.patch);
+      }
+      if (pick.length) toast(`직원 계정 ${pick.length}건을 적용했어요.`);
+      setTimeout(membersDialog, 0);   // 목록 화면으로 돌아가기
+      return true;
+    }
+  });
+}
+$("membersBtn").addEventListener("click", membersDialog);
 
 /* =====================================================================
    운영지표
@@ -2477,6 +2856,7 @@ if (!DEMO) {
   $("logoutBtn").addEventListener("click", async () => {
     for (const x of Object.values(extApps)) { try { await fb.A.signOut(x.auth); } catch {} }   // 매출·JP People 연결도 같이 끊음
     for (const k in extApps) delete extApps[k];
+    gcalLogout();
     await fb.A.signOut(fb.auth);
   });
 } else {
@@ -2484,7 +2864,8 @@ if (!DEMO) {
   $("logoutBtn").classList.add("hidden");
   $("demoBox").classList.remove("hidden");
   const demoAs = $("demoAs");
-  demoAs.innerHTML = [[ADMIN_EMAILS[0], "대표"], ...Object.entries(BRANCH_BY_EMAIL).map(([e,b]) => [e, BRANCHES[b] + " 계정"])]
+  demoAs.innerHTML = [[ADMIN_EMAILS[0], "대표"], ...Object.entries(BRANCH_BY_EMAIL).map(([e,b]) => [e, BRANCHES[b] + " 공용 계정"]),
+      ...DEMO_MEMBERS.map(m => [m.email, `${m.name} 선생님 (${SHORT[m.branch]})`])]
     .map(([e,l]) => `<option value="${e}">${l}</option>`).join("");
   demoAs.value = store.get("portal.demoAs") || ADMIN_EMAILS[0];
   demoAs.addEventListener("change", () => { store.set("portal.demoAs", demoAs.value); store.del("portal.writer"); enter({ email: demoAs.value }); toast(`${demoAs.selectedOptions[0].text}(으)로 보고 있어요.`); });
