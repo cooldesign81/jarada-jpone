@@ -542,6 +542,7 @@
   .legend i{display:inline-block;margin-right:6px;vertical-align:middle}
   .legend i.line{width:14px;height:3px;border-radius:2px}
   .legend i.box{width:10px;height:10px;border-radius:2px}
+  .legend i.line.dash{background:repeating-linear-gradient(90deg,#767676 0 4px,transparent 4px 7px)}
   .tip{position:fixed;z-index:70;pointer-events:none;background:var(--ink);color:#fff;font-size:12px;line-height:1.55;padding:8px 10px;border-radius:var(--r-btn);
        white-space:pre;transform:translate(-50%,calc(-100% - 8px));box-shadow:0 6px 18px rgba(0,0,0,.2)}
   .tip::first-line{font-weight:800}
@@ -2564,6 +2565,9 @@ function buildSnapshot(rows, branch, base){
   const sampleIn = ym => rows.filter(r => r.status === "샘플수업" && r.reg && ymOf(r.reg) === ym).length;
   const enrolled = months.map((ym, i) => i === 11 ? rows.filter(isActive).length : enrolledAt(monthEnd(ym)));
   const newc = months.map(newIn), left = months.map(leftIn);
+  // 작년 같은 달 월말 재원 (재원생 추이에 점선으로 비교)
+  const ly = ym => { const [y, m] = ym.split("-"); return `${+y - 1}-${m}`; };
+  const enrolledLY = months.map(ym => enrolledAt(monthEnd(ly(ym))));
   const pYm = months[10], ppYm = months[9];
   const rate = (a, b) => b ? Math.round(a / b * 1000) / 10 : 0;
   const inqCur = sampleIn(curYm) + newc[11], inqPrev = sampleIn(pYm) + newc[10];
@@ -2596,7 +2600,7 @@ function buildSnapshot(rows, branch, base){
   const heat = {};
   for (const r of active) if (r.day && r.hour != null) { (heat[r.day] ||= {}); heat[r.day][r.hour] = (heat[r.day][r.hour] || 0) + 1; }
   return {
-    branch, base, rowCount: rows.length, months, enrolled, newc, left,
+    branch, base, rowCount: rows.length, months, enrolled, enrolledLY, newc, left,
     cur:  { enrolled:enrolled[11], newc:newc[11], left:left[11], leftRate:rate(left[11], enrolled[10]),
             rest:rows.filter(r => /휴원/.test(r.status) || (isActive(r) && /휴원/.test(r.group))).length, inq:inqCur, sampleRate:rate(newc[11], inqCur),
             expiring:active.filter(r => r.end && r.end >= base && r.end <= until14).length,
@@ -2790,10 +2794,11 @@ function lineChart({ labels, series, fmtV = v => v, zero = false, aria }){
   return `<svg class="chart" viewBox="0 0 ${CW} ${CH}" role="img" aria-label="${esc(aria || "")}">
     ${ticks.map(t => `<line x1="${CP.l}" x2="${CW-CP.r}" y1="${y(t)}" y2="${y(t)}" stroke="#ECECEC"/><text x="${CP.l-8}" y="${y(t)+4}" text-anchor="end" class="ax">${esc(fmtV(t))}</text>`).join("")}
     ${labels.map((l,i) => (labels.length <= 12 || i % 2 === 0) ? `<text x="${x(i)}" y="${CH-6}" text-anchor="middle" class="ax">${esc(l)}</text>` : "").join("")}
-    ${series.map(s => `<polyline points="${s.values.map((v,i) => `${x(i)},${y(v)}`).join(" ")}" fill="none" stroke="${s.color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-      <circle cx="${x(s.values.length-1)}" cy="${y(s.values.at(-1))}" r="4" fill="${s.color}" stroke="#fff" stroke-width="2"/>`).join("")}
+    ${series.map(s => `<polyline points="${s.values.map((v,i) => v == null ? "" : `${x(i)},${y(v)}`).filter(Boolean).join(" ")}" fill="none" stroke="${s.color}" stroke-width="${s.dash ? 1.6 : 2}"
+        ${s.dash ? `stroke-dasharray="5 4" opacity=".75"` : ""} stroke-linejoin="round" stroke-linecap="round"/>
+      ${s.dash ? "" : `<circle cx="${x(s.values.length-1)}" cy="${y(s.values.at(-1))}" r="4" fill="${s.color}" stroke="#fff" stroke-width="2"/>`}`).join("")}
     ${labels.map((l,i) => `<rect class="hit" x="${x(i) - step/2}" y="${CP.t}" width="${step}" height="${CH-CP.t-CP.b}" fill="transparent" tabindex="-1"
-      data-tip="${esc(l + "\n" + series.map(s => `${s.name} ${fmtV(s.values[i])}`).join("\n"))}"/>`).join("")}
+      data-tip="${esc(l + "\n" + series.filter(s => s.values[i] != null).map(s => `${s.name} ${fmtV(s.values[i])}`).join("\n"))}"/>`).join("")}
   </svg>`;
 }
 function barChart({ labels, series, fmtV = v => v, aria }){
@@ -2812,7 +2817,8 @@ function barChart({ labels, series, fmtV = v => v, aria }){
           data-tip="${esc(l + "\n" + series.map(s => `${s.name} ${fmtV(s.values[i])}`).join("\n"))}"/>`; }).join("")}
   </svg>`;
 }
-const legend = (series, kind = "line") => `<div class="legend">${series.map(s => `<span><i class="${kind}" style="background:${s.color}"></i>${esc(s.name)}</span>`).join("")}</div>`;
+const legend = (series, kind = "line") => `<div class="legend">${series.filter(s => !s.dash).map(s => `<span><i class="${kind}" style="background:${s.color}"></i>${esc(s.name)}</span>`).join("")}${
+  series.some(s => s.dash) ? `<span><i class="line dash"></i>점선 = 작년 같은 달</span>` : ""}</div>`;
 
 /* ── 운영지표 화면 ── */
 const KPI_TILES = [
@@ -2915,7 +2921,8 @@ function kpiPageHTML(){
   };
   /* 추이 차트 */
   const ref = snaps[0], labels = ref.months.map(mLabel);
-  const enrSeries = snaps.map(s => ({ name:BRANCHES[s.branch], color:BRANCH_COLOR[s.branch], values:s.enrolled }));
+  const enrSeries = [...snaps.filter(s => s.enrolledLY).map(s => ({ name:`${BRANCHES[s.branch]} 작년`, color:BRANCH_COLOR[s.branch], values:s.enrolledLY.map(v => v || null), dash:true })),
+    ...snaps.map(s => ({ name:BRANCHES[s.branch], color:BRANCH_COLOR[s.branch], values:s.enrolled }))];
   const sum = k => ref.months.map((_, i) => snaps.reduce((t, s) => t + (s[k][i] || 0), 0));
   const nlSeries = [{ name:"신규", color:"var(--c-new)", values:sum("newc") }, { name:"퇴원", color:"var(--c-left)", values:sum("left") }];
   /* 샘플 → 등록 */
