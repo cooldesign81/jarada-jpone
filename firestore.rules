@@ -3,6 +3,7 @@ rules_version = '2';
 // 대표: 모든 원 읽기/쓰기.  원 공용 계정·선생님: "모든 원" + 자기 원 읽기, 자기 원만 쓰기.
 // 원 공용 계정 목록은 index.html 의 BRANCH_BY_EMAIL 과 반드시 같게 유지하세요.
 // 선생님 = portalMembers/{구글 이메일} 문서가 있고 active == true 인 구글 로그인 계정 (대표가 '직원 계정'에서 관리)
+//   branches: 소속 원 목록(겸임이면 여러 개). 세 원 모두면 '3개 원 전체' — 모든 원 읽기·쓰기(금액·직원 계정 제외)
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -20,12 +21,17 @@ service cloud.firestore {
     function isGoogle()   { return signedIn() && request.auth.token.email_verified == true && request.auth.token.firebase.sign_in_provider == 'google.com'; }
     function memberPath() { return /databases/$(database)/documents/portalMembers/$(email()); }
     function isStaff()    { return isGoogle() && exists(memberPath()) && get(memberPath()).data.active == true; }
-    function isMyBranch(b){ return b in ['pyeongchon', 'banpo', 'daechi'] && (sharedBranch() == b || (isStaff() && get(memberPath()).data.branch == b)); }
+    // 소속 원 목록 (예전 문서의 branch 한 개짜리 값도 인정)
+    function staffHas(b)  { return get(memberPath()).data.get('branches', []).hasAny([b]) || get(memberPath()).data.get('branch', '') == b; }
+    // 세 원 모두 소속 = 3개 원 전체
+    function isWideStaff(){ return isStaff() && (get(memberPath()).data.get('branches', []).hasAll(['pyeongchon', 'banpo', 'daechi'])
+                                                 || get(memberPath()).data.get('branch', '') == 'all'); }
+    function isMyBranch(b){ return b in ['pyeongchon', 'banpo', 'daechi'] && (sharedBranch() == b || (isStaff() && staffHas(b))); }
     // JP ONE 회원 = 대표, 원 공용 계정, 등록된 선생님. 아무 Google 계정으로 로그인해도 읽을 수 없게 함
     function isMember()     { return isAdmin() || sharedBranch() != 'none' || isStaff(); }
     function validBranch(b) { return b in ['all', 'pyeongchon', 'banpo', 'daechi']; }
-    function canSee(b)      { return isAdmin() || b == 'all' || isMyBranch(b); }
-    function canWrite(b)    { return isAdmin() || isMyBranch(b); }
+    function canSee(b)      { return isAdmin() || isWideStaff() || b == 'all' || isMyBranch(b); }
+    function canWrite(b)    { return isAdmin() || (isWideStaff() && validBranch(b)) || isMyBranch(b); }
 
     // 새 문서: 작성자 이메일이 본인이어야 하고, 쓸 수 있는 원이어야 함
     function okCreate() {
@@ -80,7 +86,7 @@ service cloud.firestore {
     }
     // 운영지표 계산 결과: 문서 ID = 원 (pyeongchon / banpo / daechi)
     match /portalKpi/{branch} {
-      allow read: if isMember() && (isAdmin() || isMyBranch(resource.data.branch));
+      allow read: if isMember() && (isAdmin() || isWideStaff() || isMyBranch(resource.data.branch));
       allow create, update: if isMember() && canWrite(branch) && branch != 'all'
         && request.resource.data.branch == branch && request.resource.data.uploadedBy == email();
       allow delete: if isAdmin();
@@ -96,7 +102,9 @@ service cloud.firestore {
     match /portalMembers/{mail} {
       allow get: if isAdmin() || (signedIn() && mail == email());
       allow list: if isAdmin();
-      allow create, update: if isAdmin() && request.resource.data.branch in ['pyeongchon', 'banpo', 'daechi']
+      allow create, update: if isAdmin() && request.resource.data.branches is list && request.resource.data.branches.size() > 0
+        && request.resource.data.branches.hasOnly(['pyeongchon', 'banpo', 'daechi'])
+        && request.resource.data.get('branch', null) == null
         && request.resource.data.active is bool && request.resource.data.name is string && request.resource.data.name.size() <= 20;
       allow delete: if isAdmin();
     }
