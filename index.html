@@ -550,12 +550,19 @@
   @media (hover:none){ .folders .fold-ed{opacity:1} }
   @media (max-width:1180px){ .kpis.kpis7{grid-template-columns:repeat(4,minmax(0,1fr))} .grid2.even{grid-template-columns:minmax(0,1fr)} }
   @media (max-width:560px){ .kpis.kpis7{grid-template-columns:repeat(2,minmax(0,1fr))} .heat .hc{height:24px;font-size:10px} }
+  .boot{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;background:var(--brand-yellow);color:var(--ink);z-index:80}
+  .boot .k{font-size:32px;font-weight:900;letter-spacing:-.05em}
+  .boot .e{font-size:12px;font-weight:800;letter-spacing:.12em;line-height:1.15;border-left:2px solid var(--ink);padding-left:8px}
+  .boot p{flex-basis:100%;text-align:center;margin:8px 0 0;font-size:14px;font-weight:600}
 </style>
 </head>
 <body>
 
 <!-- 처음 열 때 Firebase를 불러오는 동안 -->
 <div id="boot" class="boot" role="status"><span class="k">자라다</span><span class="e">JP<br>ONE</span><p>불러오는 중…</p></div>
+
+<!-- 처음 불러오는 동안 -->
+<div id="boot" class="boot" role="status"><span class="k">자라다</span><span class="e">JP<br>ONE</span><p>불러오는 중이에요…</p></div>
 
 <!-- 로그인 -->
 <div id="login" class="login hidden">
@@ -1036,6 +1043,7 @@ function loginMsg(code){
 }
 function stopWatching(){ unsubs.forEach(u => u && u()); unsubs = []; }
 function showLogin(){
+  $("boot")?.remove();
   stopWatching();
   $("boot")?.remove();
   $("app").classList.add("hidden");
@@ -1043,6 +1051,7 @@ function showLogin(){
 }
 
 function enter(user){
+  $("boot")?.remove();
   stopWatching();
   const email = (user.email || "").toLowerCase();
   if (!DEMO && !ADMIN_EMAILS.includes(email) && !BRANCH_BY_EMAIL[email]) {
