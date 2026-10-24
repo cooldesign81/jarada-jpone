@@ -1,0 +1,12 @@
+{
+  "name": "자라다 JP ONE",
+  "short_name": "JP ONE",
+  "start_url": "./",
+  "display": "browser",
+  "background_color": "#F5F5F5",
+  "theme_color": "#FECD3F",
+  "icons": [
+    { "src": "apple-touch-icon.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
