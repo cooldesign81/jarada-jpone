@@ -492,7 +492,9 @@
   .mh-who{max-width:320px;margin-bottom:12px}
   .mh-sum{display:flex;flex-wrap:wrap;gap:8px 18px;font-size:13px;margin-bottom:12px}
   .mh-port{list-style:none;padding:0;margin:0;display:grid;gap:12px}.mh-port>li{border:1px solid var(--line);border-radius:var(--r-card);padding:12px 14px;display:grid;gap:6px}
-  .tagb.ok{background:#E8F5EE;color:#1F7A4D}
+  .tagb.ok{background:#E8F5EE;color:#1F7A4D}.tagb.bad{background:#FDECEE;color:#D1495B}
+  .nas-st{font-size:12px;font-weight:700;margin:-6px 0 12px;display:flex;align-items:center;gap:6px;color:var(--text-sub)}.nas-st::before{content:"";width:8px;height:8px;border-radius:50%;background:#BDBDBD}
+  .nas-st.on::before{background:#1F7A4D}.nas-st.warn::before{background:#C98100}.nas-st.off::before{background:#D1495B}.nas-st b{color:#D1495B}
   /* 워크허브 */
   .wh-tabs{margin-bottom:16px;flex-wrap:wrap}
   .wh-list{list-style:none;margin:0;padding:0;display:grid;gap:8px}
@@ -923,8 +925,8 @@ const BRANCH_KEYS = ["pyeongchon","banpo","daechi"];
 const SHORT = { pyeongchon:"평촌", banpo:"반포", daechi:"대치" };
 
 /* Firestore 컬렉션 이름 */
-const COLL = { notices:"portalNotices", events:"portalEvents", todos:"portalTodos", files:"portalFiles", bookmarks:"portalBookmarks", bmGroups:"portalBmGroups", kpi:"portalKpi", kpiPriv:"portalKpiPrivate", folders:"portalFolders", members:"portalMembers", birthdays:"portalBirthdays", teachers:"portalTeachers", manuals:"portalManuals", counsel:"portalCounsel", revenue:"portalRevenue", manCats:"portalManCats", tasks:"portalTasks", routines:"portalRoutines", missions:"portalMissions", evals:"portalEvals" };
-const COLL_LABEL = { notices:"공지", events:"일정", todos:"할 일", files:"자료", bookmarks:"북마크", bmGroups:"북마크 구분", kpi:"운영지표", kpiPriv:"운영지표(금액)", folders:"자료실 폴더", members:"직원 계정", birthdays:"생일", teachers:"선생님 입사월", manuals:"업무매뉴얼", counsel:"상담 현황", revenue:"과거 매출", manCats:"매뉴얼 분류", tasks:"워크허브 업무", routines:"루틴", missions:"미션", evals:"미션 평가" };
+const COLL = { notices:"portalNotices", events:"portalEvents", todos:"portalTodos", files:"portalFiles", bookmarks:"portalBookmarks", bmGroups:"portalBmGroups", kpi:"portalKpi", kpiPriv:"portalKpiPrivate", folders:"portalFolders", members:"portalMembers", birthdays:"portalBirthdays", teachers:"portalTeachers", manuals:"portalManuals", counsel:"portalCounsel", revenue:"portalRevenue", manCats:"portalManCats", tasks:"portalTasks", routines:"portalRoutines", missions:"portalMissions", evals:"portalEvals", nasJobs:"portalNasJobs", nasStatus:"portalNasStatus" };
+const COLL_LABEL = { notices:"공지", events:"일정", todos:"할 일", files:"자료", bookmarks:"북마크", bmGroups:"북마크 구분", kpi:"운영지표", kpiPriv:"운영지표(금액)", folders:"자료실 폴더", members:"직원 계정", birthdays:"생일", teachers:"선생님 입사월", manuals:"업무매뉴얼", counsel:"상담 현황", revenue:"과거 매출", manCats:"매뉴얼 분류", tasks:"워크허브 업무", routines:"루틴", missions:"미션", evals:"미션 평가", nasJobs:"NAS 작업", nasStatus:"NAS 커넥터 상태" };
 /* 북마크 구분선 색 */
 const LINE_COLORS = [["#222222","검정"],["#DE8619","주황"],["#C98100","황토"],["#D1495B","빨강"],["#8B5CF6","보라"],["#2563A6","파랑"],["#1F7A4D","초록"],["#767676","회색"]];
 
@@ -1052,7 +1054,7 @@ function fileType(name){
 /* ========= 상태 ========= */
 const state = {
   user:null, isAdmin:false, wide:false, myBranch:null, myBranches:[], branch:"all", tab:"home",
-  notices:[], events:[], todos:[], files:[], bookmarks:[], bmGroups:[], kpi:{}, kpiPriv:{}, revenue:{}, folders:[], members:[], member:null, birthdays:[], ageP: +(store.get("portal.ageP") || 3), counsel:{}, manuals:[], manCats:[], tasks:[], routines:[], whView:"mine", whFilter:"open", whWho:"", missions:[], evals:{}, mhView:"list", mhOpen:null, mhWho:"", manCat:"all", manQ:"", openManual:null, tSort:{ k:"enrolled", dir:-1 }, tQ:"", tWarn:false, loaded:{}, teachers:[], kpiPeriod: +(store.get("portal.kpiPeriod") || 3),
+  notices:[], events:[], todos:[], files:[], bookmarks:[], bmGroups:[], kpi:{}, kpiPriv:{}, revenue:{}, nasStatus:{}, folders:[], members:[], member:null, birthdays:[], ageP: +(store.get("portal.ageP") || 3), counsel:{}, manuals:[], manCats:[], tasks:[], routines:[], whView:"mine", whFilter:"open", whWho:"", missions:[], evals:{}, mhView:"list", mhOpen:null, mhWho:"", manCat:"all", manQ:"", openManual:null, tSort:{ k:"enrolled", dir:-1 }, tQ:"", tWarn:false, loaded:{}, teachers:[], kpiPeriod: +(store.get("portal.kpiPeriod") || 3),
   cal:{ y:new Date().getFullYear(), m:new Date().getMonth(), sel:todayISO() },
   openNotice:null, todoFilter:"open", folder:"all", fileQ:""
 };
@@ -1424,9 +1426,9 @@ async function enter(user){
 
   state.kpiPriv = {};
   state.loaded = {};
-  ["notices","events","tasks","routines","missions","members","files","bookmarks","bmGroups","kpi","folders","birthdays","teachers","manuals","manCats","counsel", ...(state.isAdmin ? ["kpiPriv","revenue"] : [])].forEach(name => {
+  ["notices","events","tasks","routines","missions","members","files","bookmarks","bmGroups","kpi","folders","birthdays","teachers","manuals","manCats","counsel", ...(state.isAdmin ? ["kpiPriv","revenue","nasStatus"] : [])].forEach(name => {
     unsubs.push(DB.watch(name, list => {
-      state[name] = name === "kpi" || name === "kpiPriv" || name === "counsel" || name === "revenue" ? Object.fromEntries(list.map(x => [x.id, x])) : list;
+      state[name] = name === "kpi" || name === "kpiPriv" || name === "counsel" || name === "revenue" || name === "nasStatus" ? Object.fromEntries(list.map(x => [x.id, x])) : list;
       onData(name);
     }));
   });
@@ -1447,7 +1449,7 @@ function onData(name){
   if (name === "manCats") state.loaded.manCats = true;
   if (name === "tasks" || name === "routines") { state.loaded[name] = true; clearTimeout(onData.gt); onData.gt = setTimeout(genRoutineTasks, 800); }
   if (name === "birthdays" || name === "teachers") { state.loaded[name] = true; if (bdPending && state.loaded.birthdays && state.loaded.teachers) { const x = bdPending; bdPending = null; syncPeople(x); } }
-  const uses = { home:["notices","events","tasks","kpi","birthdays"], notice:["notices","events","birthdays","kpi","kpiPriv"], todo:["tasks","routines","members"], mission:["tasks","missions","evals","members"], files:["files","folders"], manual:["manuals","manCats"], bm:["bookmarks","bmGroups"], kpi:["kpi","kpiPriv","teachers","counsel","revenue"] }[state.tab] || [];
+  const uses = { home:["notices","events","tasks","kpi","birthdays"], notice:["notices","events","birthdays","kpi","kpiPriv"], todo:["tasks","routines","members"], mission:["tasks","missions","evals","members","nasStatus"], files:["files","folders"], manual:["manuals","manCats"], bm:["bookmarks","bmGroups"], kpi:["kpi","kpiPriv","teachers","counsel","revenue"] }[state.tab] || [];
   if (uses.includes(name)) renderView({ keepFocus: true });
 }
 
@@ -2621,7 +2623,7 @@ const evalOf = t => state.evals[t.id];
 const mTasks = mid => state.tasks.filter(t => t.missionId === mid && t.status !== "canceled");
 const lastVer = t => (t.versions || []).at(-1);
 const isImg = f => /^image\//.test(f.type || "") || /\.(jpe?g|png|gif|webp|heic)$/i.test(f.name || "");
-const fileLinks = files => (files || []).map(f => { const u = DB.fileUrl(f); return `<li>${isImg(f) && u ? `<a href="${esc(u)}" target="_blank" rel="noopener"><img src="${esc(u)}" alt=""></a>` : ""}<a href="${esc(u || "#")}" target="_blank" rel="noopener">${esc(f.name)}</a><small>${sizeLabel(f.size || 0)}</small>${f.nas === "done" ? `<span class="tagb ok">NAS 보관</span>` : ""}</li>`; }).join("");
+const fileLinks = files => (files || []).map(f => { const u = DB.fileUrl(f); return `<li>${isImg(f) && u ? `<a href="${esc(u)}" target="_blank" rel="noopener"><img src="${esc(u)}" alt=""></a>` : ""}<a href="${esc(u || "#")}" target="_blank" rel="noopener">${esc(f.name)}</a><small>${sizeLabel(f.size || 0)}</small>${f.nas === "done" ? `<span class="tagb ok" title="${esc(f.nasPath || "")}">NAS 보관</span>` : f.nas === "fail" ? `<span class="tagb bad">NAS 실패</span>` : f.path && f.nas === "wait" ? `<span class="tagb">NAS 대기</span>` : ""}</li>`; }).join("");
 
 function missionHubHTML(){
   const mgr = anyMgr();
@@ -2640,7 +2642,14 @@ function missionHubHTML(){
     body = L.length ? `<section class="card"><ul class="wh-list">${L.map(t => mRow(t, false)).join("")}</ul></section>` : `<div class="soon"><h2>받은 미션이 없어요</h2><p>관리자가 미션을 배정하면 여기와 워크허브 '내 업무'에 함께 나와요.</p></div>`; }
   else body = portfolioHTML();
   return `<div class="head"><h1>미션허브</h1><div class="acts">${mgr ? `<button type="button" class="btn btn-primary btn-sm" data-act="mh-new">미션 만들기</button>` : ""}</div></div>
+    ${state.isAdmin ? nasStatusHTML() : ""}
     <div class="seg2 wh-tabs" role="tablist">${tabs.map(([k, l]) => `<button type="button" data-act="mh-view" data-v="${k}" aria-pressed="${v === k}">${l}</button>`).join("")}</div>${body}`;
+}
+function nasStatusHTML(){
+  const c = state.nasStatus?.connector;
+  if (!c) return `<p class="nas-st off">NAS 커넥터: 아직 연결된 적이 없어요. 대치원 서버 PC에 설치하면 제출 파일이 NAS 교사 폴더에 자동 저장돼요. (설치 안내: 저장소 nas-connector/README.md)</p>`;
+  const ago = Math.round((Date.now() - c.lastSeen) / 60000), live = ago <= 3;
+  return `<p class="nas-st ${live ? (c.failed ? "warn" : "on") : "off"}">NAS 커넥터 ${live ? "연결됨" : "연결 끊김"} · 마지막 확인 ${ago < 1 ? "방금" : ago < 60 ? ago + "분 전" : Math.round(ago / 60) + "시간 전"} · 저장 대기 ${c.pending || 0}건${c.failed ? ` · <b>실패 ${c.failed}건</b>(원본은 Firebase에 안전하게 있어요)` : ""}</p>`;
 }
 function mRow(t, who){
   const e = evalOf(t), lv = lastVer(t);
@@ -2787,6 +2796,9 @@ function missionTaskDialog(t){
         if (!files.length) { b.disabled = false; return formErr("결과물 파일을 하나 이상 올려 주세요."); }
         const v = ((t.versions || []).at(-1)?.v || 0) + 1;
         await DB.update("tasks", t.id, { checks, note, files, status:"submitted", submittedAt:Date.now(), versions:[...(t.versions || []), { v, at:Date.now(), note, files, checks }].slice(-10), log: whLog(t, `제출 v${v}`) });
+        // NAS 저장 작업 — 대치원 서버 PC의 커넥터가 가져가서 교사 폴더에 저장
+        for (const [i, f] of files.entries()) if (f.path) await DB.set("nasJobs", `${t.id}_v${v}_${i}`, { taskId:t.id, v, idx:i, storagePath:f.path, name:f.name, size:f.size || 0,
+          teacher:t.assignee, teacherName:t.assigneeName, branch:t.branch, missionTitle:t.title, mType:t.mType, year:new Date().getFullYear(), status:"wait", attempts:0, createdAt:Date.now(), createdBy:myEmail() });
         toast(`제출했어요 (v${v}). 관리자가 평가하면 알려 드려요.`);
       } else { await DB.update("tasks", t.id, { checks, note, files, status: t.status === "revise" ? "revise" : "doing", log: whLog(t, "임시 저장") }); toast("임시 저장했어요."); }
       $("dlg").close();

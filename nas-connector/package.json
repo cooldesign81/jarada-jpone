@@ -1,0 +1,9 @@
+{
+  "name": "jarada-nas-connector",
+  "version": "1.0.0",
+  "description": "JP ONE 미션허브 제출 파일을 학원 NAS에 저장하는 커넥터 (대치원 서버 PC)",
+  "main": "connector.js",
+  "type": "commonjs",
+  "scripts": { "start": "node connector.js", "test-nas": "node connector.js --test" },
+  "dependencies": { "firebase-admin": "^12.7.0", "node-windows": "^1.0.0-beta.8" }
+}

@@ -1,0 +1,17 @@
+{
+  "serviceAccount": "service-account.json",
+  "bucket": "jarada-jpone.firebasestorage.app",
+  "mode": "smb",
+  "smb": {
+    "root": "\\\\192.168.0.10\\JARADA",
+    "user": "jarada-sync",
+    "password": "NAS 계정 비밀번호"
+  },
+  "webdav": {
+    "url": "http://192.168.0.10:8080/JARADA",
+    "user": "jarada-sync",
+    "password": "NAS 계정 비밀번호"
+  },
+  "baseFolder": "JARADA_ONE",
+  "pollSeconds": 30
+}

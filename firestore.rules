@@ -203,6 +203,18 @@ service cloud.firestore {
         && request.resource.data.teacher is string && request.resource.data.published is bool;
       allow delete: if isManagerOf(resource.data.branch);
     }
+    // NAS 저장 작업: 교사가 자기 미션을 제출할 때 만들고, 대치원 서버 PC 커넥터(서비스 키, 규칙 밖)가 처리. 대표만 봄
+    match /portalNasJobs/{id} {
+      allow read: if isAdmin();
+      allow create: if isMember() && request.resource.data.createdBy == email() && request.resource.data.status == 'wait'
+        && (isAdmin() || get(/databases/$(database)/documents/portalTasks/$(request.resource.data.taskId)).data.assignee == email());
+      allow update, delete: if isAdmin();
+    }
+    // NAS 커넥터 상태(커넥터가 씀): 대표만 봄
+    match /portalNasStatus/{id} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
     match /portalBmGroups/{id} {
       allow read: if okRead();
       allow create: if okCreate() && request.resource.data.name is string && request.resource.data.name.size() <= 20;
