@@ -3011,14 +3011,20 @@ async function extConnect(key, interactive){
 }
 const ym12 = () => { const out = [ymOf(todayISO())]; while (out.length < 12) out.unshift(prevYm(out[0])); return out; };
 async function loadPay(db){
-  const F = fb.F, months = ym12(), from = months[0] + "-01", out = {};
+  // 최근 12개월 + 작년 같은 달 12개월. 장부가 시작되기 전 달은 비워 둠(0이 아니라 '기록 없음')
+  const F = fb.F, months = ym12(), lyMonths = months.map(m => `${+m.slice(0, 4) - 1}${m.slice(4)}`), from = lyMonths[0] + "-01", out = {}, ly = {};
+  let first = "9999-99";
+  const snaps = {};
   for (const [b, center] of Object.entries(EXT.pay.centers)){
-    const snap = await F.getDocs(F.query(F.collection(db, "centers", center, "ledger"), F.where("paidDate", ">=", from)));
-    const by = Object.fromEntries(months.map(m => [m, 0]));
-    snap.forEach(d => { const x = d.data(); const m = (x.paidDate || "").slice(0, 7); if (m in by) by[m] += Number(x.amount) || 0; });
-    out[b] = months.map(m => by[m]);
+    snaps[b] = await F.getDocs(F.query(F.collection(db, "centers", center, "ledger"), F.where("paidDate", ">=", from)));
+    snaps[b].forEach(d => { const m = (d.data().paidDate || "").slice(0, 7); if (m && m < first) first = m; });
   }
-  return { months, byBranch: out };
+  for (const b of Object.keys(EXT.pay.centers)){
+    const by = {}; snaps[b].forEach(d => { const x = d.data(); const m = (x.paidDate || "").slice(0, 7); by[m] = (by[m] || 0) + (Number(x.amount) || 0); });
+    out[b] = months.map(m => by[m] || 0);
+    ly[b] = lyMonths.map(m => m < first ? null : by[m] || 0);
+  }
+  return { months, byBranch: out, lyByBranch: ly, first: first === "9999-99" ? "" : first };
 }
 async function loadPeople(db){
   const F = fb.F;
@@ -3492,12 +3498,15 @@ function adminRowsHTML(bs){
     <section class="card"><h2>매출 <span class="sub">결제 매니저 장부 기준, 대표만 보여요</span></h2>
       ${extBox("pay", d => {
         const ser = bs.map(b => ({ name:BRANCHES[b], color:BRANCH_COLOR[b], values:d.byBranch[b] || d.months.map(() => 0) }));
+        // 작년 같은 달: 같은 색 점선. 장부 시작 전 달은 선을 그리지 않음
+        const lySer = bs.map(b => ({ name:`작년 ${BRANCHES[b]}`, color:BRANCH_COLOR[b], dash:true, values:(d.lyByBranch?.[b] || []) }))
+          .filter(s => s.values.some(v => v != null && v > 0));
         const tot = i => ser.reduce((t, s) => t + s.values[i], 0), cur = tot(11), prev = tot(10), diff = cur - prev;
         return `<div class="money"><div><span class="l">이번 달</span><b>${won(cur)}</b>
             <span class="d ${diff >= 0 ? "up" : "down"}">${diff >= 0 ? "▲" : "▼"} ${won(Math.abs(diff))}</span><span class="pm">전월 ${won(prev)}</span></div>
           ${bs.length > 1 ? `<ul class="money-br">${ser.map(s => `<li><i style="background:${s.color}"></i>${esc(s.name)} <b>${won(s.values[11])}</b></li>`).join("")}</ul>` : ""}</div>
-          ${lineChart({ labels:d.months.map(mLabel), series:ser, fmtV:man, zero:true, aria:"월별 매출" })}${ser.length > 1 ? legend(ser) : ""}
-          <p class="fnote">이번 달은 오늘까지 들어온 결제만 합친 금액이에요.</p>`; })}
+          ${lineChart({ labels:d.months.map(mLabel), series:[...lySer, ...ser], fmtV:man, zero:true, aria:"월별 매출" })}${ser.length > 1 ? legend(ser) : ""}
+          <p class="fnote">이번 달은 오늘까지 들어온 결제만 합친 금액이에요. 점선 = 작년 같은 달${lySer.length ? (d.first > d.months[0].replace(/^(\d{4})/, (_, y) => y - 1) ? ` (장부가 ${+d.first.slice(5)}월 ${d.first.slice(0, 4)}년부터라 그 전은 비어 있어요)` : "") : ` — 결제 매니저 장부에 작년 기록이 아직 없어 그리지 못했어요${d.first ? ` (장부 시작 ${d.first.slice(0, 4)}년 ${+d.first.slice(5)}월)` : ""}`}.</p>`; })}
     </section>
     <section class="card"><h2>교사 현황 <span class="sub">JP People 기준, 대표만 보여요</span></h2>
       ${extBox("people", d => {
@@ -3548,8 +3557,10 @@ function demoRows(b){
 }
 function demoPay(){
   const months = ym12(), base = { pyeongchon:118e6, banpo:72e6, daechi:96e6 }, out = {};
-  for (const b of BRANCH_KEYS) out[b] = months.map((m, i) => Math.round(base[b] * (0.9 + 0.012 * i + ((i * 7 + b.length) % 5) * 0.012) * (i === 11 ? 0.78 : 1) / 1000) * 1000);
-  return { months, byBranch: out };
+  const ly = {};
+  for (const b of BRANCH_KEYS){ out[b] = months.map((m, i) => Math.round(base[b] * (0.9 + 0.012 * i + ((i * 7 + b.length) % 5) * 0.012) * (i === 11 ? 0.78 : 1) / 1000) * 1000);
+    ly[b] = months.map((m, i) => Math.round(base[b] * (0.82 + 0.01 * i + ((i * 5 + b.length) % 4) * 0.015) / 1000) * 1000); }
+  return { months, byBranch: out, lyByBranch: ly, first: "" };
 }
 function demoPeople(){
   const t = todayISO(), emps = [];
