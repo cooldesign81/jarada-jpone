@@ -2826,8 +2826,12 @@ function buildSnapshot(rows, branch, base){
   const inqCur = fCur.inq, inqPrev = fPrev.inq;
   const until14 = addDays(base, 14), d30 = addDays(base, -30), d180 = addDays(base, -180), d90 = addDays(base, -90);
   const active = rows.filter(isActive);
-  const unpaidAll = active.concat(rows.filter(r => !isActive(r) && r.unpaid > 0)).filter(r => r.unpaid > 0);
-  // 3주 이상 미납: 엑셀에 미납(청구)일 열이 있으면 그 날짜, 없으면 수강 종료일(=결제된 기간의 끝)이 21일 넘게 지난 원생
+  // 미납: 결제 매니저와 같은 기준 — 재원(휴원 제외)인데 종료일이 지난 원생 = 다음 텀 결제가 안 된 원생.
+  // 엑셀에 미납 금액 열이 채워져 있으면 그 원생만 대상으로 함
+  const hasAmt = rows.some(r => r.unpaid > 0);
+  const unpaidAll = hasAmt ? active.concat(rows.filter(r => !isActive(r) && r.unpaid > 0)).filter(r => r.unpaid > 0)
+                           : rows.filter(r => isPure(r) && r.end && r.end < base);
+  // 3주 이상: 미납(청구)일 열이 있으면 그 날짜, 없으면 종료일에서 21일 넘게 지난 원생 (결제 매니저 '경과 3주' 이상)
   const d21 = addDays(base, -21), dueOf = r => r.due || r.end || "";
   const unpaid = unpaidAll.filter(r => dueOf(r) && dueOf(r) <= d21);
   const unpaidBasis = rows.some(r => r.due) ? "due" : "end";
@@ -3392,7 +3396,7 @@ function checkListHTML(){
   if (!snaps.length) return `<p class="empty">원생 명단을 올리면 미납·미등록 원생이 여기 나와요.</p>`;
   const L = k => snaps.flatMap(s => (s.lists?.[k] || []).map((x, i) => ({ ...x, branch:s.branch, amt: k === "unpaid" ? privAmts(s.branch)[i] || 0 : 0 })));
   const lists = [
-    ["critical", "3주 이상 미납", L("unpaid"), x => `${x.name}${x.teacher ? ` (${x.teacher})` : ""}${x.since ? `, ${md(x.since)}부터` : ""}${state.isAdmin && x.amt ? `, ${won(x.amt)}` : ""}`],
+    ["critical", "3주 이상 미납", L("unpaid"), x => `${x.name}${x.teacher ? ` (${x.teacher})` : ""}${x.since ? `, ${md(x.since)} 종료` : ""}${state.isAdmin && x.amt ? `, ${won(x.amt)}` : ""}`],
     ["info", "샘플 후 3일 넘게 미등록", L("sampleWait"), x => `${x.name}, ${md(x.reg)} 샘플`]
   ];
   return lists.map(([s, title, items, line]) => `<details class="chk-d ${s}"><summary>${ICON[s]}<span class="t">${title}</span><b>${items.length}명</b></summary>
@@ -3518,7 +3522,7 @@ function kpiHelp(){
     <li><b>샘플 문의</b>: 등록일이 그 달인 모든 원생(샘플수업·대기·등록취소·등록 포함).</li>
     <li><b>샘플 등록율</b>: 샘플 문의 중 등록한 원생 비율.</li>
     <li><b>샘플 퍼널</b>: 문의 → 샘플 진행('대기' 제외) → 샘플 후 등록(등록한 원생) → 정규 등록(그중 지금 수업을 다니는 원생).</li>
-    <li><b>미납 3주 이상</b>: 미납 열에 금액이 있거나 '미납'이라고 적힌 원생 중, 엑셀에 미납(청구)일 열이 있으면 그 날짜가, 없으면 수강 종료일이 기준일보다 21일 넘게 지난 원생.</li>
+    <li><b>미납 3주 이상</b>: 결제 매니저와 같은 기준 — 상태가 재원(휴원 제외)인데 수강 종료일이 기준일보다 21일 넘게 지난 원생(다음 텀 결제가 안 됨). 엑셀에 미납 금액 열이 채워져 있으면 그 원생만 셈.</li>
     <li><b>교사 · 요일 · 시간</b>: 반 이름, 예) 5번 (김민수) (수-4 18:30) 에서 읽어요.</li></ul>` });
 }
 const DEMO_TEACH = { pyeongchon:["김민수","박지은","이도윤","최서연","정하늘"], banpo:["한지민","오세훈","윤아름","장현우"], daechi:["서지호","강유나","임태현","배수아","조은비"] };
