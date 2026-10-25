@@ -817,6 +817,7 @@
 <div class="toast hidden" id="toast" role="status" aria-live="polite"></div>
 <input type="file" id="filePick" multiple hidden>
 <input type="file" id="lmsPick" accept=".xlsx,.xls,.csv" multiple hidden>
+<input type="file" id="revPick" accept=".xlsx,.xls,.csv" multiple hidden>
 <div class="tip hidden" id="tip" role="tooltip"></div>
 
 <script type="module">
@@ -854,8 +855,8 @@ const BRANCH_KEYS = ["pyeongchon","banpo","daechi"];
 const SHORT = { pyeongchon:"평촌", banpo:"반포", daechi:"대치" };
 
 /* Firestore 컬렉션 이름 */
-const COLL = { notices:"portalNotices", events:"portalEvents", todos:"portalTodos", files:"portalFiles", bookmarks:"portalBookmarks", bmGroups:"portalBmGroups", kpi:"portalKpi", kpiPriv:"portalKpiPrivate", folders:"portalFolders", members:"portalMembers", birthdays:"portalBirthdays", teachers:"portalTeachers", manuals:"portalManuals", counsel:"portalCounsel" };
-const COLL_LABEL = { notices:"공지", events:"일정", todos:"할 일", files:"자료", bookmarks:"북마크", bmGroups:"북마크 구분", kpi:"운영지표", kpiPriv:"운영지표(금액)", folders:"자료실 폴더", members:"직원 계정", birthdays:"생일", teachers:"선생님 입사월", manuals:"업무매뉴얼", counsel:"상담 현황" };
+const COLL = { notices:"portalNotices", events:"portalEvents", todos:"portalTodos", files:"portalFiles", bookmarks:"portalBookmarks", bmGroups:"portalBmGroups", kpi:"portalKpi", kpiPriv:"portalKpiPrivate", folders:"portalFolders", members:"portalMembers", birthdays:"portalBirthdays", teachers:"portalTeachers", manuals:"portalManuals", counsel:"portalCounsel", revenue:"portalRevenue" };
+const COLL_LABEL = { notices:"공지", events:"일정", todos:"할 일", files:"자료", bookmarks:"북마크", bmGroups:"북마크 구분", kpi:"운영지표", kpiPriv:"운영지표(금액)", folders:"자료실 폴더", members:"직원 계정", birthdays:"생일", teachers:"선생님 입사월", manuals:"업무매뉴얼", counsel:"상담 현황", revenue:"과거 매출" };
 /* 북마크 구분선 색 */
 const LINE_COLORS = [["#222222","검정"],["#DE8619","주황"],["#C98100","황토"],["#D1495B","빨강"],["#8B5CF6","보라"],["#2563A6","파랑"],["#1F7A4D","초록"],["#767676","회색"]];
 
@@ -983,7 +984,7 @@ function fileType(name){
 /* ========= 상태 ========= */
 const state = {
   user:null, isAdmin:false, wide:false, myBranch:null, myBranches:[], branch:"all", tab:"home",
-  notices:[], events:[], todos:[], files:[], bookmarks:[], bmGroups:[], kpi:{}, kpiPriv:{}, folders:[], members:[], member:null, birthdays:[], ageP: +(store.get("portal.ageP") || 3), counsel:{}, manuals:[], manCat:"all", manQ:"", openManual:null, tSort:{ k:"enrolled", dir:-1 }, tQ:"", tWarn:false, loaded:{}, teachers:[], kpiPeriod: +(store.get("portal.kpiPeriod") || 3),
+  notices:[], events:[], todos:[], files:[], bookmarks:[], bmGroups:[], kpi:{}, kpiPriv:{}, revenue:{}, folders:[], members:[], member:null, birthdays:[], ageP: +(store.get("portal.ageP") || 3), counsel:{}, manuals:[], manCat:"all", manQ:"", openManual:null, tSort:{ k:"enrolled", dir:-1 }, tQ:"", tWarn:false, loaded:{}, teachers:[], kpiPeriod: +(store.get("portal.kpiPeriod") || 3),
   cal:{ y:new Date().getFullYear(), m:new Date().getMonth(), sel:todayISO() },
   openNotice:null, todoFilter:"open", folder:"all", fileQ:""
 };
@@ -1052,6 +1053,7 @@ function seed(){
       { id:"f8", name:"할로윈 행사 사진.zip", folder:"photo", branch:"banpo", size:48230110, at:ago(1), createdBy:BP, writer:"반포원", versions:[ { size:48230110, at:ago(1), by:"반포원" } ] }
     ],
     kpi: BRANCH_KEYS.map(b => ({ id:b, ...splitSnapshot(buildSnapshot(demoRows(b), b, t)).pub, fileName:"샘플 원생 목록.xlsx", uploadedAt:ago(1), uploadedBy:ADMIN, uploader:"대표" })),
+    revenue: Object.values(demoRevenue()),
     kpiPriv: BRANCH_KEYS.map(b => ({ id:b, ...splitSnapshot(buildSnapshot(demoRows(b), b, t)).priv, uploadedAt:ago(1), uploadedBy:ADMIN })),
     folders: DEFAULT_FOLDERS.map((f, i) => ({ ...f, order:i + 1, branch:"all", at:ago(60), createdBy:ADMIN, writer:"대표" })),
     birthdays: (() => { const t = todayISO(), md = n => addDays(t, n).slice(5);
@@ -1312,9 +1314,9 @@ async function enter(user){
 
   state.kpiPriv = {};
   state.loaded = {};
-  ["notices","events","todos","files","bookmarks","bmGroups","kpi","folders","birthdays","teachers","manuals","counsel", ...(state.isAdmin ? ["kpiPriv","members"] : [])].forEach(name => {
+  ["notices","events","todos","files","bookmarks","bmGroups","kpi","folders","birthdays","teachers","manuals","counsel", ...(state.isAdmin ? ["kpiPriv","members","revenue"] : [])].forEach(name => {
     unsubs.push(DB.watch(name, list => {
-      state[name] = name === "kpi" || name === "kpiPriv" || name === "counsel" ? Object.fromEntries(list.map(x => [x.id, x])) : list;
+      state[name] = name === "kpi" || name === "kpiPriv" || name === "counsel" || name === "revenue" ? Object.fromEntries(list.map(x => [x.id, x])) : list;
       onData(name);
     }));
   });
@@ -1324,7 +1326,7 @@ async function enter(user){
 function onData(name){
   if (name === "members") { renderMemList(); return; }
   if (name === "birthdays" || name === "teachers") { state.loaded[name] = true; if (bdPending && state.loaded.birthdays && state.loaded.teachers) { const x = bdPending; bdPending = null; syncPeople(x); } }
-  const uses = { home:["notices","events","todos","kpi","birthdays"], notice:["notices","events","birthdays","kpi","kpiPriv"], todo:["todos"], files:["files","folders"], manual:["manuals"], bm:["bookmarks","bmGroups"], kpi:["kpi","kpiPriv","teachers","counsel"] }[state.tab] || [];
+  const uses = { home:["notices","events","todos","kpi","birthdays"], notice:["notices","events","birthdays","kpi","kpiPriv"], todo:["todos"], files:["files","folders"], manual:["manuals"], bm:["bookmarks","bmGroups"], kpi:["kpi","kpiPriv","teachers","counsel","revenue"] }[state.tab] || [];
   if (uses.includes(name)) renderView({ keepFocus: true });
 }
 
@@ -2303,6 +2305,7 @@ $("view").addEventListener("click", e => {
     case "file-open": fileDetail(state.files.find(x => x.id === id)); break;
     case "bm-new": bmForm(null, el.dataset.group); break;
     case "lms-pick": $("lmsPick").click(); break;
+    case "rev-pick": $("revPick").click(); break;
     case "kpi-help": kpiHelp(); break;
     case "people-resync": extConnect("people", true).then(() => toast(state.teachers.length ? `선생님 입사월 ${new Set(state.teachers.map(t => t.empId)).size}명을 확인했어요.` : "JP People을 읽지 못했어요.")); break;
     case "t-sort": { const k = el.dataset.k; state.tSort = state.tSort.k === k ? { k, dir: -state.tSort.dir } : { k, dir: k === "name" || k === "branch" ? 1 : -1 }; renderView(); $("view").querySelector(`[data-act="t-sort"][data-k="${k}"]`)?.focus(); break; }
@@ -2980,6 +2983,96 @@ function lmsPreview(files){
   $("dlgBody").addEventListener("change", re);
 }
 
+/* ── 과거 매출 올리기 (대표 전용): 월별 합계표 · 일별 매출표 → portalRevenue/{원} ──
+   표 모양: ① 열 제목에 평촌·반포·대치 (원별 금액 열) ② '원' 열 + 금액 열 ③ 금액 열 하나(원은 직접 고름).
+   날짜 칸이 '2025-11'·'2025.11'·'2025년 11월'이면 월별, '2026-10-01'·엑셀 날짜면 일별. 합계 줄은 건너뜀 */
+const revNum = v => { if (typeof v === "number") return v; const t = String(v ?? "").replace(/[,원\s₩]/g, ""); if (!/^-?\d+(\.\d+)?$/.test(t)) return null; return +t; };
+function revDate(v, yearHint){
+  if (v instanceof Date && !isNaN(v)) { const x = new Date(v.getTime() + 12 * 36e5); return { d: `${x.getFullYear()}-${pad2(x.getMonth() + 1)}-${pad2(x.getDate())}` }; }
+  if (typeof v === "number" && v > 20000 && v < 80000) { const d = new Date(Math.round((v - 25569) * 864e5)); return { d: `${d.getUTCFullYear()}-${pad2(d.getUTCMonth() + 1)}-${pad2(d.getUTCDate())}` }; }
+  const t = String(v ?? "").trim(); if (!t || /합계|소계|total/i.test(t)) return null;
+  let m = t.match(/^(\d{2,4})\s*[-./년]\s*(\d{1,2})\s*[-./월]?\s*(?:(\d{1,2})\s*일?)?\s*(?:\(.\))?$/);
+  if (m){ let y = +m[1]; if (y < 100) y += 2000; if (+m[2] < 1 || +m[2] > 12) return null;
+    return m[3] ? { d: `${y}-${pad2(+m[2])}-${pad2(+m[3])}` } : { m: `${y}-${pad2(+m[2])}` }; }
+  m = t.match(/^(\d{1,2})\s*[/.월]\s*(\d{1,2})\s*일?\s*(?:\(.\))?$/);
+  if (m && yearHint) return { d: `${yearHint}-${pad2(+m[1])}-${pad2(+m[2])}` };
+  return null;
+}
+async function readRevFile(file){
+  await loadXLSX();
+  const wb = XLSX.read(await file.arrayBuffer(), { type:"array", cellDates:true });
+  const yHint = (file.name.match(/20\d{2}/) || [String(new Date().getFullYear())])[0];
+  const recs = [];   // { b|null, key, kind:'m'|'d', amt }
+  for (const sn of wb.SheetNames){
+    const aoa = XLSX.utils.sheet_to_json(wb.Sheets[sn], { header:1, raw:true, defval:"" });
+    // 날짜 열: 날짜로 읽히는 칸이 가장 많은 열
+    const W = Math.max(0, ...aoa.slice(0, 400).map(r => r.length));
+    let dc = -1, best = 0;
+    for (let c = 0; c < W; c++){ const n = aoa.reduce((a, r) => a + (revDate(r[c], yHint) ? 1 : 0), 0); if (n > best) { best = n; dc = c; } }
+    if (dc < 0 || best < 1) continue;
+    const firstData = aoa.findIndex(r => revDate(r[dc], yHint));
+    // 머리글 = 첫 날짜 줄 위쪽에서 글자가 가장 많은 줄
+    let hi = -1; for (let i = firstData - 1; i >= Math.max(0, firstData - 6); i--){ if (aoa[i].some(x => String(x).trim())) { hi = i; break; } }
+    const head = hi >= 0 ? aoa[hi].map(x => String(x).replace(/\s/g, "")) : [];
+    const brCols = head.map((h, c) => [branchOfCenter(h), c]).filter(([b, c]) => b && c !== dc);
+    const brCol = head.findIndex(h => /^(원|지점|센터|센터명|지점명|원명)$/.test(h));
+    const amtCol = (() => { const i = head.findIndex((h, c) => c !== dc && /매출|금액|합계|총액|결제/.test(h)); if (i >= 0) return i;
+      for (let c = 0; c < W; c++) if (c !== dc && c !== brCol && aoa.slice(firstData, firstData + 30).filter(r => revNum(r[c]) != null).length > 0) return c; return -1; })();
+    for (let i = firstData; i < aoa.length; i++){
+      const r = aoa[i], dt = revDate(r[dc], yHint); if (!dt) continue;
+      const key = dt.d || dt.m, kind = dt.d ? "d" : "m";
+      if (brCols.length) { for (const [b, c] of brCols){ const v = revNum(r[c]); if (v != null) recs.push({ b, key, kind, amt:v }); } }
+      else if (brCol >= 0 && amtCol >= 0) { const b = branchOfCenter(String(r[brCol])), v = revNum(r[amtCol]); if (b && v != null) recs.push({ b, key, kind, amt:v }); }
+      else if (amtCol >= 0) { const v = revNum(r[amtCol]); if (v != null) recs.push({ b:null, key, kind, amt:v }); }
+    }
+  }
+  return { recs, guess: branchOfCenter(file.name) };
+}
+$("revPick")?.addEventListener("change", async e => {
+  const fs = [...e.target.files]; e.target.value = ""; if (!fs.length || !state.isAdmin) return;
+  const files = [];
+  for (const f of fs){ try { const r = await readRevFile(f); if (!r.recs.length) toast(`${f.name}: 날짜와 금액을 찾지 못했어요.`); else files.push({ name:f.name, ...r }); }
+    catch (err) { toast(`${f.name}: ${err.message || "파일을 읽지 못했어요."}`); } }
+  if (files.length) revPreview(files);
+});
+function revPreview(files){
+  const pick0 = files.map(f => f.recs.some(x => !x.b) ? (f.guess || (state.branch !== "all" ? state.branch : "pyeongchon")) : "");
+  const collect = picks => {
+    const g = {}; let skipped = 0;
+    files.forEach((f, i) => f.recs.forEach(x => { const b = x.b || picks[i]; if (!b) return;
+      if (x.kind === "d" && x.key >= LEDGER_FROM) { skipped++; return; }   // 장부와 겹치는 날은 장부를 씀
+      const o = g[b] ||= { monthly:{}, daily:{} }; const t = x.kind === "m" ? o.monthly : o.daily; t[x.key] = (t[x.key] || 0) + x.amt; }));
+    return { g, skipped };
+  };
+  const rng = keys => { const k = keys.sort(); return k.length ? `${k[0]} ~ ${k.at(-1)}` : "-"; };
+  const render = picks => { const { g, skipped } = collect(picks);
+    return BRANCH_KEYS.filter(b => g[b]).map(b => { const { monthly, daily } = g[b], mk = Object.keys(monthly), dk = Object.keys(daily);
+      return `<tr><td><b>${BRANCHES[b]}</b></td><td>${mk.length ? `${mk.length}달<small class="fnm">${rng(mk)}</small>` : "-"}</td><td class="num">${mk.length ? won(Object.values(monthly).reduce((a, v) => a + v, 0)) : "-"}</td>
+        <td>${dk.length ? `${dk.length}일<small class="fnm">${rng(dk)}</small>` : "-"}</td><td class="num">${dk.length ? won(Object.values(daily).reduce((a, v) => a + v, 0)) : "-"}</td></tr>`; }).join("")
+      + (skipped ? `<tr><td colspan="5" class="dupw">${+LEDGER_FROM.slice(5, 7)}월 ${+LEDGER_FROM.slice(8)}일 이후 일별 ${skipped}건은 결제 매니저 장부와 겹쳐서 뺐어요.</td></tr>` : ""); };
+  openForm({
+    title: "과거 매출 적용 전 확인",
+    fields: `<p class="hint">원별로 읽은 내용이에요. 같은 달·같은 날이 이미 있으면 새 값으로 바뀌고, 나머지는 그대로 남아요. 대표만 볼 수 있어요.</p>
+      <div class="lms-files">${files.map((f, i) => `<div class="lf"><span class="fn">${esc(f.name)}</span>${pick0[i] ? `<select class="inp" name="pick${i}" aria-label="${esc(f.name)}의 원">${BRANCH_KEYS.map(b => `<option value="${b}" ${b === pick0[i] ? "selected" : ""}>${BRANCHES[b]}</option>`).join("")}</select>`
+        : `<span class="ro">원 이름으로 자동 구분 (${[...new Set(f.recs.map(x => SHORT[x.b]))].join("·")})</span>`}</div>`).join("")}</div>
+      <div class="pv-wrap"><table class="pv"><thead><tr><th>원</th><th>월별</th><th>월별 합</th><th>일별</th><th>일별 합</th></tr></thead><tbody id="pvBody">${render(pick0)}</tbody></table></div>
+      <p class="hint small">${+LEDGER_FROM.slice(5, 7)}월은 ${+LEDGER_FROM.slice(8) - 1}일까지 일별 매출 + ${+LEDGER_FROM.slice(8)}일부터 결제 매니저 장부를 더해요. 그 전 달은 월별 합계를 써요(월별이 없으면 일별 합).</p>`,
+    saveLabel: "적용",
+    async onSave(form){
+      const { g } = collect(files.map((f, i) => pick0[i] ? val(form, "pick" + i) : ""));
+      let n = 0;
+      for (const [b, { monthly, daily }] of Object.entries(g)){
+        const old = state.revenue[b] || {};
+        await DB.set("revenue", b, { branch:b, monthly:{ ...(old.monthly || {}), ...monthly }, daily:{ ...(old.daily || {}), ...daily }, updatedAt: Date.now(), updatedBy: state.user.email });
+        n++;
+      }
+      if (!n) return formErr("적용할 내용이 없어요.");
+      toast(`${n}개 원의 과거 매출을 넣었어요.`);
+    }
+  });
+  $("dlgBody").addEventListener("change", () => { const f = $("dlgForm"); $("pvBody").innerHTML = render(files.map((x, i) => pick0[i] ? f.elements["pick" + i]?.value : "")); });
+}
+
 /* ── 다른 앱 연결 (대표 전용): 결제 매니저 · JP People ── */
 const ext = { pay:{ status:"off" }, people:{ status:"off" } };
 const extApps = {};
@@ -3010,21 +3103,29 @@ async function extConnect(key, interactive){
   if (state.tab === "kpi" || state.tab === "home") renderView();
 }
 const ym12 = () => { const out = [ymOf(todayISO())]; while (out.length < 12) out.unshift(prevYm(out[0])); return out; };
+/* 매출 = 결제 매니저 장부 중 '정규 + 신규생 + 다른 요일'만 (샘플 후 등록·기타·상자 제외). 장부는 LEDGER_FROM 부터 씀.
+   그 전은 대표가 올린 과거 매출(portalRevenue: 월별 합계 · 일별 매출)로 채움 */
+const LEDGER_FROM = "2026-10-20";
+const REV_KINDS = ["정규", "신규생", "다른 요일"];
+const ledgerKindLabel = x => x.kind === "기타" ? (x.category || "기타") : (x.kind || "");
 async function loadPay(db){
-  // 최근 12개월 + 작년 같은 달 12개월. 장부가 시작되기 전 달은 비워 둠(0이 아니라 '기록 없음')
-  const F = fb.F, months = ym12(), lyMonths = months.map(m => `${+m.slice(0, 4) - 1}${m.slice(4)}`), from = lyMonths[0] + "-01", out = {}, ly = {};
-  let first = "9999-99";
-  const snaps = {};
+  const F = fb.F, months = ym12(), from = `${+months[0].slice(0, 4) - 1}${months[0].slice(4)}-01`, ledger = {};
   for (const [b, center] of Object.entries(EXT.pay.centers)){
-    snaps[b] = await F.getDocs(F.query(F.collection(db, "centers", center, "ledger"), F.where("paidDate", ">=", from)));
-    snaps[b].forEach(d => { const m = (d.data().paidDate || "").slice(0, 7); if (m && m < first) first = m; });
+    const snap = await F.getDocs(F.query(F.collection(db, "centers", center, "ledger"), F.where("paidDate", ">=", from > LEDGER_FROM ? from : LEDGER_FROM)));
+    const by = {}; snap.forEach(d => { const x = d.data(); if (!REV_KINDS.includes(ledgerKindLabel(x))) return;
+      const m = (x.paidDate || "").slice(0, 7); if (m) by[m] = (by[m] || 0) + (Number(x.amount) || 0); });
+    ledger[b] = by;
   }
-  for (const b of Object.keys(EXT.pay.centers)){
-    const by = {}; snaps[b].forEach(d => { const x = d.data(); const m = (x.paidDate || "").slice(0, 7); by[m] = (by[m] || 0) + (Number(x.amount) || 0); });
-    out[b] = months.map(m => by[m] || 0);
-    ly[b] = lyMonths.map(m => m < first ? null : by[m] || 0);
-  }
-  return { months, byBranch: out, lyByBranch: ly, first: first === "9999-99" ? "" : first };
+  return { months, ledger };
+}
+/* 한 원의 월 매출: 장부 시작 전 달 = 올린 월별 합계(없으면 일별 합) / 장부 시작 달 = 올린 일별(시작일 전) + 장부 / 그 뒤 = 장부. 자료가 없으면 null */
+function revenueOf(b, ym, ledger){
+  const r = state.revenue[b] || {}, mon = r.monthly || {}, daily = r.daily || {}, lm = LEDGER_FROM.slice(0, 7);
+  const days = Object.entries(daily).filter(([d]) => d.startsWith(ym) && d < LEDGER_FROM);
+  const dsum = days.reduce((a, [, v]) => a + (+v || 0), 0), led = ledger?.[b]?.[ym] || 0;
+  if (ym < lm) return mon[ym] != null ? +mon[ym] : days.length ? dsum : null;
+  if (ym === lm) return days.length ? dsum + led : mon[ym] != null ? +mon[ym] : led;
+  return led;
 }
 async function loadPeople(db){
   const F = fb.F;
@@ -3498,18 +3599,23 @@ function extBox(key, inner){
 }
 function adminRowsHTML(bs){
   return `<div class="grid2 even">
-    <section class="card"><h2>매출 <span class="sub">결제 매니저 장부 기준, 대표만 보여요</span></h2>
+    <section class="card"><h2>매출 <span class="sub">정규 + 신규생 + 다른 요일, 대표만 보여요</span></h2>
       ${extBox("pay", d => {
-        const ser = bs.map(b => ({ name:BRANCHES[b], color:BRANCH_COLOR[b], values:d.byBranch[b] || d.months.map(() => 0) }));
-        // 작년 같은 달: 같은 색 점선. 장부 시작 전 달은 선을 그리지 않음
-        const lySer = bs.map(b => ({ name:`작년 ${BRANCHES[b]}`, color:BRANCH_COLOR[b], dash:true, values:(d.lyByBranch?.[b] || []) }))
+        const lyOf = m => `${+m.slice(0, 4) - 1}${m.slice(4)}`;
+        const ser = bs.map(b => ({ name:BRANCHES[b], color:BRANCH_COLOR[b], values:d.months.map(m => revenueOf(b, m, d.ledger)) }));
+        // 작년 같은 달: 같은 색 점선. 자료가 없는 달은 선을 그리지 않음
+        const lySer = bs.map(b => ({ name:`작년 ${BRANCHES[b]}`, color:BRANCH_COLOR[b], dash:true, values:d.months.map(m => revenueOf(b, lyOf(m), d.ledger)) }))
           .filter(s => s.values.some(v => v != null && v > 0));
-        const tot = i => ser.reduce((t, s) => t + s.values[i], 0), cur = tot(11), prev = tot(10), diff = cur - prev;
+        const tot = i => ser.reduce((t, s) => t + (s.values[i] || 0), 0), cur = tot(11), prev = tot(10), diff = cur - prev;
+        const lyCur = lySer.length ? lySer.reduce((t, s) => t + (s.values[11] || 0), 0) : 0;
+        const hasPast = bs.some(b => Object.keys(state.revenue[b]?.monthly || {}).length || Object.keys(state.revenue[b]?.daily || {}).length);
         return `<div class="money"><div><span class="l">이번 달</span><b>${won(cur)}</b>
-            <span class="d ${diff >= 0 ? "up" : "down"}">${diff >= 0 ? "▲" : "▼"} ${won(Math.abs(diff))}</span><span class="pm">전월 ${won(prev)}</span></div>
-          ${bs.length > 1 ? `<ul class="money-br">${ser.map(s => `<li><i style="background:${s.color}"></i>${esc(s.name)} <b>${won(s.values[11])}</b></li>`).join("")}</ul>` : ""}</div>
+            <span class="d ${diff >= 0 ? "up" : "down"}">${diff >= 0 ? "▲" : "▼"} ${won(Math.abs(diff))}</span><span class="pm">전월 ${won(prev)}${lyCur ? ` · 작년 ${+d.months[11].slice(5)}월 ${won(lyCur)}` : ""}</span></div>
+          ${bs.length > 1 ? `<ul class="money-br">${ser.map(s => `<li><i style="background:${s.color}"></i>${esc(s.name)} <b>${won(s.values[11] || 0)}</b></li>`).join("")}</ul>` : ""}</div>
           ${lineChart({ labels:d.months.map(mLabel), series:[...lySer, ...ser], fmtV:man, zero:true, aria:"월별 매출" })}${ser.length > 1 ? legend(ser) : ""}
-          <p class="fnote">이번 달은 오늘까지 들어온 결제만 합친 금액이에요. 점선 = 작년 같은 달${lySer.length ? (d.first > d.months[0].replace(/^(\d{4})/, (_, y) => y - 1) ? ` (장부가 ${+d.first.slice(5)}월 ${d.first.slice(0, 4)}년부터라 그 전은 비어 있어요)` : "") : ` — 결제 매니저 장부에 작년 기록이 아직 없어 그리지 못했어요${d.first ? ` (장부 시작 ${d.first.slice(0, 4)}년 ${+d.first.slice(5)}월)` : ""}`}.</p>`; })}
+          <p class="fnote">정규 + 신규생 + 다른 요일 결제만 합쳤어요(샘플 후 등록·기타·상자 제외). 점선 = 작년 같은 달.
+            ${+LEDGER_FROM.slice(5, 7)}월 ${+LEDGER_FROM.slice(8)}일부터는 결제 매니저 장부, 그 전은 올린 과거 매출${hasPast ? "" : "(아직 없음)"}. 이번 달은 오늘까지 들어온 결제만이에요.</p>
+          <div class="acts"><button type="button" class="btn btn-ghost btn-sm" data-act="rev-pick" data-tip="월별 매출표 또는 일별 매출표 엑셀. 원 이름(평촌·반포·대치)이 열 제목이나 '원' 열에 있으면 원별로 나눠요">과거 매출 올리기</button></div>`; })}
     </section>
     <section class="card"><h2>교사 현황 <span class="sub">JP People 기준, 대표만 보여요</span></h2>
       ${extBox("people", d => {
@@ -3559,11 +3665,19 @@ function demoRows(b){
   return rows;
 }
 function demoPay(){
+  const months = ym12(), base = { pyeongchon:118e6, banpo:72e6, daechi:96e6 }, ledger = {};
+  for (const b of BRANCH_KEYS){ ledger[b] = {}; months.forEach((m, i) => { if (i >= 11) ledger[b][m] = Math.round(base[b] * 0.4 / 1000) * 1000; }); }
+  return { months, ledger };
+}
+function demoRevenue(){
   const months = ym12(), base = { pyeongchon:118e6, banpo:72e6, daechi:96e6 }, out = {};
-  const ly = {};
-  for (const b of BRANCH_KEYS){ out[b] = months.map((m, i) => Math.round(base[b] * (0.9 + 0.012 * i + ((i * 7 + b.length) % 5) * 0.012) * (i === 11 ? 0.78 : 1) / 1000) * 1000);
-    ly[b] = months.map((m, i) => Math.round(base[b] * (0.82 + 0.01 * i + ((i * 5 + b.length) % 4) * 0.015) / 1000) * 1000); }
-  return { months, byBranch: out, lyByBranch: ly, first: "" };
+  for (const b of BRANCH_KEYS){ const monthly = {}, daily = {};
+    months.forEach((m, i) => { const ly = `${+m.slice(0, 4) - 1}${m.slice(4)}`;
+      monthly[ly] = Math.round(base[b] * (0.82 + 0.01 * i + ((i * 5 + b.length) % 4) * 0.015) / 1000) * 1000;
+      if (i < 11) monthly[m] = Math.round(base[b] * (0.9 + 0.012 * i + ((i * 7 + b.length) % 5) * 0.012) / 1000) * 1000; });
+    for (let d = 1; d < 20; d++) daily[`${months[11]}-${pad2(d)}`] = Math.round(base[b] / 26 / 1000) * 1000;
+    out[b] = { id:b, branch:b, monthly, daily }; }
+  return out;
 }
 function demoPeople(){
   const t = todayISO(), emps = [];
