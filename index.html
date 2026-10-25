@@ -569,6 +569,22 @@
   svg.chart .hit:hover{fill:rgba(34,34,34,.04)}
   .legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--text);margin-top:8px}
   .legend + .legend{margin-top:4px}
+  .cs-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 28px}
+  .cs-row{display:grid;grid-template-columns:110px minmax(0,1fr) 54px;align-items:center;gap:8px;font-size:13px}
+  .cs-t{display:flex;align-items:baseline;gap:6px;min-width:0}.cs-t b{color:var(--ink)}.cs-t small{font-size:11px;color:var(--text-sub)}
+  .cs-bar{height:12px;background:#F2F2F2;border-radius:6px;overflow:hidden}.cs-bar i{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,#C3AEF7,#6D3FD8)}
+  .cs-v{text-align:right;font-weight:800;color:var(--ink);font-variant-numeric:tabular-nums}.cs-v small{font-size:11px;color:var(--text-sub);margin-left:1px}
+  @media (max-width:900px){ .cs-list{grid-template-columns:1fr} }
+  .age-leave{margin-top:24px;padding-top:16px;border-top:1px solid var(--line)}
+  .al-h{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+  .al-h h3{margin:0;font-size:15px;color:var(--ink)}.al-h .seg2{margin:0}
+  .al-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px 24px}
+  .al-row{display:grid;grid-template-columns:64px minmax(0,1fr) 92px;align-items:center;gap:8px;font-size:13px}
+  .al-k{font-weight:700;color:var(--ink)}
+  .al-bar{position:relative;height:12px;background:#F2F2F2;border-radius:4px}.al-bar i{display:block;height:100%;border-radius:4px}
+  .al-bar em{position:absolute;top:-3px;width:2px;height:18px;background:var(--ink)}
+  .al-v{text-align:right;font-variant-numeric:tabular-nums}.al-v b{color:var(--ink)}.al-v small{display:block;font-size:11px;color:var(--text-sub)}
+  @media (max-width:900px){ .al-list{grid-template-columns:1fr} }
   .age-wrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:24px;align-items:start}
   .age-dist{display:grid;gap:6px}
   .ad-row{display:grid;grid-template-columns:64px minmax(0,1fr) 72px;align-items:center;gap:8px;font-size:13px}
@@ -639,10 +655,16 @@
   .ttable td small{display:block;font-size:11px;font-weight:600;margin-top:2px}
   .ttable .mut{color:var(--text-sub)}
   .ttable .sep{border-left:1px solid var(--line);padding-left:12px}
-  .sortb{border:0;background:none;padding:0;font:inherit;color:inherit;cursor:pointer;display:inline-flex;align-items:center;gap:3px;white-space:nowrap}
-  .sortb i{font-style:normal;font-size:10px;color:#BDBDBD}
-  .sortb.on{color:var(--ink);font-weight:700}.sortb.on i{color:var(--ink)}
-  .ttable th.num .sortb{justify-content:flex-end;width:100%}
+  /* 정렬 머리글: 알약 버튼. 정렬 중인 칸은 검정 + 노랑 */
+  .sortb{border:0;background:#F0F0F0;border-radius:12px;padding:5px 8px;font:inherit;font-size:11.5px;font-weight:800;color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+  .sortb:hover{background:#E4E4E4}
+  .sortb i{font-style:normal;font-size:10px;color:#9E9E9E}
+  .sortb.on{background:var(--ink);color:var(--brand-yellow)}.sortb.on i{color:var(--brand-yellow)}
+  .ttable th:has(.sortb){padding:6px 3px;border-bottom:1px solid var(--line)}
+  .tcard .tb-bar i{background:linear-gradient(90deg,#9FD5C9,#0F766E)}
+  .tcard .ttable .barc{width:10%;min-width:56px}
+  .tcard .ttable td,.tcard .ttable th{padding-left:4px;padding-right:4px}
+  .ttable th.num .sortb{float:right}
   .tfilter{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 8px}
   .tfilter .fsearch{max-width:200px}
   .tchk{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--ink);cursor:pointer}
@@ -832,8 +854,8 @@ const BRANCH_KEYS = ["pyeongchon","banpo","daechi"];
 const SHORT = { pyeongchon:"평촌", banpo:"반포", daechi:"대치" };
 
 /* Firestore 컬렉션 이름 */
-const COLL = { notices:"portalNotices", events:"portalEvents", todos:"portalTodos", files:"portalFiles", bookmarks:"portalBookmarks", bmGroups:"portalBmGroups", kpi:"portalKpi", kpiPriv:"portalKpiPrivate", folders:"portalFolders", members:"portalMembers", birthdays:"portalBirthdays", teachers:"portalTeachers", manuals:"portalManuals" };
-const COLL_LABEL = { notices:"공지", events:"일정", todos:"할 일", files:"자료", bookmarks:"북마크", bmGroups:"북마크 구분", kpi:"운영지표", kpiPriv:"운영지표(금액)", folders:"자료실 폴더", members:"직원 계정", birthdays:"생일", teachers:"선생님 입사월", manuals:"업무매뉴얼" };
+const COLL = { notices:"portalNotices", events:"portalEvents", todos:"portalTodos", files:"portalFiles", bookmarks:"portalBookmarks", bmGroups:"portalBmGroups", kpi:"portalKpi", kpiPriv:"portalKpiPrivate", folders:"portalFolders", members:"portalMembers", birthdays:"portalBirthdays", teachers:"portalTeachers", manuals:"portalManuals", counsel:"portalCounsel" };
+const COLL_LABEL = { notices:"공지", events:"일정", todos:"할 일", files:"자료", bookmarks:"북마크", bmGroups:"북마크 구분", kpi:"운영지표", kpiPriv:"운영지표(금액)", folders:"자료실 폴더", members:"직원 계정", birthdays:"생일", teachers:"선생님 입사월", manuals:"업무매뉴얼", counsel:"상담 현황" };
 /* 북마크 구분선 색 */
 const LINE_COLORS = [["#222222","검정"],["#DE8619","주황"],["#C98100","황토"],["#D1495B","빨강"],["#8B5CF6","보라"],["#2563A6","파랑"],["#1F7A4D","초록"],["#767676","회색"]];
 
@@ -961,7 +983,7 @@ function fileType(name){
 /* ========= 상태 ========= */
 const state = {
   user:null, isAdmin:false, wide:false, myBranch:null, myBranches:[], branch:"all", tab:"home",
-  notices:[], events:[], todos:[], files:[], bookmarks:[], bmGroups:[], kpi:{}, kpiPriv:{}, folders:[], members:[], member:null, birthdays:[], manuals:[], manCat:"all", manQ:"", openManual:null, tSort:{ k:"enrolled", dir:-1 }, tQ:"", tWarn:false, loaded:{}, teachers:[], kpiPeriod: +(store.get("portal.kpiPeriod") || 3),
+  notices:[], events:[], todos:[], files:[], bookmarks:[], bmGroups:[], kpi:{}, kpiPriv:{}, folders:[], members:[], member:null, birthdays:[], ageP: +(store.get("portal.ageP") || 3), counsel:{}, manuals:[], manCat:"all", manQ:"", openManual:null, tSort:{ k:"enrolled", dir:-1 }, tQ:"", tWarn:false, loaded:{}, teachers:[], kpiPeriod: +(store.get("portal.kpiPeriod") || 3),
   cal:{ y:new Date().getFullYear(), m:new Date().getMonth(), sel:todayISO() },
   openNotice:null, todoFilter:"open", folder:"all", fileQ:""
 };
@@ -1037,6 +1059,7 @@ function seed(){
         .map(([e, name, m, branch]) => ({ id:`${e}_${branch}`, empId:e, name, md:m, branch, at:ago(5), createdBy:ADMIN, writer:"JP People" })); })(),
     teachers: BRANCH_KEYS.flatMap(b => DEMO_TEACH[b].map((n, i) => ({ id:`${b}${i}_${b}`, empId:b + i, name:n, branch:b,
       startYm: (i === 4 ? addDays(todayISO(), -5) : addDays(todayISO(), -(60 + i * 240))).slice(0, 7), active: !(b === "banpo" && i === 3), at:ago(5), createdBy:ADMIN, writer:"JP People" }))),
+    counsel: [],
     manuals: [
       { id:"m1", title:"첫 수업 날 교사 체크리스트", cat:"teacher", branch:"all", pinned:true, at:ago(20), updatedAt:ago(3), createdBy:ADMIN, writer:"대표", editor:"대표",
         body:"# 수업 전\n- 출석부와 사진 확인\n- 재료 미리 꺼내 두기 (재료 요청 앱에서 부족분 신청)\n\n# 수업 중\n1. 인사하고 이름 불러 주기\n2. **오늘의 목표**를 한 문장으로 말해 주기\n3. 마무리 10분 전 정리 시작\n\n# 수업 후\n- 관찰일지 사진 올리기: [자비스 업로더](https://jarvis-webapp-8yim.onrender.com/)\n- 특이사항은 스케줄 매니저 메모에 남기기" },
@@ -1289,19 +1312,19 @@ async function enter(user){
 
   state.kpiPriv = {};
   state.loaded = {};
-  ["notices","events","todos","files","bookmarks","bmGroups","kpi","folders","birthdays","teachers","manuals", ...(state.isAdmin ? ["kpiPriv","members"] : [])].forEach(name => {
+  ["notices","events","todos","files","bookmarks","bmGroups","kpi","folders","birthdays","teachers","manuals","counsel", ...(state.isAdmin ? ["kpiPriv","members"] : [])].forEach(name => {
     unsubs.push(DB.watch(name, list => {
-      state[name] = name === "kpi" || name === "kpiPriv" ? Object.fromEntries(list.map(x => [x.id, x])) : list;
+      state[name] = name === "kpi" || name === "kpiPriv" || name === "counsel" ? Object.fromEntries(list.map(x => [x.id, x])) : list;
       onData(name);
     }));
   });
   ext.pay = { status:"off" }; ext.people = { status:"off" };
-  if (state.isAdmin) { extConnect("pay", false); extConnect("people", false); }
+  if (state.isAdmin) { extConnect("pay", false); extConnect("people", false); setTimeout(() => counselSync(false), 1500); }
 }
 function onData(name){
   if (name === "members") { renderMemList(); return; }
   if (name === "birthdays" || name === "teachers") { state.loaded[name] = true; if (bdPending && state.loaded.birthdays && state.loaded.teachers) { const x = bdPending; bdPending = null; syncPeople(x); } }
-  const uses = { home:["notices","events","todos","kpi","birthdays"], notice:["notices","events","birthdays","kpi","kpiPriv"], todo:["todos"], files:["files","folders"], manual:["manuals"], bm:["bookmarks","bmGroups"], kpi:["kpi","kpiPriv","teachers"] }[state.tab] || [];
+  const uses = { home:["notices","events","todos","kpi","birthdays"], notice:["notices","events","birthdays","kpi","kpiPriv"], todo:["todos"], files:["files","folders"], manual:["manuals"], bm:["bookmarks","bmGroups"], kpi:["kpi","kpiPriv","teachers","counsel"] }[state.tab] || [];
   if (uses.includes(name)) renderView({ keepFocus: true });
 }
 
@@ -2285,6 +2308,8 @@ $("view").addEventListener("click", e => {
     case "t-sort": { const k = el.dataset.k; state.tSort = state.tSort.k === k ? { k, dir: -state.tSort.dir } : { k, dir: k === "name" || k === "branch" ? 1 : -1 }; renderView(); $("view").querySelector(`[data-act="t-sort"][data-k="${k}"]`)?.focus(); break; }
     case "t-warn": state.tWarn = el.checked; renderView(); break;
     case "t-reset": state.tQ = ""; state.tWarn = false; state.tSort = { k:"enrolled", dir:-1 }; renderView(); break;
+    case "age-period": state.ageP = +el.dataset.n; store.set("portal.ageP", el.dataset.n); renderView(); break;
+    case "counsel-sync": counselSync(true); break;
     case "kpi-period": state.kpiPeriod = +el.dataset.n; store.set("portal.kpiPeriod", el.dataset.n); renderView(); break;
     case "ext-connect": extConnect(el.dataset.key, true); break;
     case "folder-new": folderForm(null); break;
@@ -2706,6 +2731,11 @@ const EXT = {
               storageBucket:"jarada-checkin.firebasestorage.app", messagingSenderId:"527430354151", appId:"1:527430354151:web:f6e1127e969ebfe36c0e42" },
     centers: { pyeongchon:"안양평촌원", banpo:"서초반포원", daechi:"강남대치원" }
   },
+  // 스케줄 매니저 (원마다 다른 프로젝트). 평촌은 결제 매니저와 같은 프로젝트(jarada-checkin)라 그 연결을 같이 씀
+  banpo: { name: "스케줄 매니저(반포)", config: { apiKey:"AIzaSyALml0ro7SvDL7awn9UlMiFjisx9OiSuXQ", authDomain:"jarada-banpo.firebaseapp.com", projectId:"jarada-banpo",
+    storageBucket:"jarada-banpo.firebasestorage.app", messagingSenderId:"259819249661", appId:"1:259819249661:web:d5ff6db57196b3f225c394" } },
+  daechi: { name: "스케줄 매니저(대치)", config: { apiKey:"AIzaSyByg6Wr45wtraJ-uUS0-kLeGRUhiocZ_zo", authDomain:"jarada-daechi.firebaseapp.com", projectId:"jarada-daechi",
+    storageBucket:"jarada-daechi.firebasestorage.app", messagingSenderId:"456067871093", appId:"1:456067871093:web:90bd5be807ea4942cfa33c" } },
   people: {
     name: "JP People",
     config: { apiKey:"AIzaSyCi5HyQ3oGATMXwWUdYHYrlBjS95eW6AYA", authDomain:"jarada-people.firebaseapp.com", projectId:"jarada-people",
@@ -2828,6 +2858,10 @@ function buildSnapshot(rows, branch, base){
   for (const r of active.filter(isPure)) if (r.day && r.hour != null) { (heat[r.day] ||= {}); heat[r.day][r.hour] = (heat[r.day][r.hour] || 0) + 1; }
   return {
     branch, base, rowCount: rows.length, months, enrolled, enrolledLY, newc, left, newcLY, leftLY,
+    ageM: (() => { const o = {}; for (const k of AGE_KEYS){ const L = rows.filter(r => ageKey(r.age) === k);
+        o[k] = { enr0: enrAt(L, monthEnd(prevYm(months[0]))), enr: months.map((ym, i) => i === 11 ? L.filter(isPure).length : enrAt(L, monthEnd(ym))),
+                 new: months.map(ym => L.filter(r => isReg(r) && r.reg && ymOf(r.reg) === ym).length),
+                 left: months.map(ym => L.filter(r => r.status === "퇴원" && r.end && ymOf(r.end) === ym).length) }; } return o; })(),
     ages: rows.filter(isPure).reduce((o, r) => { const k = ageKey(r.age); if (k) o[k] = (o[k] || 0) + 1; return o; }, {}),
     agesUnknown: rows.filter(r => isPure(r) && !ageKey(r.age)).length,
     cur:  { enrolled:enrolled[11], newc:newc[11], left:left[11], leftRate:rate(left[11], enrolled[10]),
@@ -3089,6 +3123,58 @@ const KPI_TILES = [
   { key:"unpaid", label:"미납 3주 이상", unit:"명", good:"down" }
 ];
 const visBranches = () => state.branch === "all" ? BRANCH_KEYS : [state.branch];
+/* ── 상담 현황: 스케줄 매니저 상담 기록(학생별) + 반 배정 명단(학생 → 담당 교사)으로 최근 30일 교사별 새 상담 수
+   대표 화면에서 계산해 portalCounsel/{원} 에 숫자만 저장 (상담 내용·학생 이름은 저장하지 않음) */
+const SCHED_EXT = { pyeongchon:"pay", banpo:"banpo", daechi:"daechi" };
+const parseCls = raw => { const m = String(raw || "").trim().match(/^(.+?)\(([^)]+)\)\s*\(([월화수목금토일])-(\d+)\s+(\d{1,2}:\d{2})\)\s*$/); return m ? m[2].trim() : ""; };
+async function loadCounsel(db, branch){
+  const F = fb.F, since = Date.now() - 30 * 864e5, sinceISO = addDays(todayISO(), -30);
+  const [rosterSnap, cSnap] = await Promise.all([F.getDoc(F.doc(db, "roster", "current")), F.getDocs(F.collection(db, "counseling"))]);
+  const tOf = new Map();
+  for (const r of (rosterSnap.exists() ? rosterSnap.data().rows || [] : [])){
+    const key = `${String(r.phone || "").trim()}__${String(r.name || "").trim()}`.replace(/\//g, "_"), t = parseCls(r.classField);
+    if (t) { if (!tOf.has(key)) tOf.set(key, new Set()); tOf.get(key).add(t); }
+  }
+  const byTeacher = {}; let total = 0, students = 0;
+  cSnap.forEach(d => { const recs = (d.data().records || []).filter(x => x.createdAt ? x.createdAt >= since : (x.date || "") >= sinceISO);
+    if (!recs.length) return; total += recs.length; students++;
+    const ts = [...(tOf.get(d.id) || ["반 배정 없음"])];
+    for (const t of ts) byTeacher[t] = (byTeacher[t] || 0) + recs.length; });
+  return { branch, byTeacher, total, students, from: sinceISO, to: todayISO() };
+}
+async function counselSync(interactive){
+  if (!state.isAdmin) return;
+  let n = 0;
+  for (const [b, key] of Object.entries(SCHED_EXT)){
+    try {
+      let data;
+      if (DEMO) data = { branch:b, byTeacher: Object.fromEntries(DEMO_TEACH[b].map((t, i) => [t, (i * 7 + b.length) % 9 + 1])), total:0, students:0, from:addDays(todayISO(), -30), to:todayISO() };
+      else {
+        const x = await extInit(key);
+        if (!x.auth.currentUser) { if (!interactive) continue; await fb.A.signInWithPopup(x.auth, new fb.A.GoogleAuthProvider()); }
+        data = await loadCounsel(x.db, b);
+      }
+      if (DEMO) data.total = Object.values(data.byTeacher).reduce((a, v) => a + v, 0);
+      await DB.set("counsel", b, { ...data, at: Date.now(), uploadedBy: state.user.email });
+      n++;
+    } catch (err) { if (interactive) toast(`${BRANCHES[b]} 상담을 읽지 못했어요. ${err.code === "permission-denied" ? "스케줄 매니저 읽기 권한이 없어요." : err.code || err.message || ""}`); }
+  }
+  if (interactive) toast(n ? `${n}개 원의 상담 현황을 새로 셌어요.` : "상담 현황을 불러오지 못했어요.");
+}
+function counselHTML(){
+  const bs = visBranches(), docs = bs.map(b => state.counsel[b]).filter(Boolean);
+  const btn = state.isAdmin ? `<button type="button" class="icon-btn" data-act="counsel-sync" data-tip="스케줄 매니저에서 최근 30일 상담을 다시 세요. 처음엔 원마다 구글 로그인 창이 떠요.">스케줄 매니저에서 다시 불러오기</button>` : "";
+  if (!docs.length) return `<div class="card-h"><h2>상담 현황 <span class="sub">최근 30일</span></h2>${btn}</div><p class="empty">아직 불러온 상담 현황이 없어요.${state.isAdmin ? " '스케줄 매니저에서 다시 불러오기'를 눌러 주세요." : " 대표님이 불러오면 보여요."}</p>`;
+  const map = {};
+  for (const d of docs) for (const [t, v] of Object.entries(d.byTeacher || {})){ const x = map[t] ||= { t, v:0, bs:[] }; x.v += v; if (!x.bs.includes(d.branch)) x.bs.push(d.branch); }
+  const list = Object.values(map).sort((a, b) => b.v - a.v), mx = Math.max(1, ...list.map(x => x.v));
+  const tot = docs.reduce((a, d) => a + (d.total || 0), 0), last = Math.max(...docs.map(d => d.at || 0));
+  return `<div class="card-h"><h2>상담 현황 <span class="sub">최근 30일 새로 등록된 상담, ${esc(docs.map(d => `${SHORT[d.branch]} ${d.total || 0}건`).join(" · "))}</span></h2>${btn}</div>
+    <div class="cs-list">${list.map(x => `<div class="cs-row" data-tip="${esc(`${x.t}\n최근 30일 상담 ${x.v}건`)}"><span class="cs-t"><b>${esc(x.t)}</b>${state.branch === "all" ? `<small>${esc(x.bs.map(b => SHORT[b]).join("·"))}</small>` : ""}</span>
+      <span class="cs-bar"><i style="width:${x.v / mx * 100}%"></i></span><span class="cs-v">${x.v}<small>건</small></span></div>`).join("")}</div>
+    <p class="fnote">합계 ${tot}건. 스케줄 매니저 학생 상담 기록 중 최근 30일에 새로 쓴 것을 그 학생 반의 담당 교사로 셌어요(두 반이면 두 교사 모두). 마지막으로 센 때: ${last ? new Date(last).toLocaleString("ko-KR", { month:"numeric", day:"numeric", hour:"2-digit", minute:"2-digit" }) : "-"}.</p>`;
+}
+
 /* ── 교사별 운영지표: 기간(1·3·6·12개월) 선택 ──
    JP People의 입사일을 보고 '입사한 다음 달'부터만 계산에 넣음 (입사한 달은 반을 받는 중이라 숫자가 왜곡됨)
    샘플 = 그 기간 샘플수업으로 남아 있는 원생 + 그 기간 신규 등록(샘플을 거쳐 등록한 것으로 봄), 등록 = 신규 등록 */
@@ -3259,7 +3345,26 @@ function ageHTML(snaps){
       <tr class="sumr"><td><b>합계</b></td>${state.branch === "all" ? "<td></td>" : ""}${AGE_KEYS.map(k => `<td class="num"><b>${colSum(k)}</b></td>`).join("")}<td class="num sep"><b>${AGE_KEYS.reduce((a, k) => a + colSum(k), 0)}</b></td></tr>
       <tr class="sumr"><td>교사 평균</td>${state.branch === "all" ? "<td></td>" : ""}${AGE_KEYS.map(k => `<td class="num">${(colSum(k) / rows.length).toFixed(1)}</td>`).join("")}<td class="num sep">${(AGE_KEYS.reduce((a, k) => a + colSum(k), 0) / rows.length).toFixed(1)}</td></tr>
     </tbody></table></div><p class="fnote">숫자는 원생 수예요. 칸 색이 진할수록 많아요. 표 합계는 재직 중인 교사 반만 더한 값이에요.</p>` : `<p class="empty">교사별 나이 정보가 없어요.</p>`;
-  return `<div class="age-wrap">${dist}<div>${table}</div></div>`;
+  return `<div class="age-wrap">${dist}<div>${table}</div></div>${ageLeaveHTML(snaps)}`;
+}
+/* 연령별 퇴원율: 기간 동안 그 나이 원생(기간 시작 재원 + 기간 신규) 중 퇴원한 비율 */
+function ageLeaveHTML(snaps){
+  if (!snaps.every(s => s.ageM)) return `<p class="warn-note" style="margin-top:16px">원생 명단을 다시 올리면 연령별 퇴원율이 나와요.</p>`;
+  const n = state.ageP, first = 12 - n;
+  const rows = AGE_KEYS.map(k => { let base = 0, newc = 0, left = 0;
+    for (const s of snaps){ const m = s.ageM[k]; if (!m) continue;
+      base += first === 0 ? m.enr0 : m.enr[first - 1];
+      for (let i = first; i < 12; i++){ newc += m.new[i] || 0; left += m.left[i] || 0; } }
+    const tot = base + newc; return { k, tot, left, rate: tot ? Math.round(left / tot * 1000) / 10 : 0 }; });
+  const all = rows.reduce((a, r) => ({ tot: a.tot + r.tot, left: a.left + r.left }), { tot:0, left:0 }), avg = all.tot ? Math.round(all.left / all.tot * 1000) / 10 : 0;
+  const mx = Math.max(1, ...rows.map(r => r.rate));
+  return `<div class="age-leave"><div class="al-h"><h3>연령별 퇴원율 <span class="sub">${esc(n === 1 ? "이번 달" : n === 12 ? "최근 1년" : `최근 ${n}개월`)}, 전체 평균 ${avg}%</span></h3>
+      <div class="seg2 sm" role="group" aria-label="연령별 퇴원율 기간">${KPI_PERIODS.map(([p, l]) => `<button type="button" data-act="age-period" data-n="${p}" aria-pressed="${n === p}">${l}</button>`).join("")}</div></div>
+    <div class="al-list">${rows.map(r => `<div class="al-row" data-tip="${esc(`${ageLabel(r.k)}\n기간 동안 다닌 원생 ${r.tot}명 중 ${r.left}명 퇴원 (${r.rate}%)`)}">
+        <span class="al-k">${ageLabel(r.k)}</span>
+        <span class="al-bar"><i style="width:${r.rate / mx * 100}%;background:${r.rate > avg ? "#D1495B" : "#F0A3AD"}"></i><em style="left:${avg / mx * 100}%"></em></span>
+        <span class="al-v"><b>${r.rate}%</b><small>${r.left} / ${r.tot}명</small></span></div>`).join("")}</div>
+    <p class="fnote">퇴원율 = 기간 동안 퇴원한 원생 ÷ (기간 시작 때 재원 + 기간 중 신규). 진한 빨강 = 전체 평균보다 높음, 세로선 = 전체 평균. 나이는 자라다 시스템 '나이' 열(지금 기준).</p></div>`;
 }
 
 /* ── 샘플 퍼널 (세로): 문의 → 샘플 진행 → 샘플 후 등록 → 정규 등록. 원이 여럿이면 원별로 나란히 ── */
@@ -3363,6 +3468,7 @@ function kpiPageHTML(){
       ${state.isAdmin ? `<button type="button" class="icon-btn" data-act="people-resync" data-tip="JP People에서 입사일을 고쳤다면 눌러서 다시 맞춰요">JP People 다시 불러오기</button>` : ""}
       <div class="seg2 sm" role="group" aria-label="기간">${KPI_PERIODS.map(([n, l]) => `<button type="button" data-act="kpi-period" data-n="${n}" aria-pressed="${state.kpiPeriod === n}">${l}</button>`).join("")}</div></div>
     ${teacherHTML}</section>
+  <section class="card tcard">${counselHTML()}</section>
   <section class="card"><h2>연령별 현황 <span class="sub">지금 재원생, ${snaps.length > 1 ? "원 합계, " : ""}자라다 시스템 '나이' 기준</span></h2>${ageHTML(snaps)}</section>
 
   ${state.isAdmin ? adminRowsHTML(bs) : ""}`;
