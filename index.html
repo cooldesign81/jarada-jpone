@@ -223,6 +223,8 @@
   .ev .w{flex:none;font-size:12px;color:var(--text-sub)}
   .cal-none{font-size:13px;color:var(--text-sub);margin:0}
   /* 내 구글 일정 (본인 화면에만) — 공유 일정과 헷갈리지 않게 점선 */
+  .chip.task{border-color:var(--ink);background:#F2F2F2;font-weight:700}.chip.task.done{opacity:.55;text-decoration:line-through}.chip.task.revise{border-color:#D1495B;background:#FDECEE}.chip.task.rt{border-color:#9E9E9E;background:#fff;font-weight:500}
+  .dots i.task,.cal-legend i.task{background:var(--ink)}.ev .k.task{background:var(--ink);color:var(--brand-yellow)}
   .chip.mine{background:#fff;border:1px dashed #BDBDBD;border-left:3px solid var(--text-sub)}
   .chip.mine b{font-weight:700;color:var(--text-sub)}
   .dots i.mine{background:#fff !important;box-shadow:inset 0 0 0 1.5px var(--text-sub)}
@@ -493,6 +495,7 @@
   .wh-files{font-size:13px;margin:8px 0 0;display:flex;gap:10px;flex-wrap:wrap}
   .wh-ppl{display:flex;flex-wrap:wrap;gap:6px}.wh-ppl label{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:var(--r-btn);padding:6px 10px;font-size:13px;cursor:pointer}
   .wh-ppl label:has(input:checked){background:var(--ink);color:var(--brand-yellow);border-color:var(--ink)}.wh-ppl input{position:absolute;opacity:0;pointer-events:none}
+  .wh-ppl label.all{font-weight:800;border-style:dashed}.wh-ppl label.dim{opacity:.55}
   .wh-ppl label:has(input:focus-visible){outline:2px solid var(--brand-orange)}
   .wh-meta{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;font-size:13px;color:var(--text-sub);margin-bottom:12px}
   .wh-callout{background:#FDECEE;color:#9E2433;border-radius:var(--r-btn);padding:10px 12px;font-size:14px;font-weight:700;margin-bottom:12px}
@@ -1921,6 +1924,17 @@ function gcalUrl(e){
   if (e.repeat === "weekly") q.set("recur", "RRULE:FREQ=WEEKLY" + (e.until ? `;UNTIL=${d(e.until)}` : ""));
   return "https://calendar.google.com/calendar/render?" + q.toString();
 }
+/* 내 워크허브 업무를 내 캘린더에 (마감일 기준, 나만 보임). 루틴은 날마다 '루틴 n개'로 묶음 */
+function myTasksOn(day){
+  const L = (state.tasks || []).filter(t => t.assignee === myEmail() && t.due === day && t.status !== "canceled");
+  return { one: L.filter(t => !t.routineId), rt: L.filter(t => t.routineId) };
+}
+function taskGcalUrl(t){
+  const d = x => x.replace(/-/g, "");
+  const q = new URLSearchParams({ action:"TEMPLATE", text:`[업무] ${t.title}`, dates:`${d(t.due)}/${d(addDays(t.due, 1))}`,
+    details:[`${BRANCHES[t.branch] || ""} · ${t.writer || ""} 배정${t.needCheck ? " · 확인 필요" : ""}`, t.desc || "", (t.checklist || []).map(x => "□ " + x).join("\n"), "JP ONE 워크허브"].filter(Boolean).join("\n\n") });
+  return "https://calendar.google.com/calendar/render?" + q.toString();
+}
 function calHTML(mode){
   const { y, m, sel } = state.cal, wk = mode === "weeks", now = new Date(), today = todayISO();
   let start, weeks;
@@ -1929,18 +1943,21 @@ function calHTML(mode){
   const maxChips = wk ? 3 : 2, cells = [];
   for (let i = 0; i < weeks * 7; i++){
     const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
-    const key = isoOf(d), bds = birthdaysOn(key), evs = [...bds.map(b => ({ bd:true, title:`${b.name} 생일` })), ...eventsOn(key)], mine = gcalOn(key), n = evs.length + mine.length, dow = d.getDay(), hol = holidayOn(key);
+    const key = isoOf(d), bds = birthdaysOn(key), tk = myTasksOn(key),
+      evs = [...tk.one.map(t => ({ task:t, title:t.title })), ...(tk.rt.length ? [{ rt:tk.rt, title:`루틴 ${tk.rt.filter(t => t.status === "done").length}/${tk.rt.length}` }] : []), ...bds.map(b => ({ bd:true, title:`${b.name} 생일` })), ...eventsOn(key)],
+      mine = gcalOn(key), n = evs.length + mine.length, dow = d.getDay(), hol = holidayOn(key);
     const numTxt = wk && (i === 0 || d.getDate() === 1) ? `${d.getMonth()+1}/${d.getDate()}` : d.getDate();
     const cls = ["day", !wk && d.getMonth() !== m && "out", dow === 0 && "sun", dow === 6 && "sat", hol && "hol", key === today && "today", key === sel && "sel"].filter(Boolean).join(" ");
     cells.push(`<button type="button" class="${cls}" data-act="cal-day" data-day="${key}" data-fk="day-${key}"
         aria-label="${d.getMonth()+1}월 ${d.getDate()}일${hol ? `, ${hol}` : ""}${n ? `, 일정 ${n}개` : ""}" aria-pressed="${key === sel}">
       <span class="num">${numTxt}</span>${hol ? `<span class="hn">${esc(hol)}</span>` : ""}
-      ${evs.slice(0, maxChips).map(e => e.bd ? `<span class="chip bd">${esc(e.title)}</span>` : `<span class="chip" style="border-color:${CAL_KIND[e.kind]?.color}">${esc(e.title)}</span>`).join("")}
+      ${evs.slice(0, maxChips).map(e => e.task ? `<span class="chip task ${e.task.status}">${e.task.status === "done" ? "✓ " : ""}${esc(e.title)}</span>` : e.rt ? `<span class="chip task rt">${esc(e.title)}</span>` : e.bd ? `<span class="chip bd">${esc(e.title)}</span>` : `<span class="chip" style="border-color:${CAL_KIND[e.kind]?.color}">${esc(e.title)}</span>`).join("")}
       ${mine.slice(0, Math.max(0, maxChips - evs.length)).map(e => `<span class="chip mine">${e.allDay ? "" : `<b>${e.time}</b> `}${esc(e.title)}</span>`).join("")}
       ${n > maxChips ? `<span class="more-n">+${n - maxChips}</span>` : ""}
-      ${n ? `<span class="dots">${evs.slice(0,3).map(e => `<i style="background:${e.bd ? "#1F7A4D" : CAL_KIND[e.kind]?.color}"></i>`).join("")}${mine.slice(0, Math.max(0, 3 - evs.length)).map(() => `<i class="mine"></i>`).join("")}</span>` : ""}
+      ${n ? `<span class="dots">${evs.slice(0,3).map(e => e.task || e.rt ? `<i class="task"></i>` : `<i style="background:${e.bd ? "#1F7A4D" : CAL_KIND[e.kind]?.color}"></i>`).join("")}${mine.slice(0, Math.max(0, 3 - evs.length)).map(() => `<i class="mine"></i>`).join("")}</span>` : ""}
     </button>`);
   }
+  const selTk = myTasksOn(sel), selTasks = [...selTk.one, ...selTk.rt];
   const selEvs = eventsOn(sel), selMine = gcalOn(sel), selHol = holidayOn(sel), selBd = birthdaysOn(sel), canAdd = branchOptions("events").length > 0;
   const gBtn = !gcalCanUse() ? "" : gcal.status === "on"
     ? `<button type="button" class="gc-on" data-act="gcal-set" data-tip="내 구글 일정은 나만 보여요. 눌러서 캘린더 고르기 · 연결 끊기">내 구글 ${gcal.loading.size ? "불러오는 중…" : "표시 중"}</button>`
@@ -1959,7 +1976,7 @@ function calHTML(mode){
         ${wk ? `<button type="button" data-act="go" data-tab="notice">전체 캘린더</button>` : ""}
       </div>
     </div>
-    <div class="cal-legend">${Object.values(CAL_KIND).map(k => `<span><i style="background:${k.color}"></i>${k.label}</span>`).join("")}<span><i class="bd"></i>생일</span>${gcal.status === "on" ? `<span><i class="mine"></i>내 구글 일정 (나만 보여요)</span>` : ""}</div>
+    <div class="cal-legend">${Object.values(CAL_KIND).map(k => `<span><i style="background:${k.color}"></i>${k.label}</span>`).join("")}<span><i class="bd"></i>생일</span><span><i class="task"></i>내 업무 (나만 보여요)</span>${gcal.status === "on" ? `<span><i class="mine"></i>내 구글 일정 (나만 보여요)</span>` : ""}</div>
     ${gcal.err ? `<p class="gc-err">${esc(gcal.err)}</p>` : ""}
     <div class="cal">
       ${WD.map((w,i) => `<div class="dow ${i===0?"sun":i===6?"sat":""}">${w}</div>`).join("")}
@@ -1968,6 +1985,11 @@ function calHTML(mode){
     <div class="cal-day">
       <h3>${selTitle}${sel === today ? " (오늘)" : ""}</h3>
       ${selHol ? `<div class="ev"><span class="k hol">공휴일</span><span class="t">${esc(selHol)}</span></div>` : ""}
+      ${selTasks.map(t => `<div class="ev"><span class="k task">${t.routineId ? "루틴" : "내 업무"}</span>
+          <span class="t">${esc(t.title)}<small>${esc((WH_ST[t.status] || WH_ST.todo)[0])}${(t.checklist || []).length ? ` · 체크 ${whChecks(t).c}/${whChecks(t).n}` : ""}${t.needCheck ? " · 확인 필요" : ""}</small></span>
+          <span class="w">${esc(SHORT[t.branch] || "")}</span>
+          ${t.routineId ? "" : `<a class="icon-btn" href="${esc(taskGcalUrl(t))}" target="_blank" rel="noopener" title="내 구글 캘린더에 이 업무 넣기">구글 캘린더</a>`}
+          <button type="button" class="icon-btn" data-act="wh-open" data-id="${esc(t.id)}">열기</button></div>`).join("")}
       ${selBd.map(b => `<div class="ev"><span class="k bd">생일</span><span class="t">${esc(b.name)} 선생님 생일</span>
           <span class="w">${esc(state.birthdays.filter(x => x.empId === b.empId).map(x => SHORT[x.branch]).join(" · "))}</span></div>`).join("")}
       ${selEvs.length ? selEvs.map(e => `<div class="ev">
@@ -1983,7 +2005,7 @@ function calHTML(mode){
           <span class="w">${esc(e.cal)}</span>
           ${e.link ? `<a class="icon-btn" href="${esc(e.link)}" target="_blank" rel="noopener">구글에서 보기</a>` : ""}
         </div>`).join("")}
-      ${selEvs.length || selMine.length || selHol || selBd.length ? "" : `<p class="cal-none">이날은 일정이 없어요.</p>`}
+      ${selEvs.length || selMine.length || selHol || selBd.length || selTasks.length ? "" : `<p class="cal-none">이날은 일정이 없어요.</p>`}
     </div>`;
 }
 
@@ -2312,11 +2334,11 @@ const freqLabel = r => r.freq === "daily" ? "매일" : r.freq === "weekly" ? `�
 function whRoutinesHTML(){
   const list = state.routines.filter(visible).sort((a, b) => (b.active ? 1 : 0) - (a.active ? 1 : 0) || a.title.localeCompare(b.title));
   const mineOnly = !anyMgr();
-  const show = mineOnly ? list.filter(r => (r.assignees || []).some(p => p.email === myEmail())) : list;
+  const show = mineOnly ? list.filter(r => r.allStaff || (r.assignees || []).some(p => p.email === myEmail())) : list;
   if (!show.length) return `<div class="soon"><h2>${mineOnly ? "나에게 배정된 루틴이 없어요" : "아직 루틴이 없어요"}</h2><p>${mineOnly ? "관리자가 루틴을 만들면 여기에 나와요." : "매일 오픈·마감 점검, 주간 재료 점검처럼 반복되는 일을 '루틴 만들기'로 등록하면 그날 업무가 자동으로 생겨요."}</p></div>`;
   return `<section class="card"><ul class="wh-list">${show.map(r => `<li><button type="button" class="wh-item ${r.active ? "" : "off"}" ${isMgr(r.branch) ? `data-act="wh-routine-edit" data-id="${esc(r.id)}"` : "disabled"}>
       <span class="wh-t"><span class="tagk">${esc(freqLabel(r))}</span>${r.needCheck ? `<span class="tagb">확인 필요</span>` : ""}<b>${esc(r.title)}</b>${r.active ? "" : `<span class="tagb">멈춤</span>`}</span>
-      <span class="wh-m"><span>${esc((r.assignees || []).map(p => p.name).join(", "))}</span>${state.branch === "all" ? `<span>${SHORT[r.branch]}</span>` : ""}${(r.checklist || []).length ? `<span class="wh-ck">☑ ${r.checklist.length}개 항목</span>` : ""}</span></button></li>`).join("")}</ul>
+      <span class="wh-m"><span>${r.allStaff ? "전원" : esc((r.assignees || []).map(p => p.name).join(", "))}</span>${state.branch === "all" ? `<span>${SHORT[r.branch]}</span>` : ""}${(r.checklist || []).length ? `<span class="wh-ck">☑ ${r.checklist.length}개 항목</span>` : ""}</span></button></li>`).join("")}</ul>
     <p class="fnote">루틴은 그날 업무로 자동으로 생겨요(지난 7일 중 빠진 날 포함). 루틴을 바꾸면 앞으로 생기는 업무부터 바뀌고, 이미 생긴 업무는 그대로예요.</p></section>`;
 }
 
@@ -2328,7 +2350,7 @@ function taskForm(t, preset = {}){
   const b0 = t?.branch || (bOpts.includes(state.branch) ? state.branch : bOpts[0]);
   const asMgr = b => isMgr(b);
   const pplHTML = (b, sel) => asMgr(b) ? (t ? fSelect("담당자", "assignee", whPeople(b).map(p => [p.email, p.name]), sel[0])
-      : `<div class="fld"><span>담당자 <small>여러 명 고르면 사람마다 따로 생겨요</small></span><div class="wh-ppl">${whPeople(b).map(p => `<label><input type="checkbox" name="ppl" value="${esc(p.email)}" data-name="${esc(p.name)}" ${sel.includes(p.email) ? "checked" : ""}>${esc(p.name)}</label>`).join("") || `<span class="hint">이 원에 등록된 직원 계정이 없어요.</span>`}</div></div>`)
+      : `<div class="fld"><span>담당자 <small>여러 명 고르면 사람마다 따로 생겨요</small></span><div class="wh-ppl"><label class="all"><input type="checkbox" name="pplAll">전원</label>${whPeople(b).map(p => `<label><input type="checkbox" name="ppl" value="${esc(p.email)}" data-name="${esc(p.name)}" ${sel.includes(p.email) ? "checked" : ""}>${esc(p.name)}</label>`).join("") || `<span class="hint">이 원에 등록된 직원 계정이 없어요.</span>`}</div></div>`)
     : `<div class="fld"><span>담당자</span><div class="inp ro">${esc(writerName())} (나)</div></div>`;
   openForm({
     title: t ? "업무 수정" : anyMgr() ? "업무 배정" : "내 업무 추가",
@@ -2365,7 +2387,10 @@ function taskForm(t, preset = {}){
   });
   $("dlg").classList.add("wide");
   dlgCtx.deleteMsg = t && `'${t.title}' 업무를 지울까요? 제출한 내용과 기록도 함께 지워져요.`;
-  if (!t) $("dlgBody").addEventListener("change", e => { if (e.target.name !== "branch") return; const b = e.target.value;
+  if (!t) $("dlgBody").addEventListener("change", e => {
+    if (e.target.name === "pplAll") { $("dlgBody").querySelectorAll("input[name=ppl]").forEach(x => x.checked = e.target.checked && !(state.isAdmin && x.value === myEmail())); return; }
+    if (e.target.name === "ppl" && !e.target.checked) { const a = $("dlgBody").querySelector("input[name=pplAll]"); if (a) a.checked = false; }
+    if (e.target.name !== "branch") return; const b = e.target.value;
     $("whPpl").innerHTML = pplHTML(b, []); $("whNeedL").hidden = !asMgr(b); });
 }
 const whLog = (t, act, note) => [...(t.log || []), { at:Date.now(), by:writerName(), act, ...(note ? { note } : {}) }].slice(-40);
@@ -2452,7 +2477,8 @@ function taskDialog(t){
 function routineForm(r){
   const bOpts = r ? [r.branch] : mgrBranches(); if (!bOpts.length) return;
   const b0 = r?.branch || (bOpts.includes(state.branch) ? state.branch : bOpts[0]);
-  const ppl = (b, sel) => `<div class="fld"><span>담당자 <small>사람마다 그날 업무가 따로 생겨요</small></span><div class="wh-ppl">${whPeople(b).map(p => `<label><input type="checkbox" name="ppl" value="${esc(p.email)}" data-name="${esc(p.name)}" ${sel.includes(p.email) ? "checked" : ""}>${esc(p.name)}</label>`).join("") || `<span class="hint">이 원에 등록된 직원 계정이 없어요.</span>`}</div></div>`;
+  const ppl = (b, sel, all) => `<div class="fld"><span>담당자 <small>사람마다 그날 업무가 따로 생겨요. '전원'은 나중에 들어온 직원도 자동 포함</small></span><div class="wh-ppl">
+    <label class="all"><input type="checkbox" name="pplAll" ${all ? "checked" : ""}>전원</label>${whPeople(b).map(p => `<label class="${all ? "dim" : ""}"><input type="checkbox" name="ppl" value="${esc(p.email)}" data-name="${esc(p.name)}" ${all || sel.includes(p.email) ? "checked" : ""} ${all ? "disabled" : ""}>${esc(p.name)}</label>`).join("") || `<span class="hint">이 원에 등록된 직원 계정이 없어요.</span>`}</div></div>`;
   const fq = r?.freq || "daily";
   openForm({
     title: r ? "루틴 수정" : "루틴 만들기",
@@ -2461,7 +2487,7 @@ function routineForm(r){
         ${fSelect("반복", "freq", [["daily","매일"],["weekly","매주 정한 요일"],["monthly","매월 정한 날"]], fq)}</div>
       <div class="fld wh-days" ${fq === "weekly" ? "" : "hidden"}><span>요일</span><div class="wh-ppl">${[1,2,3,4,5,6,0].map(d => `<label><input type="checkbox" name="dow" value="${d}" ${(r?.days || [2,3,4,5,6]).includes(d) ? "checked" : ""}>${DOW[d]}</label>`).join("")}</div></div>
       <div class="wh-dom" ${fq === "monthly" ? "" : "hidden"}>${fText("매월 며칠", "dom", r?.dom ?? 25, 'type="number" min="1" max="28"')}</div>
-      <div id="whPpl">${ppl(b0, (r?.assignees || []).map(p => p.email))}</div>
+      <div id="whPpl">${ppl(b0, (r?.assignees || []).map(p => p.email), !!r?.allStaff)}</div>
       ${fArea("설명", "desc", r?.desc ?? "", 'rows="3" maxlength="3000"')}
       ${fArea("체크리스트 <small>한 줄에 하나</small>", "checklist", (r?.checklist || []).join("\n"), 'rows="5" placeholder="공간·도구 상태 확인\n재료 보관\n다음 수업 준비\n특이사항 기록"')}
       <div class="row2">${fDate("시작일", "start", r?.start || todayISO())}<div></div></div>
@@ -2471,12 +2497,13 @@ function routineForm(r){
     saveLabel: r ? "수정 저장" : "루틴 만들기",
     async onSave(form){
       const branch = val(form, "branch"), title = val(form, "title");
-      const assignees = [...form.querySelectorAll("input[name=ppl]:checked")].map(x => ({ email:x.value, name:x.dataset.name }));
+      const allStaff = !!form.querySelector("input[name=pplAll]")?.checked;
+      const assignees = allStaff ? [] : [...form.querySelectorAll("input[name=ppl]:checked")].map(x => ({ email:x.value, name:x.dataset.name }));
       const freq = val(form, "freq"), days = [...form.querySelectorAll("input[name=dow]:checked")].map(x => +x.value), dom = Math.min(28, Math.max(1, +val(form, "dom") || 1));
       if (!title) return formErr("루틴 이름을 넣어 주세요.");
-      if (!assignees.length) return formErr("담당자를 한 명 이상 골라 주세요.");
+      if (!allStaff && !assignees.length) return formErr("담당자를 한 명 이상 골라 주세요.");
       if (freq === "weekly" && !days.length) return formErr("요일을 하나 이상 골라 주세요.");
-      const data = { title, branch, freq, days, dom, assignees, desc: form.elements.desc.value.trim(), start: val(form, "start") || todayISO(),
+      const data = { title, branch, freq, days, dom, assignees, allStaff, desc: form.elements.desc.value.trim(), start: val(form, "start") || todayISO(),
         checklist: form.elements.checklist.value.split("\n").map(x => x.trim()).filter(Boolean).slice(0, 30),
         needCheck: form.elements.needCheck.checked, skipHol: form.elements.skipHol.checked, active: r ? form.elements.active.checked : true };
       if (r) await DB.update("routines", r.id, data); else await DB.add("routines", data);
@@ -2490,7 +2517,8 @@ function routineForm(r){
   dlgCtx.deleteMsg = r && `'${r.title}' 루틴을 지울까요? 이미 생긴 업무는 지워지지 않아요.`;
   $("dlgBody").addEventListener("change", e => {
     if (e.target.name === "freq"){ $("dlgBody").querySelector(".wh-days").hidden = e.target.value !== "weekly"; $("dlgBody").querySelector(".wh-dom").hidden = e.target.value !== "monthly"; }
-    if (e.target.name === "branch") $("whPpl").innerHTML = ppl(e.target.value, []);
+    if (e.target.name === "branch") $("whPpl").innerHTML = ppl(e.target.value, [], false);
+    if (e.target.name === "pplAll") $("dlgBody").querySelectorAll("input[name=ppl]").forEach(x => { x.checked = e.target.checked; x.disabled = e.target.checked; x.parentElement.classList.toggle("dim", e.target.checked); });
   });
 }
 /* 루틴 → 그날 업무 만들기 (지난 7일 + 오늘). 관리자는 그 원 담당자 모두, 담당자는 자기 것만. 문서 ID 고정이라 두 번 생기지 않음 */
@@ -2507,7 +2535,8 @@ async function genRoutineTasks(){
     const have = new Set(state.tasks.map(t => t.id)), today = todayISO();
     for (const r of state.routines){
       if (r.active === false || !state.myBranches.concat(state.wide ? BRANCH_KEYS : []).includes(r.branch) && !state.isAdmin) continue;
-      const who = (r.assignees || []).filter(p => isMgr(r.branch) || p.email === myEmail());
+      const list = r.allStaff ? whPeople(r.branch).filter(p => !(state.isAdmin && p.email === myEmail() && !state.members.some(m => m.id === p.email))) : (r.assignees || []);
+      const who = list.filter(p => isMgr(r.branch) || p.email === myEmail());
       if (!who.length) continue;
       for (let i = 6; i >= 0; i--){
         const d = addDays(today, -i); if (!routineDue(r, d)) continue;
