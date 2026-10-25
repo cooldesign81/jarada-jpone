@@ -29,6 +29,8 @@ service cloud.firestore {
     function isMyBranch(b){ return b in ['pyeongchon', 'banpo', 'daechi'] && (sharedBranch() == b || (isStaff() && staffHas(b))); }
     // JP ONE 회원 = 대표, 원 공용 계정, 등록된 선생님. 아무 Google 계정으로 로그인해도 읽을 수 없게 함
     function isMember()     { return isAdmin() || sharedBranch() != 'none' || isStaff(); }
+    // 워크허브 관리자 = 대표, 또는 직원 계정에서 '관리자'로 지정된 사람(원장·부원장·실장)의 소속 원
+    function isManagerOf(b) { return isAdmin() || (isStaff() && get(memberPath()).data.get('manager', false) == true && staffHas(b)); }
     function validBranch(b) { return b in ['all', 'pyeongchon', 'banpo', 'daechi']; }
     function canSee(b)      { return isAdmin() || isWideStaff() || b == 'all' || isMyBranch(b); }
     function canWrite(b)    { return isAdmin() || (isWideStaff() && validBranch(b)) || isMyBranch(b); }
@@ -98,14 +100,15 @@ service cloud.firestore {
         && request.resource.data.branch == branch && request.resource.data.uploadedBy == email();
       allow delete: if isAdmin();
     }
-    // 직원 계정: 대표만 관리. 본인은 자기 문서만 읽을 수 있음(로그인할 때 확인용)
+    // 직원 계정: 대표만 관리. 본인은 로그인할 때 자기 문서를 읽고, JP ONE 회원은 업무 배정용으로 목록(이름·이메일·원)을 봄
     match /portalMembers/{mail} {
-      allow get: if isAdmin() || (signedIn() && mail == email());
-      allow list: if isAdmin();
+      allow get: if isAdmin() || (signedIn() && mail == email()) || isMember();
+      allow list: if isMember();
       allow create, update: if isAdmin() && request.resource.data.branches is list && request.resource.data.branches.size() > 0
         && request.resource.data.branches.hasOnly(['pyeongchon', 'banpo', 'daechi'])
         && request.resource.data.get('branch', null) == null
-        && request.resource.data.active is bool && request.resource.data.name is string && request.resource.data.name.size() <= 20;
+        && request.resource.data.active is bool && request.resource.data.name is string && request.resource.data.name.size() <= 20
+        && request.resource.data.get('manager', false) is bool;
       allow delete: if isAdmin();
     }
     // 직원 생일: JP People에서 대표 화면이 자동으로 맞춤(이름·월일·원만). 같은 원 사람 + 대표가 봄
@@ -155,6 +158,36 @@ service cloud.firestore {
       allow read, delete: if isAdmin();
       allow create, update: if isAdmin() && branch in ['pyeongchon', 'banpo', 'daechi'] && request.resource.data.branch == branch
         && request.resource.data.monthly is map && request.resource.data.daily is map;
+    }
+    // 워크허브 업무(실행 건 하나 = 담당자 한 명). 같은 원 사람은 모두 봄(결과 공유)
+    //  - 관리자: 자기 원 업무 배정·수정·확인·삭제
+    //  - 누구나: 자기에게 자기 업무 추가(루틴 업무 자동 생성 포함)
+    //  - 담당자: 진행 상황(체크·메모·파일·상태)만 바꿈. '확인 필요' 업무는 스스로 완료 못 함
+    match /portalTasks/{id} {
+      // 아직 없는 문서 확인(루틴 업무를 한 번만 만들 때)은 회원이면 허용
+      allow get: if (resource == null && isMember()) || okRead();
+      allow list: if okRead();
+      allow create: if isMember() && request.resource.data.branch in ['pyeongchon', 'banpo', 'daechi']
+        && request.resource.data.createdBy == email() && request.resource.data.title is string && request.resource.data.title.size() <= 100
+        && (isManagerOf(request.resource.data.branch) || (request.resource.data.assignee == email() && canWrite(request.resource.data.branch)));
+      allow update: if isMember() && (
+        (isManagerOf(resource.data.branch) && isManagerOf(request.resource.data.branch))
+        || (resource.data.createdBy == email() && resource.data.assignee == email() && request.resource.data.assignee == email()
+            && request.resource.data.createdBy == email() && canWrite(request.resource.data.branch))
+        || (resource.data.assignee == email()
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'checks', 'note', 'files', 'log', 'submittedAt', 'doneAt', 'updatedAt', 'updatedBy'])
+            && request.resource.data.status in ['todo', 'doing', 'submitted', 'done', 'revise']
+            && (request.resource.data.status != 'done' || resource.data.needCheck == false)
+            && (request.resource.data.status != 'revise' || resource.data.status == 'revise')));
+      allow delete: if isManagerOf(resource.data.branch) || (resource.data.createdBy == email() && resource.data.assignee == email());
+    }
+    // 워크허브 루틴(반복 규칙): 같은 원 사람은 보고, 관리자만 만들고 고침
+    match /portalRoutines/{id} {
+      allow read: if okRead();
+      allow create: if isManagerOf(request.resource.data.branch) && request.resource.data.branch in ['pyeongchon', 'banpo', 'daechi']
+        && request.resource.data.createdBy == email() && request.resource.data.title is string && request.resource.data.title.size() <= 100;
+      allow update: if isManagerOf(resource.data.branch) && isManagerOf(request.resource.data.branch);
+      allow delete: if isManagerOf(resource.data.branch);
     }
     match /portalBmGroups/{id} {
       allow read: if okRead();
