@@ -702,6 +702,10 @@
   .money b{font-size:26px;font-weight:800;color:var(--ink);letter-spacing:-.02em}
   .money .d{font-size:12px;font-weight:700;margin-left:8px} .money .d.up{color:var(--up)} .money .d.down{color:var(--down)}
   .money .pm{font-size:12px;color:var(--text-sub);margin-left:6px}
+  .rev-grid{display:grid;gap:16px}.rev-grid.multi{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .rev-h{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:2px}.rev-h b{font-size:14px}.rev-h .rv{font-size:18px;font-weight:800;color:var(--ink);font-variant-numeric:tabular-nums}
+  .rev-h .rg{font-size:12px;font-weight:700}.rev-h .rg.up{color:#1F7A4D}.rev-h .rg.down{color:#D1495B}
+  @media (max-width:900px){ .rev-grid.multi{grid-template-columns:1fr} }
   .money-br{list-style:none;margin:0;padding:0;font-size:13px;color:var(--text);display:grid;gap:4px}
   .money-br i{display:inline-block;width:12px;height:3px;border-radius:2px;margin-right:6px;vertical-align:middle}
   .money-br b{font-size:13px;margin-left:4px}
@@ -3723,9 +3727,33 @@ function extBox(key, inner){
   return `<div class="connect"><p>${e.status === "error" ? esc(e.msg) : `${EXT[key].name}에 대표 Google 계정으로 한 번 로그인하면 바로 보여요. 다음부터는 자동으로 연결돼요.`}</p>
     <button type="button" class="btn btn-ghost btn-sm" data-act="ext-connect" data-key="${key}">${EXT[key].name} 연결</button></div>`;
 }
+/* 매출 차트 한 원: 올해(색 면 + 선) · 작년(점선) · 재작년(점점선). big=원 하나 골랐을 때 크게 */
+function revChart(r, labels, big){
+  const w = big ? 1100 : 380, h = big ? 260 : 180, P = { l:42, r:14, t:14, b:24 };
+  const all = [...r.cur, ...r.ly, ...r.ly2].filter(v => v != null && v > 0);
+  if (!all.length) return `<p class="empty">매출 자료가 없어요.</p>`;
+  const ticks = niceTicks(Math.min(...all) * .92, Math.max(...all) * 1.04), y0 = ticks[0], y1 = ticks.at(-1);
+  const x = i => P.l + (w - P.l - P.r) * i / (labels.length - 1), y = v => P.t + (h - P.t - P.b) * (1 - (v - y0) / (y1 - y0));
+  const line = vs => { let d = "", on = false; vs.forEach((v, i) => { if (v == null) { on = false; return; } d += `${on ? "L" : "M"}${x(i).toFixed(1)},${y(Math.max(v, y0)).toFixed(1)}`; on = true; }); return d; };
+  const gid = "rg" + r.b + (big ? "B" : "");
+  const curIdx = r.cur.map((v, i) => v != null ? i : -1).filter(i => i >= 0), f = curIdx[0], l = curIdx.at(-1);
+  const area = curIdx.length > 1 ? `${line(r.cur)}L${x(l)},${y(y0)}L${x(f)},${y(y0)}Z` : "";
+  const step = (w - P.l - P.r) / (labels.length - 1);
+  return `<svg class="chart rev-ch" viewBox="0 0 ${w} ${h}" role="img" aria-label="${esc(BRANCHES[r.b])} 월별 매출">
+    <defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${r.color}" stop-opacity=".24"/><stop offset="1" stop-color="${r.color}" stop-opacity="0"/></linearGradient></defs>
+    ${ticks.map(t => `<line x1="${P.l}" x2="${w - P.r}" y1="${y(t)}" y2="${y(t)}" stroke="#EFEFEF"/><text x="${P.l - 6}" y="${y(t) + 4}" text-anchor="end" class="ax">${esc(man(t))}</text>`).join("")}
+    ${labels.map((lb, i) => big || i % 3 === 0 || i === labels.length - 1 ? `<text x="${x(i)}" y="${h - 6}" text-anchor="middle" class="ax">${esc(lb)}</text>` : "").join("")}
+    ${area ? `<path d="${area}" fill="url(#${gid})"/>` : ""}
+    <path d="${line(r.ly2)}" fill="none" stroke="${r.color}" stroke-opacity=".38" stroke-width="1.5" stroke-dasharray="1.5 4" stroke-linecap="round"/>
+    <path d="${line(r.ly)}" fill="none" stroke="${r.color}" stroke-opacity=".65" stroke-width="1.5" stroke-dasharray="5 4"/>
+    <path d="${line(r.cur)}" fill="none" stroke="${r.color}" stroke-width="${big ? 2.8 : 2.4}" stroke-linejoin="round"/>
+    ${l != null ? `<circle cx="${x(l)}" cy="${y(r.cur[l])}" r="4" fill="${r.color}" stroke="#fff" stroke-width="2"/>` : ""}
+    ${labels.map((lb, i) => `<rect class="hit" x="${x(i) - step / 2}" y="${P.t}" width="${step}" height="${h - P.t - P.b}" fill="transparent" tabindex="-1"
+      data-tip="${esc(`${lb}\n올해 ${r.cur[i] != null ? won(r.cur[i]) : "-"}${r.ly[i] != null ? `\n작년 ${won(r.ly[i])}${r.cur[i] != null && r.ly[i] ? ` (${r.cur[i] >= r.ly[i] ? "+" : ""}${Math.round((r.cur[i] / r.ly[i] - 1) * 1000) / 10}%)` : ""}` : ""}${r.ly2[i] != null ? `\n재작년 ${won(r.ly2[i])}` : ""}`)}"/>`).join("")}
+  </svg>`;
+}
 function adminRowsHTML(bs){
-  return `<div class="grid2 even">
-    <section class="card"><h2>매출 <span class="sub">정규 + 신규생 + 다른 요일, 대표만 보여요</span></h2>
+  return `<section class="card"><h2>매출 <span class="sub">정규 + 신규생 + 다른 요일, 대표만 보여요</span></h2>
       ${extBox("pay", d => {
         const lyOf = (m, n = 1) => `${+m.slice(0, 4) - n}${m.slice(4)}`;
         const ser = bs.map(b => ({ name:BRANCHES[b], color:BRANCH_COLOR[b], values:d.months.map(m => revenueOf(b, m, d.ledger)) }));
@@ -3739,13 +3767,22 @@ function adminRowsHTML(bs){
         const lyCur = lySer.length ? lySer.reduce((t, s) => t + (s.values[11] || 0), 0) : 0, ly2Cur = ly2Ser.length ? ly2Ser.reduce((t, s) => t + (s.values[11] || 0), 0) : 0;
         const hasPast = bs.some(b => Object.keys(state.revenue[b]?.monthly || {}).length || Object.keys(state.revenue[b]?.daily || {}).length);
         return `<div class="money"><div><span class="l">이번 달</span><b>${won(cur)}</b>
-            <span class="d ${diff >= 0 ? "up" : "down"}">${diff >= 0 ? "▲" : "▼"} ${won(Math.abs(diff))}</span><span class="pm">전월 ${won(prev)}${lyCur ? ` · 작년 ${+d.months[11].slice(5)}월 ${won(lyCur)}` : ""}${ly2Cur ? ` · 재작년 ${won(ly2Cur)}` : ""}</span></div>
-          ${bs.length > 1 ? `<ul class="money-br">${ser.map(s => `<li><i style="background:${s.color}"></i>${esc(s.name)} <b>${won(s.values[11] || 0)}</b></li>`).join("")}</ul>` : ""}</div>
-          ${lineChart({ labels:d.months.map(mLabel), series:[...ly2Ser, ...lySer, ...ser], fmtV:man, zero:true, aria:"월별 매출" })}${ser.length > 1 ? legend(ser) : ""}
-          <p class="fnote">정규 + 신규생 + 다른 요일 결제만 합쳤어요(샘플 후 등록·기타·상자 제외). 점선 = 작년, 점점선 = 재작년 같은 달${ly2Ser.length ? "" : "(재작년 자료를 올리면 나와요)"}.
+            <span class="d ${diff >= 0 ? "up" : "down"}">${diff >= 0 ? "▲" : "▼"} ${won(Math.abs(diff))}</span><span class="pm">전월 ${won(prev)}${lyCur ? ` · 작년 ${+d.months[11].slice(5)}월 ${won(lyCur)} (${cur >= lyCur ? "+" : ""}${Math.round((cur / lyCur - 1) * 1000) / 10}%)` : ""}${ly2Cur ? ` · 재작년 ${won(ly2Cur)}` : ""}</span></div>
+</div>
+          <div class="rev-grid ${bs.length > 1 ? "multi" : ""}">${bs.map(b => {
+            const r = { b, color:BRANCH_COLOR[b], cur:d.months.map(m => revenueOf(b, m, d.ledger)), ly:d.months.map(m => revenueOf(b, lyOf(m), d.ledger)), ly2:d.months.map(m => revenueOf(b, lyOf(m, 2), d.ledger)) };
+            const c = r.cur[11] || 0, p = r.ly[11], g = p ? Math.round((c / p - 1) * 1000) / 10 : null;
+            return `<div class="rev-one">${bs.length === 1 ? "" : `<div class="rev-h"><b style="color:${r.color}">${esc(BRANCHES[b])}</b><span class="rv">${won(c)}</span>
+              ${g != null ? `<span class="rg ${g >= 0 ? "up" : "down"}">${g >= 0 ? "▲" : "▼"} 작년 대비 ${Math.abs(g)}%</span>` : ""}</div>`}${revChart(r, d.months.map(mLabel), bs.length === 1)}</div>`; }).join("")}</div>
+          <div class="legend"><span><svg width="22" height="8" aria-hidden="true"><line x1="0" x2="22" y1="4" y2="4" stroke="#767676" stroke-width="3"/></svg>올해</span>
+            <span><svg width="22" height="8" aria-hidden="true"><line x1="0" x2="22" y1="4" y2="4" stroke="#767676" stroke-width="2" stroke-dasharray="5 4"/></svg>작년 같은 달</span>
+            <span><svg width="22" height="8" aria-hidden="true"><line x1="0" x2="22" y1="4" y2="4" stroke="#767676" stroke-width="2" stroke-dasharray="1.5 4" stroke-linecap="round"/></svg>재작년 같은 달</span>
+            <span>달에 마우스를 올리면 금액과 작년 대비 %가 나와요</span></div>
+          <p class="fnote">정규 + 신규생 + 다른 요일 결제만 합쳤어요(샘플 후 등록·기타·상자 제외). ${ly2Ser.length ? "" : "재작년 선은 재작년 자료를 올리면 나와요. "}
             ${+LEDGER_FROM.slice(5, 7)}월 ${+LEDGER_FROM.slice(8)}일부터는 결제 매니저 장부, 그 전은 올린 과거 매출${hasPast ? "" : "(아직 없음)"}. 이번 달은 오늘까지 들어온 결제만이에요.</p>
           <div class="acts"><button type="button" class="btn btn-ghost btn-sm" data-act="rev-pick" data-tip="월별 매출표 또는 일별 매출표 엑셀. 원 이름(평촌·반포·대치)이 열 제목이나 '원' 열에 있으면 원별로 나눠요">과거 매출 올리기</button></div>`; })}
     </section>
+  <div>
     <section class="card"><h2>교사 현황 <span class="sub">JP People 기준, 대표만 보여요</span></h2>
       ${extBox("people", d => {
         const rows = bs.map(b => ({ b, h:hrStats(d, b), enr:state.kpi[b]?.cur.enrolled }));
