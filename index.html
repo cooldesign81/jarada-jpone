@@ -2912,7 +2912,7 @@ function lmsPreview(files){
       <div class="lms-files">${items.map((it, i) => `<div class="lf"><span class="fn">${esc(it.name)}</span>
         ${it.hasCenter ? `<span class="ro">센터명 열로 자동 구분 (${Object.keys(it.byCenter).map(b => SHORT[b]).join("·")})${it.unknown ? `, ${it.unknown}명은 원을 몰라 제외` : ""}</span>`
           : `<select class="inp" name="pick${i}" aria-label="${esc(it.name)}의 원">${opts.map(b => `<option value="${b}" ${b === pick0[i] ? "selected" : ""}>${BRANCHES[b]}</option>`).join("")}</select>`}</div>`).join("")}</div>
-      <div class="pv-wrap"><table class="pv"><thead><tr><th>원</th><th>읽은 줄</th><th>재원</th><th>이번 달 신규</th><th>이번 달 퇴원</th><th>휴원</th><th>미납</th><th>선생님</th></tr></thead>
+      <div class="pv-wrap"><table class="pv"><thead><tr><th>원</th><th>읽은 줄</th><th>재원</th><th>이번 달 신규</th><th>이번 달 퇴원</th><th>휴원</th><th>미납</th><th>교사</th></tr></thead>
         <tbody id="pvBody">${render(base0, pick0)}</tbody></table></div>
       ${missing.length && opts.length > 1 ? `<p class="hint small">${esc(missing.map(b => BRANCHES[b]).join(", "))} 명단은 없어요. 그 원은 이전 결과가 그대로 남아요.</p>` : ""}
       <p class="hint small">같은 원의 이전 결과는 이 결과로 바뀌어요. 지난 달 추이는 명단의 등록일·종료일로 다시 계산해요.</p>`,
@@ -3084,13 +3084,13 @@ const KPI_TILES = [
   { key:"unpaid", label:"미납 3주 이상", unit:"명", good:"down" }
 ];
 const visBranches = () => state.branch === "all" ? BRANCH_KEYS : [state.branch];
-/* ── 선생님별 운영지표: 기간(1·3·6·12개월) 선택 ──
+/* ── 교사별 운영지표: 기간(1·3·6·12개월) 선택 ──
    JP People의 입사일을 보고 '입사한 다음 달'부터만 계산에 넣음 (입사한 달은 반을 받는 중이라 숫자가 왜곡됨)
    샘플 = 그 기간 샘플수업으로 남아 있는 원생 + 그 기간 신규 등록(샘플을 거쳐 등록한 것으로 봄), 등록 = 신규 등록 */
 const KPI_PERIODS = [[1, "1개월"], [3, "3개월"], [6, "6개월"], [12, "1년"]];
 const periodLabel = () => { const n = state.kpiPeriod; return n === 1 ? "이번 달" : n === 12 ? "최근 1년" : `최근 ${n}개월`; };
 const ymNext = ym => { const [y, m] = ym.split("-").map(Number); return m === 12 ? `${y+1}-01` : `${y}-${pad2(m+1)}`; };
-// 선생님 이름 → 계산 시작 달(입사 다음 달). 같은 원 우선, 없으면 다른 원
+// 교사 이름 → 계산 시작 달(입사 다음 달). 같은 원 우선, 없으면 다른 원
 function teacherStart(name, branch){
   const hit = state.teachers.find(t => t.name === name && t.branch === branch) || state.teachers.find(t => t.name === name);
   return hit ? { from: ymNext(hit.startYm), startYm: hit.startYm, active: hit.active !== false } : null;
@@ -3110,7 +3110,7 @@ function teacherPeriod(t, snap){
     newc, left, leftRate: (pre + newc) ? Math.round(left / (pre + newc) * 1000) / 10 : 0,
     smp, reg: newc, regRate: smp ? Math.round(newc / smp * 1000) / 10 : 0 };
 }
-/* 전체 원을 볼 때 두 원 이상에서 일하는 선생님은 한 줄로 합침 (월별 숫자를 같은 달끼리 더함) */
+/* 전체 원을 볼 때 두 원 이상에서 일하는 교사은 한 줄로 합침 (월별 숫자를 같은 달끼리 더함) */
 const brLabel = s => (s.branches || [s.branch]).map(b => SHORT[b]).join("·");
 function mergeTeachers(rows){
   if (state.branch !== "all") return rows;
@@ -3131,16 +3131,16 @@ function mergeTeachers(rows){
 }
 function teacherTableHTML(snaps){
   const rows = snaps.flatMap(s => (s.teachers || []).map(t => ({ t, s })));
-  if (!rows.length) return `<p class="empty">반 이름에서 선생님을 읽지 못했어요.</p>`;
+  if (!rows.length) return `<p class="empty">반 이름에서 교사를 읽지 못했어요.</p>`;
   if (rows.some(({ t }) => !t.m)) return `<p class="warn-note">기간별로 보려면 원생 명단을 한 번 다시 올려 주세요. (예전에 올린 명단에는 월별 기록이 없어요)</p>`;
   const all = mergeTeachers(rows).map(({ t, s }) => ({ t, s, p: teacherPeriod(t, s) })).sort((a, b) => b.t.enrolled - a.t.enrolled);
-  // JP People에서 재직 중인 선생님만 보여 줌 (퇴직·휴직·JP People에 없는 이름은 숨김). JP People을 아직 못 불러왔으면 모두 보여 줌
+  // JP People에서 재직 중인 교사만 보여 줌 (퇴직·휴직·JP People에 없는 이름은 숨김). JP People을 아직 못 불러왔으면 모두 보여 줌
   const known = state.teachers.length > 0;
   const active = known ? all.filter(x => x.p.st && x.p.st.active) : all;
   // 필터: 이름 찾기 · 퇴원율 10% 이상만
   const q = state.tQ.trim();
   const list = active.filter(x => (!q || x.t.name.includes(q)) && (!state.tWarn || (x.p.months > 0 && x.p.leftRate >= 10)));
-  // 정렬: 머리글을 누르면 그 칸으로, 다시 누르면 반대로. 숫자가 없는(입사 직후) 선생님은 항상 아래
+  // 정렬: 머리글을 누르면 그 칸으로, 다시 누르면 반대로. 숫자가 없는(입사 직후) 교사은 항상 아래
   const SV = { name:x => x.t.name, branch:x => brLabel(x.s), enrolled:x => x.t.enrolled, avg:x => x.p.avg, newc:x => x.p.newc, left:x => x.p.left,
     leftRate:x => x.p.leftRate, avgRate:x => x.p.avgRate, smp:x => x.p.smp, reg:x => x.p.reg, regRate:x => x.p.regRate };
   const { k: sk, dir } = state.tSort, get = SV[sk] || SV.enrolled, textKey = sk === "name" || sk === "branch";
@@ -3154,26 +3154,26 @@ function teacherTableHTML(snaps){
   const multi = state.kpiPeriod > 1;
   const tmax = Math.max(1, ...list.map(x => x.t.enrolled));
   const noPeople = list.filter(x => !x.p.st).length;
-  if (!active.length) return `<p class="empty">JP People에서 재직 중으로 확인된 선생님이 없어요.</p>`;
+  if (!active.length) return `<p class="empty">JP People에서 재직 중으로 확인된 교사가 없어요.</p>`;
   const dash = `<span class="mut">–</span>`;
   const th = (k, label, cls = "", tip = "") => { const on = state.tSort.k === k;
     return `<th class="${cls}" aria-sort="${on ? (state.tSort.dir > 0 ? "ascending" : "descending") : "none"}"${tip ? ` data-tip="${esc(tip)}"` : ""}>
       <button type="button" class="sortb${on ? " on" : ""}" data-act="t-sort" data-k="${k}">${label}<i>${on ? (state.tSort.dir > 0 ? "▲" : "▼") : "↕"}</i></button></th>`; };
   const bar = `<div class="tfilter">
       <label class="fsearch"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-        <input type="search" id="tQ" placeholder="선생님 이름" value="${esc(state.tQ)}" data-fk="tQ" aria-label="선생님 이름으로 찾기"></label>
+        <input type="search" id="tQ" placeholder="교사 이름" value="${esc(state.tQ)}" data-fk="tQ" aria-label="교사 이름으로 찾기"></label>
       <label class="tchk"><input type="checkbox" data-act="t-warn" ${state.tWarn ? "checked" : ""}> 퇴원율 10% 이상만</label>
       <span class="tcount">${list.length}명${list.length !== active.length ? ` / ${active.length}명` : ""}</span>
       ${state.tQ || state.tWarn || state.tSort.k !== "enrolled" || state.tSort.dir !== -1 ? `<button type="button" class="linkish" data-act="t-reset">처음대로</button>` : ""}
     </div>`;
-  if (!list.length) return bar + `<p class="empty">조건에 맞는 선생님이 없어요.</p>`;
-  return bar + `<div class="tbl-wrap"><table class="ttable"><thead><tr>${th("name", "선생님")}${state.branch === "all" ? th("branch", "원") : ""}
+  if (!list.length) return bar + `<p class="empty">조건에 맞는 교사가 없어요.</p>`;
+  return bar + `<div class="tbl-wrap"><table class="ttable"><thead><tr>${th("name", "교사")}${state.branch === "all" ? th("branch", "원") : ""}
       ${th("enrolled", "현재 재원", "num")}<th class="barc"></th>${th("avg", "평균 재원", "num")}
       ${th("newc", "신규", "num")}${th("left", "퇴원", "num")}${th("leftRate", "퇴원율", "num")}${multi ? th("avgRate", "월평균 퇴원율", "num", "달마다 낸 퇴원율의 평균") : ""}
       ${th("smp", "샘플 수업", "num sep")}${th("reg", "샘플 등록", "num")}${th("regRate", "등록율", "num")}</tr></thead><tbody>
     ${list.map(({ t, s, p }) => {
       const none = p.months === 0;
-      const note = !p.st ? `<small class="mut" data-tip="JP People에서 '${esc(t.name)}' 이름을 찾지 못해 입사일을 몰라요. 기간 전체로 계산했어요. JP People의 이름을 반 이름의 선생님 이름과 똑같이 맞춰 주세요.">입사일 모름</small>`
+      const note = !p.st ? `<small class="mut" data-tip="JP People에서 '${esc(t.name)}' 이름을 찾지 못해 입사일을 몰라요. 기간 전체로 계산했어요. JP People의 이름을 반 이름의 교사 이름과 똑같이 맞춰 주세요.">입사일 모름</small>`
         : none ? `<small class="mut">${md(p.st.startYm + "-01").replace(/\.1$/, "월")} 입사, 다음 달부터 계산</small>`
         : p.partial ? `<small class="mut" data-tip="입사한 달은 빼고 계산해요">${p.months}개월치</small>` : "";
       return `<tr><td><b>${esc(t.name)}</b>${note}</td>${state.branch === "all" ? `<td>${esc(brLabel(s))}</td>` : ""}
@@ -3186,7 +3186,7 @@ function teacherTableHTML(snaps){
     </tbody></table></div>
     <p class="fnote">평균 재원 = 기간 동안 매달 말 재원생의 평균(이번 달은 지금 기준). 퇴원율 = 퇴원 ÷ (기간 시작 재원 + 신규).
       ${multi ? "월평균 퇴원율 = 달마다 (퇴원 ÷ 전달 말 재원 + 그 달 신규)의 평균. " : ""}샘플 수업 = 샘플 후 아직 등록 안 한 원생 + 신규 등록, 등록율 = 신규 ÷ 샘플 수업. 입사한 달은 빼고 다음 달부터 계산해요${noPeople ? ` (입사일 모름 ${noPeople}명은 기간 전체)` : ""}.
-      ${state.branch === "all" && list.some(x => x.s.branches) ? "두 원 이상에서 일하는 선생님은 원별 숫자를 합쳐 한 줄로 보여요. " : ""}
+      ${state.branch === "all" && list.some(x => x.s.branches) ? "두 원 이상에서 일하는 교사는 원별 숫자를 합쳐 한 줄로 보여요. " : ""}
       ${hidden.length ? `<br>JP People에서 재직 중이 아니라 숨긴 이름 ${hidden.length}명: ${esc([...new Set(hidden.map(x => x.t.name))].join(", "))}` : ""}</p>`;
 }
 
@@ -3230,7 +3230,7 @@ function nlTilesHTML(labels, nlSeries, hasLY){
     <div class="legend"><span><i class="box" style="background:#767676"></i>진한 좁은 막대 = 올해</span>${hasLY ? `<span><i class="box" style="background:#767676;opacity:.25"></i>연한 넓은 막대 = 작년 같은 달</span>` : ""}<span>막대에 마우스를 올리면 숫자가 나와요</span></div>`;
 }
 
-/* ── 연령별 현황: 전체 분포 막대 + 선생님 × 나이 표(칸 색이 진할수록 많음) ── */
+/* ── 연령별 현황: 전체 분포 막대 + 교사 × 나이 표(칸 색이 진할수록 많음) ── */
 function ageHTML(snaps){
   if (!snaps.some(s => s.ages)) return `<p class="warn-note">원생 명단을 다시 올리면 연령별 현황이 나와요.</p>`;
   const tot = {}; snaps.forEach(s => Object.entries(s.ages || {}).forEach(([k, v]) => tot[k] = (tot[k] || 0) + v));
@@ -3241,19 +3241,19 @@ function ageHTML(snaps){
       return `<div class="ad-row" data-tip="${esc(`${ageLabel(k)}\n${v}명, 전체의 ${pc}%`)}"><span class="ad-k">${ageLabel(k)}</span>
         <span class="ad-bar"><i style="width:${v / mx * 100}%"></i></span><span class="ad-v">${v}<small>${pc}%</small></span></div>`; }).join("")}
       <p class="fnote">순수 재원생 ${sumAll}명 기준${unknown ? `, 나이 없는 ${unknown}명 제외` : ""}. 평균 ${(AGE_KEYS.reduce((a, k) => a + (+k) * (tot[k] || 0), 0) / sumAll).toFixed(1)}세(5세 이하·13세 이상은 5·13으로 계산)</p></div>`;
-  // 선생님 × 나이 (재직 중인 선생님만, 여러 원이면 합산)
+  // 교사 × 나이 (재직 중인 교사만, 여러 원이면 합산)
   const rows = mergeTeachers(snaps.flatMap(s => (s.teachers || []).map(t => ({ t, s }))))
     .filter(({ t, s }) => { if (!state.teachers.length) return true; const st = teacherStart(t.name, s.branch); return st && st.active; })
     .filter(({ t }) => t.ages && Object.keys(t.ages).length).sort((a, b) => b.t.enrolled - a.t.enrolled);
   const cmax = Math.max(1, ...rows.flatMap(({ t }) => AGE_KEYS.map(k => t.ages[k] || 0)));
   const cell = (v, strong) => { const a = v / cmax; return `<td class="num hc2" style="background:${v ? `rgba(37,99,166,${(0.08 + a * 0.8).toFixed(2)})` : "transparent"};color:${a > .55 ? "#fff" : v ? "var(--ink)" : "#C4C4C4"}${strong ? ";font-weight:700" : ""}">${v || "·"}</td>`; };
   const colSum = k => rows.reduce((a, { t }) => a + (t.ages[k] || 0), 0);
-  const table = rows.length ? `<div class="tbl-wrap"><table class="ttable agetbl"><thead><tr><th>선생님</th>${state.branch === "all" ? "<th>원</th>" : ""}${AGE_KEYS.map(k => `<th class="num">${k === "5" ? "~5세" : k === "13" ? "13세~" : k + "세"}</th>`).join("")}<th class="num sep">합계</th></tr></thead><tbody>
+  const table = rows.length ? `<div class="tbl-wrap"><table class="ttable agetbl"><thead><tr><th>교사</th>${state.branch === "all" ? "<th>원</th>" : ""}${AGE_KEYS.map(k => `<th class="num">${k === "5" ? "~5세" : k === "13" ? "13세~" : k + "세"}</th>`).join("")}<th class="num sep">합계</th></tr></thead><tbody>
       ${rows.map(({ t, s }) => { const tsum = AGE_KEYS.reduce((a, k) => a + (t.ages[k] || 0), 0);
         return `<tr><td><b>${esc(t.name)}</b></td>${state.branch === "all" ? `<td>${esc(brLabel(s))}</td>` : ""}${AGE_KEYS.map(k => cell(t.ages[k] || 0)).join("")}<td class="num sep"><b>${tsum}</b></td></tr>`; }).join("")}
       <tr class="sumr"><td><b>합계</b></td>${state.branch === "all" ? "<td></td>" : ""}${AGE_KEYS.map(k => `<td class="num"><b>${colSum(k)}</b></td>`).join("")}<td class="num sep"><b>${AGE_KEYS.reduce((a, k) => a + colSum(k), 0)}</b></td></tr>
-      <tr class="sumr"><td>선생님 평균</td>${state.branch === "all" ? "<td></td>" : ""}${AGE_KEYS.map(k => `<td class="num">${(colSum(k) / rows.length).toFixed(1)}</td>`).join("")}<td class="num sep">${(AGE_KEYS.reduce((a, k) => a + colSum(k), 0) / rows.length).toFixed(1)}</td></tr>
-    </tbody></table></div><p class="fnote">숫자는 원생 수예요. 칸 색이 진할수록 많아요. 표 합계는 재직 중인 선생님 반만 더한 값이에요.</p>` : `<p class="empty">선생님별 나이 정보가 없어요.</p>`;
+      <tr class="sumr"><td>교사 평균</td>${state.branch === "all" ? "<td></td>" : ""}${AGE_KEYS.map(k => `<td class="num">${(colSum(k) / rows.length).toFixed(1)}</td>`).join("")}<td class="num sep">${(AGE_KEYS.reduce((a, k) => a + colSum(k), 0) / rows.length).toFixed(1)}</td></tr>
+    </tbody></table></div><p class="fnote">숫자는 원생 수예요. 칸 색이 진할수록 많아요. 표 합계는 재직 중인 교사 반만 더한 값이에요.</p>` : `<p class="empty">교사별 나이 정보가 없어요.</p>`;
   return `<div class="age-wrap">${dist}<div>${table}</div></div>`;
 }
 
@@ -3301,7 +3301,7 @@ function kpiPageHTML(){
     <div class="acts">${canUp ? `<button type="button" class="btn btn-primary btn-sm" data-act="lms-pick" data-tip="${state.branch === "all" && branchOptions("kpi").filter(b => b !== "all").length > 1 ? "3개 원 명단을 한 번에 골라도 돼요 (Ctrl 또는 Shift를 누른 채 여러 파일 선택)" : "자라다 시스템에서 내려받은 원생 목록 엑셀"}">원생 명단 올리기${state.branch === "all" && branchOptions("kpi").filter(b => b !== "all").length > 1 ? " (여러 원 한 번에)" : ""}</button>` : ""}</div></div>
     <p class="kpi-meta left">${esc(metaLine)}. 화살표는 전월 대비 <button type="button" class="linkish" data-act="kpi-help">계산 기준</button></p>`;
   if (!snaps.length) return head + `<div class="soon"><h2>아직 올린 원생 명단이 없어요</h2>
-      <p>자라다 시스템에서 원생 목록을 엑셀로 내려받아 '원생 명단 올리기'로 올리면 재원·신규·퇴원·샘플·미납·선생님별 지표가 계산돼요.</p>
+      <p>자라다 시스템에서 원생 목록을 엑셀로 내려받아 '원생 명단 올리기'로 올리면 재원·신규·퇴원·샘플·미납·교사별 지표가 계산돼요.</p>
       <p>매주 한 번 올리는 것을 권해요. 지난 달 추이는 명단의 등록일과 종료일로 자동 계산돼요.</p></div>` + (state.isAdmin ? adminRowsHTML(bs) : "");
   const partial = snaps.length < bs.length;
   /* 지표 칸 */
@@ -3340,7 +3340,7 @@ function kpiPageHTML(){
       ${days.map(d => `<span class="hd">${d}</span>${hours.map(h => { const n = heat[d][h] || 0, a = n / hmax;
         return `<span class="hc" style="background:${n ? tealOf(a) : "#F4F4F4"};color:${a > .5 ? "#fff" : "var(--ink)"}" data-tip="${esc(`${d}요일 ${h}시\n재원 ${n}명`)}">${n || ""}</span>`; }).join("")}`).join("")}
     </div><div class="heat-scale"><span>적음</span><i></i><span>많음</span></div>` : `<p class="empty">반 이름에서 요일·시간을 읽지 못했어요.</p>`;
-  /* 선생님별 (기간 선택) */
+  /* 교사별 (기간 선택) */
   const teacherHTML = teacherTableHTML(snaps);
   return head + `
   ${partial ? `<p class="warn-note">명단이 없는 원은 빈칸으로 보여요. 그 원에서 명단을 올리면 채워져요.</p>` : ""}
@@ -3354,7 +3354,7 @@ function kpiPageHTML(){
       ${restNote ? `<p class="fnote">* ${esc(labels.at(-1))}(이번 명단)부터 휴원생 제외: ${esc(restNote)}. 지난 달들은 당시 휴원 여부를 알 수 없어 포함돼 있어요.</p>` : ""}</section>
     <section class="card"><h2>요일 · 시간대별 재원생 <span class="sub">${snaps.length > 1 ? "원 합계, " : ""}반 이름 기준</span></h2>${heatHTML}</section>
   </div>
-  <section class="card tcard"><div class="card-h"><h2>선생님별 운영지표 <span class="sub">${esc(periodLabel())}</span></h2>
+  <section class="card tcard"><div class="card-h"><h2>교사별 운영지표 <span class="sub">${esc(periodLabel())}</span></h2>
       ${state.isAdmin ? `<button type="button" class="icon-btn" data-act="people-resync" data-tip="JP People에서 입사일을 고쳤다면 눌러서 다시 맞춰요">JP People 다시 불러오기</button>` : ""}
       <div class="seg2 sm" role="group" aria-label="기간">${KPI_PERIODS.map(([n, l]) => `<button type="button" data-act="kpi-period" data-n="${n}" aria-pressed="${state.kpiPeriod === n}">${l}</button>`).join("")}</div></div>
     ${teacherHTML}</section>
@@ -3383,7 +3383,7 @@ function adminRowsHTML(bs){
           ${lineChart({ labels:d.months.map(mLabel), series:ser, fmtV:man, zero:true, aria:"월별 매출" })}${ser.length > 1 ? legend(ser) : ""}
           <p class="fnote">이번 달은 오늘까지 들어온 결제만 합친 금액이에요.</p>`; })}
     </section>
-    <section class="card"><h2>선생님 현황 <span class="sub">JP People 기준, 대표만 보여요</span></h2>
+    <section class="card"><h2>교사 현황 <span class="sub">JP People 기준, 대표만 보여요</span></h2>
       ${extBox("people", d => {
         const rows = bs.map(b => ({ b, h:hrStats(d, b), enr:state.kpi[b]?.cur.enrolled }));
         return `<div class="tbl-wrap"><table class="ttable hr"><thead><tr><th>원</th><th class="num">재직 교사</th><th class="num">휴직</th><th class="num">이번 달 입사 · 퇴사</th>
@@ -3407,7 +3407,7 @@ function kpiHelp(){
     <li><b>샘플 등록율</b>: 샘플 문의 중 등록한 원생 비율.</li>
     <li><b>샘플 퍼널</b>: 문의 → 샘플 진행('대기' 제외) → 샘플 후 등록(등록한 원생) → 정규 등록(그중 지금 수업을 다니는 원생).</li>
     <li><b>미납 3주 이상</b>: 미납 열에 금액이 있거나 '미납'이라고 적힌 원생 중, 엑셀에 미납(청구)일 열이 있으면 그 날짜가, 없으면 수강 종료일이 기준일보다 21일 넘게 지난 원생.</li>
-    <li><b>선생님 · 요일 · 시간</b>: 반 이름, 예) 5번 (김민수) (수-4 18:30) 에서 읽어요.</li></ul>` });
+    <li><b>교사 · 요일 · 시간</b>: 반 이름, 예) 5번 (김민수) (수-4 18:30) 에서 읽어요.</li></ul>` });
 }
 const DEMO_TEACH = { pyeongchon:["김민수","박지은","이도윤","최서연","정하늘"], banpo:["한지민","오세훈","윤아름","장현우"], daechi:["서지호","강유나","임태현","배수아","조은비"] };
 const DEMO_NAMES = "민준 서준 도윤 예준 시우 하준 주원 지호 지후 준우 준서 건우 도현 현우 지훈 우진 선우 서진 유준 연우 은우 민재 현준 시윤 정우 이준 윤우 승우 지우 승현".split(" ");
