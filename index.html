@@ -3295,6 +3295,7 @@ function kpiPageHTML(){
   const enrSeries = [...snaps.filter(s => s.enrolledLY).map(s => ({ name:`${BRANCHES[s.branch]} 작년`, color:BRANCH_COLOR[s.branch], values:s.enrolledLY.map(v => v || null), dash:true })),
     ...snaps.map(s => ({ name:BRANCHES[s.branch], color:BRANCH_COLOR[s.branch], values:s.enrolled }))];
   const sum = k => ref.months.map((_, i) => snaps.reduce((t, s) => t + (s[k][i] || 0), 0));
+  const restNote = snaps.filter(s => s.cur.rest > 0).map(s => `${BRANCHES[s.branch]} ${s.cur.rest}명`).join(", ");
   const hasLY = snaps.every(s => s.newcLY);
   const nlSeries = [{ name:"신규", color:"var(--c-new)", values:sum("newc"), ly: hasLY ? sum("newcLY") : null },
                     { name:"퇴원", color:"var(--c-left)", values:sum("left"), ly: hasLY ? sum("leftLY") : null }];
@@ -3329,7 +3330,8 @@ function kpiPageHTML(){
     ${nlTilesHTML(labels, nlSeries, hasLY)}</section>
   <div class="grid2 even">
     <section class="card"><h2>재원생 추이 <span class="sub">최근 12개월, 월말 기준</span></h2>
-      ${lineChart({ labels, series:enrSeries, fmtV:v => v + "명", fixMin:100, fixMax:400, h:330, aria:"재원생 추이" })}${enrSeries.length > 1 ? legend(enrSeries) : ""}</section>
+      ${lineChart({ labels: restNote ? labels.map((l, i) => i === labels.length - 1 ? l + "*" : l) : labels, series:enrSeries, fmtV:v => v + "명", fixMin:100, fixMax:400, h:330, aria:"재원생 추이" })}${enrSeries.length > 1 ? legend(enrSeries) : ""}
+      ${restNote ? `<p class="fnote">* ${esc(labels.at(-1))}(이번 명단)부터 휴원생 제외: ${esc(restNote)}. 지난 달들은 당시 휴원 여부를 알 수 없어 포함돼 있어요.</p>` : ""}</section>
     <section class="card"><h2>샘플에서 등록까지 <span class="sub">이번 달</span></h2>${funnel}</section>
   </div>
   <section class="card"><h2>요일 · 시간대별 재원생 <span class="sub">${snaps.length > 1 ? "원 합계, " : ""}반 이름 기준</span></h2>${heatHTML}</section>
