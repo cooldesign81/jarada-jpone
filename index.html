@@ -3309,12 +3309,18 @@ function hrStats(data, b){
   const list = data.emps.filter(e => (b === "all" || e.branch === b) && isTeacherEmp(e));
   const act = list.filter(e => e.status === "active"), leave = list.filter(e => e.status === "leave");
   const left12 = list.filter(e => e.status === "resigned" && e.resignedAt && e.resignedAt >= y1);
+  const y3 = addDays(t, -365 * 3), left36 = list.filter(e => e.status === "resigned" && e.resignedAt && e.resignedAt >= y3);
+  // 1년 미만 = 지금 재직 중이고 입사한 지 1년이 안 된 사람 / 12개월 퇴사 = 최근 1년에 퇴사한 사람 중 입사 후 12개월 안에 그만둔 사람
+  const under1 = act.filter(e => e.joinedAt && e.joinedAt > y1).length;
+  const early = left12.filter(e => e.joinedAt && daysBetween(e.joinedAt, e.resignedAt) < 365).length;
+  const early3 = left36.filter(e => e.joinedAt && daysBetween(e.joinedAt, e.resignedAt) < 365).length;
   const tenure = act.filter(e => e.joinedAt).map(e => daysBetween(e.joinedAt, t) / 30.44);
   return { active:act.length, leave:leave.length,
     joined:list.filter(e => e.joinedAt && ymOf(e.joinedAt) === ym).length,
     resigned:list.filter(e => e.status === "resigned" && e.resignedAt && ymOf(e.resignedAt) === ym).length,
     avgMonths: tenure.length ? tenure.reduce((a,b) => a + b, 0) / tenure.length : 0,
-    turnover: (act.length + left12.length) ? Math.round(left12.length / (act.length + left12.length) * 1000) / 10 : 0, left12:left12.length };
+    turnover: (act.length + left12.length) ? Math.round(left12.length / (act.length + left12.length) * 1000) / 10 : 0, left12:left12.length,
+    turnover3: (act.length + left36.length) ? Math.round(left36.length / (act.length + left36.length) * 1000) / 10 : 0, left36:left36.length, under1, early, early3 };
 }
 const tenureLabel = m => { const y = Math.floor(m / 12), mm = Math.round(m % 12); return y ? `${y}년 ${mm}개월` : `${mm}개월`; };
 const won = n => Math.round(n).toLocaleString("ko-KR") + "원";
@@ -3805,12 +3811,15 @@ function adminRowsHTML(bs){
       ${extBox("people", d => {
         const rows = bs.map(b => ({ b, h:hrStats(d, b), enr:state.kpi[b]?.cur.enrolled, fte:classTeachers(b) }));
         return `<div class="tbl-wrap"><table class="ttable hr"><thead><tr><th>원</th><th class="num">재직 교사</th><th class="num">휴직</th><th class="num">이번 달 입사 · 퇴사</th>
-            <th class="num">평균 근속</th><th class="num">1년 이직율</th><th class="num">교사 1인당 원생</th></tr></thead><tbody>
+            <th class="num">평균 근속</th><th class="num">1년 미만</th><th class="num">12개월 퇴사</th><th class="num">1년 이직율</th><th class="num">3년 이직율</th><th class="num">교사 1인당 원생</th></tr></thead><tbody>
           ${rows.map(({ b, h, enr, fte }) => `<tr><td><b>${esc(BRANCHES[b])}</b></td><td class="num">${h.active}명</td><td class="num">${h.leave}명</td>
             <td class="num">${h.joined} · ${h.resigned}</td><td class="num">${h.avgMonths ? tenureLabel(h.avgMonths) : "-"}</td>
+            <td class="num" data-tip="지금 재직 중이고 입사한 지 1년이 안 된 교사">${h.under1}명</td>
+            <td class="num ${h.early ? "warn" : ""}" data-tip="${esc(`최근 1년에 퇴사한 교사 중 입사 후 12개월 안에 그만둔 사람\n최근 3년으로 보면 ${h.early3}명`)}">${h.early}명</td>
             <td class="num ${h.turnover >= 30 ? "warn" : ""}" data-tip="${esc(`최근 1년 퇴사 ${h.left12}명`)}">${h.turnover}%</td>
+            <td class="num ${h.turnover3 >= 50 ? "warn" : ""}" data-tip="${esc(`최근 3년 퇴사 ${h.left36}명 ÷ (지금 재직 + 3년 퇴사)`)}">${h.turnover3}%</td>
             <td class="num" data-tip="${esc(fte.n ? `재원생 ${enr}명 ÷ 수업 맡은 교사 ${Math.round(fte.n * 10) / 10}명\n${fte.list.join(", ")}` : "원생 명단을 올리면 나와요")}">${enr != null && fte.n ? (Math.round(enr / fte.n * 10) / 10) + "명" : "-"}<small class="sub2">${fte.n ? ` / ${Math.round(fte.n * 10) / 10}명` : ""}</small></td></tr>`).join("")}</tbody></table></div>
-          <p class="fnote">교사 1인당 원생 = 재원생 ÷ 원생 명단에서 실제로 반을 맡은 교사 수(원장·부원장도 반이 있으면 포함, 두 원을 맡으면 원생 비율로 나눠 셈, JP People 재직자이고 맡은 원생 10명 이상). 재직 교사·근속·이직율은 JP People 기준이라 원장·부원장·실장 직책은 빼요. 퇴사일은 JP People 발령·변경 기록의 '퇴직' 날짜를 써요.</p>`; })}
+          <p class="fnote">교사 1인당 원생 = 재원생 ÷ 원생 명단에서 실제로 반을 맡은 교사 수(원장·부원장도 반이 있으면 포함, 두 원을 맡으면 원생 비율로 나눠 셈, JP People 재직자이고 맡은 원생 10명 이상). 재직 교사·근속·이직율은 JP People 기준이라 원장·부원장·실장 직책은 빼요. 퇴사일은 JP People 발령·변경 기록의 '퇴직' 날짜를 써요. 이직율 = 기간 중 퇴사 ÷ (지금 재직 + 기간 중 퇴사). 12개월 퇴사 = 최근 1년 퇴사자 중 입사 후 12개월 안에 그만둔 사람.</p>`; })}
     </section>
   </div>`;
 }
