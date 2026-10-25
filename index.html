@@ -638,7 +638,7 @@
   .fbar{height:14px;background:#F2F2F2;border-radius:3px;overflow:hidden}
   .fbar i{display:block;height:100%;border-radius:3px}
   .heat{display:grid;gap:3px;font-size:11px}
-  .heat .hh{text-align:center;color:var(--text-sub)}
+  .heat .hh{text-align:center;color:var(--text-sub);font-weight:700}
   .heat .hd{color:var(--text-sub);font-weight:700;display:flex;align-items:center}
   .heat .hc{height:30px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px}
   .heat .hc:hover{outline:2px solid var(--ink)}
@@ -3445,9 +3445,10 @@ function kpiPageHTML(){
   const heat = {}; snaps.forEach(s => Object.entries(s.heat || {}).forEach(([d, hrs]) => Object.entries(hrs).forEach(([h, n]) => { (heat[d] ||= {}); heat[d][h] = (heat[d][h] || 0) + n; })));
   const days = ["월","화","수","목","금","토","일"].filter(d => heat[d]), hours = [...new Set(days.flatMap(d => Object.keys(heat[d]).map(Number)))].sort((a,b) => a - b);
   const hmax = Math.max(1, ...days.flatMap(d => Object.values(heat[d])));
-  const heatHTML = days.length ? `<div class="heat" style="grid-template-columns:28px repeat(${hours.length},minmax(0,1fr))">
-      <span></span>${hours.map(h => `<span class="hh">${h}시</span>`).join("")}
-      ${days.map(d => `<span class="hd">${d}</span>${hours.map(h => { const n = heat[d][h] || 0, a = n / hmax;
+  /* 열 = 요일, 행 = 시간대 */
+  const heatHTML = days.length ? `<div class="heat" style="grid-template-columns:40px repeat(${days.length},minmax(0,1fr))">
+      <span></span>${days.map(d => `<span class="hh">${d}</span>`).join("")}
+      ${hours.map(h => `<span class="hd">${h}시</span>${days.map(d => { const n = heat[d][h] || 0, a = n / hmax;
         return `<span class="hc" style="background:${n ? tealOf(a) : "#F4F4F4"};color:${a > .5 ? "#fff" : "var(--ink)"}" data-tip="${esc(`${d}요일 ${h}시\n재원 ${n}명`)}">${n || ""}</span>`; }).join("")}`).join("")}
     </div><div class="heat-scale"><span>적음</span><i></i><span>많음</span></div>` : `<p class="empty">반 이름에서 요일·시간을 읽지 못했어요.</p>`;
   /* 교사별 (기간 선택) */
