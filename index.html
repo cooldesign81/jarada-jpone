@@ -567,6 +567,15 @@
        white-space:pre;transform:translate(-50%,calc(-100% - 8px));box-shadow:0 6px 18px rgba(0,0,0,.2)}
   .tip::first-line{font-weight:800}
   .fun{margin-bottom:16px}
+  .vfun-wrap{display:grid;gap:16px}
+  .vfun{display:flex;flex-direction:column;align-items:stretch}
+  .vf-b{font-size:13px;font-weight:800;color:var(--ink);text-align:center;margin-bottom:6px}
+  .vf-st{display:flex;flex-direction:column;align-items:center}
+  .vf-bar{height:34px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:15px;font-variant-numeric:tabular-nums;min-width:40px}
+  .vf-l{font-size:12px;color:var(--text);margin-top:3px;font-weight:600}
+  .vf-conv{text-align:center;font-size:11px;color:var(--text-sub);font-weight:700;margin:4px 0}
+  .vf-tot{text-align:center;font-size:12px;color:var(--text);margin-top:10px;padding-top:8px;border-top:1px solid var(--line)}
+  .vf-tot b{font-size:15px;color:var(--ink)}
   .fun-h{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;font-size:14px;color:var(--ink)}
   .fun-h span{font-size:18px;font-weight:800}
   .fun-row{display:grid;grid-template-columns:36px 1fr 40px;align-items:center;gap:8px;font-size:12px;color:var(--text);margin-bottom:4px}
@@ -1629,8 +1638,7 @@ function homeHTML(){
   const cnt = k => bs.reduce((t, b) => t + (state.kpi[b] ? state.kpi[b].cur[k] : SAMPLE[b][k]?.[0] || 0), 0);
   const lst = k => bs.reduce((t, b) => t + (state.kpi[b]?.lists?.[k]?.length || 0), 0);
   const checks = [...CHECKS.filter(c => !(real && /샘플 후/.test(c[1]))),
-    ...(real ? [["critical","미납 원생","결제를 확인해 주세요", cnt("unpaid") + "명"], ["info","샘플 후 30일 넘게 미등록","다시 연락할 대상", lst("sampleWait") + "명"]] : []),
-    ["info","14일 안에 수강 만료","재등록 안내 대상", cnt("expiring") + "명"]];
+    ...(real ? [["critical","3주 이상 미납","결제를 확인해 주세요", cnt("unpaid") + "명"], ["info","샘플 후 30일 넘게 미등록","다시 연락할 대상", lst("sampleWait") + "명"]] : [])];
   const notices = sortNotices(state.notices.filter(visible)).slice(0, 5);
   const open = sortTodos(state.todos.filter(t => visible(t) && !t.done));
   const canTodo = branchOptions("todos").length > 0;
@@ -2551,7 +2559,7 @@ const BRANCH_COLOR = { pyeongchon:"#2563A6", banpo:"#C98100", daechi:"#8B5CF6" }
 const LMS_COLS = {
   center:["센터명","센터","원","지점"], name:["원생명","이름","원생","학생명","학생"], group:["관리그룹","그룹"], age:["나이","연령","만나이"],
   status:["상태"], cls:["반","반명","클래스","수업"], reg:["등록일"], start:["시작일","수강시작일"], end:["종료일","수강종료일"],
-  unpaid:["미납","미납금","미수","미수금","미납액"], last:["최근등원일","최근등원"]
+  unpaid:["미납","미납금","미수","미수금","미납액"], due:["미납일","미납시작일","청구일","결제예정일","납부기한","납부예정일","결제기한","납부일"], last:["최근등원일","최근등원"]
 };
 const branchOfCenter = s => /평촌/.test(s) ? "pyeongchon" : /반포/.test(s) ? "banpo" : /대치/.test(s) ? "daechi" : "";
 function toISO(v){
@@ -2583,7 +2591,7 @@ function rowsFromSheet(aoa){
     return { center: String(g("center")).trim(), name: String(g("name")).trim(), group: String(g("group")).trim(),
       status: String(g("status")).replace(/\s/g, ""), cls: String(g("cls")).trim(), teacher: c.teacher, day: c.day, hour: c.hour,
       reg: toISO(g("reg")), start: toISO(g("start")), end: toISO(g("end")), unpaid: unpaidAmt(g("unpaid")), last: toISO(g("last")),
-      age: (m => m ? +m[0] : null)(String(g("age")).match(/\d+/)) };
+      age: (m => m ? +m[0] : null)(String(g("age")).match(/\d+/)), due: toISO(g("due")) };
   });
   return { rows, cols: Object.keys(col) };
 }
@@ -2617,10 +2625,21 @@ function buildSnapshot(rows, branch, base){
   const newcLY = months.map(ym => newIn(ly(ym))), leftLY = months.map(ym => leftIn(ly(ym)));
   const pYm = months[10], ppYm = months[9];
   const rate = (a, b) => b ? Math.round(a / b * 1000) / 10 : 0;
-  const inqCur = sampleIn(curYm) + newc[11], inqPrev = sampleIn(pYm) + newc[10];
+  // 샘플 퍼널 (그 달에 등록일이 있는 원생 기준): 문의 → 샘플 진행 → 샘플 후 등록 → 정규 등록
+  //  문의 = 모든 상태 / 샘플 진행 = '대기'(아직 샘플 전) 제외 / 샘플 후 등록 = 등록한 원생 / 정규 등록 = 그중 지금 다니는 원생(수업 시작)
+  const funnelOf = ym => { const L = rows.filter(r => r.reg && ymOf(r.reg) === ym);
+    const reg = L.filter(isReg);
+    return { inq: L.length, sample: L.filter(r => r.status !== "대기").length, reg: reg.length,
+             regular: reg.filter(r => isActive(r) && (!r.start || r.start <= base)).length }; };
+  const fCur = funnelOf(curYm), fPrev = funnelOf(pYm);
+  const inqCur = fCur.inq, inqPrev = fPrev.inq;
   const until14 = addDays(base, 14), d30 = addDays(base, -30), d180 = addDays(base, -180), d90 = addDays(base, -90);
   const active = rows.filter(isActive);
-  const unpaid = active.concat(rows.filter(r => !isActive(r) && r.unpaid > 0)).filter(r => r.unpaid > 0);
+  const unpaidAll = active.concat(rows.filter(r => !isActive(r) && r.unpaid > 0)).filter(r => r.unpaid > 0);
+  // 3주 이상 미납: 엑셀에 미납(청구)일 열이 있으면 그 날짜, 없으면 수강 종료일(=결제된 기간의 끝)이 21일 넘게 지난 원생
+  const d21 = addDays(base, -21), dueOf = r => r.due || r.end || "";
+  const unpaid = unpaidAll.filter(r => dueOf(r) && dueOf(r) <= d21);
+  const unpaidBasis = rows.some(r => r.due) ? "due" : "end";
   const tmap = {};
   for (const r of rows){
     if (!r.teacher) continue;
@@ -2651,15 +2670,15 @@ function buildSnapshot(rows, branch, base){
     ages: rows.filter(isPure).reduce((o, r) => { const k = ageKey(r.age); if (k) o[k] = (o[k] || 0) + 1; return o; }, {}),
     agesUnknown: rows.filter(r => isPure(r) && !ageKey(r.age)).length,
     cur:  { enrolled:enrolled[11], newc:newc[11], left:left[11], leftRate:rate(left[11], enrolled[10]),
-            rest:rows.filter(r => /휴원/.test(r.status) || (isActive(r) && /휴원/.test(r.group))).length, inq:inqCur, sampleRate:rate(newc[11], inqCur),
+            rest:rows.filter(r => /휴원/.test(r.status) || (isActive(r) && /휴원/.test(r.group))).length, inq:inqCur, sampleRate:rate(fCur.reg, inqCur), funnel:fCur,
             expiring:active.filter(r => r.end && r.end >= base && r.end <= until14).length,
-            unpaid:unpaid.length, unpaidAmt:unpaid.reduce((s, r) => s + (r.unpaid > 1 ? r.unpaid : 0), 0) },
+            unpaid:unpaid.length, unpaidAll:unpaidAll.length, unpaidBasis, unpaidAmt:unpaid.reduce((s, r) => s + (r.unpaid > 1 ? r.unpaid : 0), 0) },
     prev: { enrolled:enrolled[10], newc:newc[10], left:left[10], leftRate:rate(left[10], enrolledAt(monthEnd(ppYm))),
-            rest:null, inq:inqPrev, sampleRate:rate(newc[10], inqPrev), expiring:null, unpaid:null },
+            rest:null, inq:inqPrev, sampleRate:rate(fPrev.reg, inqPrev), funnel:fPrev, expiring:null, unpaid:null },
     teachers: Object.values(tmap).filter(t => t.enrolled || t.new3 || t.left3).sort((a,b) => b.enrolled - a.enrolled),
     heat,
     lists: {
-      unpaid: unpaid.slice(0, 200).map(r => ({ name:r.name, teacher:r.teacher, amt:r.unpaid > 1 ? r.unpaid : 0 })),
+      unpaid: unpaid.sort((a, b) => dueOf(a).localeCompare(dueOf(b))).slice(0, 200).map(r => ({ name:r.name, teacher:r.teacher, since:dueOf(r), amt:r.unpaid > 1 ? r.unpaid : 0 })),
       expiring: active.filter(r => r.end && r.end >= base && r.end <= until14).sort((a,b) => a.end.localeCompare(b.end)).slice(0, 200).map(r => ({ name:r.name, teacher:r.teacher, end:r.end })),
       sampleWait: rows.filter(r => r.status === "샘플수업" && r.reg && r.reg <= d30 && r.reg >= d180).sort((a,b) => b.reg.localeCompare(a.reg)).slice(0, 200).map(r => ({ name:r.name, reg:r.reg }))
     }
@@ -2858,10 +2877,11 @@ function niceTicks(min, max, count = 4){
   return out;
 }
 const mLabel = ym => +ym.slice(5) + "월";
-function lineChart({ labels, series, fmtV = v => v, zero = false, aria }){
+function lineChart({ labels, series, fmtV = v => v, zero = false, fixMax = null, aria }){
   const all = series.flatMap(s => s.values).filter(v => v != null);
   const mn = Math.min(...all), mx = Math.max(...all), pad = (mx - mn) * .15 || 2;
-  const ticks = niceTicks(zero ? 0 : Math.max(0, mn - pad), mx + pad), y0 = ticks[0], y1 = ticks.at(-1);
+  // fixMax: 세로 최댓값을 고정(데이터가 더 크면 늘림)하고 0부터 그림
+  const ticks = fixMax ? niceTicks(0, Math.max(fixMax, mx)) : niceTicks(zero ? 0 : Math.max(0, mn - pad), mx + pad), y0 = ticks[0], y1 = ticks.at(-1);
   const x = i => CP.l + (CW - CP.l - CP.r) * (labels.length === 1 ? .5 : i / (labels.length - 1));
   const y = v => CP.t + (CH - CP.t - CP.b) * (1 - (v - y0) / (y1 - y0));
   const step = (CW - CP.l - CP.r) / Math.max(1, labels.length - 1);
@@ -2902,9 +2922,9 @@ const KPI_TILES = [
   { key:"newc", label:"신규생", unit:"명", good:"up" },
   { key:"left", label:"퇴원", unit:"명", good:"down", sub:{ key:"leftRate", label:"퇴원율", unit:"%", good:"down", pp:true } },
   { key:"rest", label:"휴원생", unit:"명", good:"down" },
-  { key:"inq", label:"샘플", unit:"건", good:"up", mainLabel:"문의", sub:{ key:"sampleRate", label:"등록률", unit:"%", good:"up", pp:true } },
-  { key:"expiring", label:"14일 내 만료", unit:"명" },
-  { key:"unpaid", label:"미납 원생", unit:"명", good:"down" }
+  { key:"inq", label:"샘플 문의", unit:"건", good:"up" },
+  { key:"sampleRate", label:"샘플 등록율", unit:"%", good:"up", pp:true },
+  { key:"unpaid", label:"미납 3주 이상", unit:"명", good:"down" }
 ];
 const visBranches = () => state.branch === "all" ? BRANCH_KEYS : [state.branch];
 /* ── 선생님별 운영지표: 기간(1·3·6·12개월) 선택 ──
@@ -3080,6 +3100,24 @@ function ageHTML(snaps){
   return `<div class="age-wrap">${dist}<div>${table}</div></div>`;
 }
 
+/* ── 샘플 퍼널 (세로): 문의 → 샘플 진행 → 샘플 후 등록 → 정규 등록. 원이 여럿이면 원별로 나란히 ── */
+const FUNNEL = [["inq","문의"],["sample","샘플 진행"],["reg","샘플 후 등록"],["regular","정규 등록"]];
+const FUNNEL_C = ["#C9D9EE","#93B4DC","#5A8BC6","#2563A6"];   // 같은 파랑의 옅은 → 진한 단계
+function funnelHTML(snaps){
+  const cols = snaps.map(s => ({ s, f: s.cur.funnel }));
+  if (cols.some(c => !c.f)) return `<p class="warn-note">원생 명단을 다시 올리면 단계별 퍼널이 나와요.</p>`;
+  return `<div class="vfun-wrap" style="grid-template-columns:repeat(${cols.length},minmax(0,1fr))">${cols.map(({ s, f }) => {
+    const top = Math.max(1, f.inq);
+    return `<div class="vfun">${cols.length > 1 ? `<div class="vf-b">${esc(BRANCHES[s.branch])}</div>` : ""}
+      ${FUNNEL.map(([k, l], i) => { const v = f[k] || 0, prev = i ? f[FUNNEL[i - 1][0]] || 0 : null, w = Math.max(14, v / top * 100);
+        const conv = prev != null ? (prev ? Math.round(v / prev * 100) : 0) : null;
+        return `${conv != null ? `<div class="vf-conv">↓ 전환 ${conv}%</div>` : ""}
+          <div class="vf-st" data-tip="${esc(`${BRANCHES[s.branch]} · ${l}\n${v}명${conv != null ? `\n앞 단계의 ${conv}%` : ""}`)}">
+            <div class="vf-bar" style="width:${w}%;background:${FUNNEL_C[i]};color:${i >= 2 ? "#fff" : "var(--ink)"}"><b>${v}</b></div><span class="vf-l">${l}</span></div>`; }).join("")}
+      <div class="vf-tot">문의 → 정규 등록 <b>${f.inq ? Math.round(f.regular / f.inq * 100) : 0}%</b></div></div>`; }).join("")}</div>
+    <p class="fnote">이번 달에 등록일이 있는 원생 기준. 샘플 진행 = '대기' 상태 제외, 샘플 후 등록 = 등록한 원생, 정규 등록 = 그중 지금 수업을 다니는 원생.</p>`;
+}
+
 function kpiPageHTML(){
   const bs = visBranches(), snaps = bs.map(b => state.kpi[b]).filter(Boolean), canUp = branchOptions("kpi").some(b => b !== "all");
   const metaLine = bs.map(b => state.kpi[b] ? `${BRANCHES[b]} ${md(state.kpi[b].base)} 기준` : `${BRANCHES[b]} 명단 없음`).join(", ");
@@ -3115,10 +3153,7 @@ function kpiPageHTML(){
   const nlSeries = [{ name:"신규", color:"var(--c-new)", values:sum("newc"), ly: hasLY ? sum("newcLY") : null },
                     { name:"퇴원", color:"var(--c-left)", values:sum("left"), ly: hasLY ? sum("leftLY") : null }];
   /* 샘플 → 등록 */
-  const funnel = snaps.map(s => { const inq = s.cur.inq || 0, reg = s.cur.newc || 0;
-    return `<div class="fun"><div class="fun-h"><b>${esc(BRANCHES[s.branch])}</b><span>${s.cur.sampleRate}%</span></div>
-      <div class="fun-row"><span>문의</span><div class="fbar"><i style="width:100%;background:#9DBCE3" data-tip="${esc(`${BRANCHES[s.branch]}\n샘플 문의 ${inq}건`)}"></i></div><b>${inq}</b></div>
-      <div class="fun-row"><span>등록</span><div class="fbar"><i style="width:${inq ? Math.max(2, reg / inq * 100) : 0}%;background:var(--c-enrolled)" data-tip="${esc(`${BRANCHES[s.branch]}\n등록 ${reg}명`)}"></i></div><b>${reg}</b></div></div>`; }).join("");
+  const funnel = funnelHTML(snaps);
   /* 요일 × 시간 재원 */
   const heat = {}; snaps.forEach(s => Object.entries(s.heat || {}).forEach(([d, hrs]) => Object.entries(hrs).forEach(([h, n]) => { (heat[d] ||= {}); heat[d][h] = (heat[d][h] || 0) + n; })));
   const days = ["월","화","수","목","금","토","일"].filter(d => heat[d]), hours = [...new Set(days.flatMap(d => Object.keys(heat[d]).map(Number)))].sort((a,b) => a - b);
@@ -3133,8 +3168,7 @@ function kpiPageHTML(){
   /* 확인 목록 */
   const L = k => snaps.flatMap(s => (s.lists?.[k] || []).map((x, i) => ({ ...x, branch:s.branch, amt: k === "unpaid" ? privAmts(s.branch)[i] || 0 : 0 })));
   const lists = [
-    ["critical", "미납 원생", L("unpaid"), x => `${x.name}${x.teacher ? ` (${x.teacher})` : ""}${state.isAdmin && x.amt ? `, ${won(x.amt)}` : ""}`],
-    ["warn", "14일 안에 수강 만료", L("expiring"), x => `${x.name}, ${md(x.end)} 만료${x.teacher ? ` (${x.teacher})` : ""}`],
+    ["critical", "3주 이상 미납", L("unpaid"), x => `${x.name}${x.teacher ? ` (${x.teacher})` : ""}${x.since ? `, ${md(x.since)}부터` : ""}${state.isAdmin && x.amt ? `, ${won(x.amt)}` : ""}`],
     ["info", "샘플 후 30일 넘게 미등록", L("sampleWait"), x => `${x.name}, ${md(x.reg)} 샘플`]
   ];
   const checkHTML = lists.map(([s, title, items, line]) => `<details class="chk-d ${s}"><summary>${ICON[s]}<span class="t">${title}</span><b>${items.length}명</b></summary>
@@ -3149,7 +3183,7 @@ function kpiPageHTML(){
     ${nlTilesHTML(labels, nlSeries, hasLY)}</section>
   <div class="grid2 even">
     <section class="card"><h2>재원생 추이 <span class="sub">최근 12개월, 월말 기준</span></h2>
-      ${lineChart({ labels, series:enrSeries, fmtV:v => v + "명", aria:"재원생 추이" })}${enrSeries.length > 1 ? legend(enrSeries) : ""}</section>
+      ${lineChart({ labels, series:enrSeries, fmtV:v => v + "명", fixMax:400, aria:"재원생 추이" })}${enrSeries.length > 1 ? legend(enrSeries) : ""}</section>
     <section class="card"><h2>샘플에서 등록까지 <span class="sub">이번 달</span></h2>${funnel}</section>
   </div>
   <section class="card"><h2>요일 · 시간대별 재원생 <span class="sub">${snaps.length > 1 ? "원 합계, " : ""}반 이름 기준</span></h2>${heatHTML}</section>
@@ -3202,9 +3236,10 @@ function kpiHelp(){
     <li><b>신규생</b>: 등록일이 그 달인 원생 중 샘플수업·등록취소·대기가 아닌 원생.</li>
     <li><b>퇴원 · 퇴원율</b>: 상태가 퇴원이고 종료일이 그 달인 원생 ÷ 전월 말 재원생.</li>
     <li><b>휴원생</b>: 상태나 관리그룹에 '휴원'이 들어간 원생.</li>
-    <li><b>샘플 문의 · 등록률</b>: 그 달 샘플수업 원생 + 신규생을 문의로 보고, 그중 신규생 비율이에요. 샘플을 거치지 않은 등록도 포함되는 추정값이에요.</li>
-    <li><b>14일 내 만료</b>: 재원생 중 종료일이 기준일부터 14일 안인 원생.</li>
-    <li><b>미납</b>: 미납 열에 금액이 있거나 '미납'이라고 적힌 원생.</li>
+    <li><b>샘플 문의</b>: 등록일이 그 달인 모든 원생(샘플수업·대기·등록취소·등록 포함).</li>
+    <li><b>샘플 등록율</b>: 샘플 문의 중 등록한 원생 비율.</li>
+    <li><b>샘플 퍼널</b>: 문의 → 샘플 진행('대기' 제외) → 샘플 후 등록(등록한 원생) → 정규 등록(그중 지금 수업을 다니는 원생).</li>
+    <li><b>미납 3주 이상</b>: 미납 열에 금액이 있거나 '미납'이라고 적힌 원생 중, 엑셀에 미납(청구)일 열이 있으면 그 날짜가, 없으면 수강 종료일이 기준일보다 21일 넘게 지난 원생.</li>
     <li><b>선생님 · 요일 · 시간</b>: 반 이름, 예) 5번 (김민수) (수-4 18:30) 에서 읽어요.</li></ul>` });
 }
 const DEMO_TEACH = { pyeongchon:["김민수","박지은","이도윤","최서연","정하늘"], banpo:["한지민","오세훈","윤아름","장현우"], daechi:["서지호","강유나","임태현","배수아","조은비"] };
