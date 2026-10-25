@@ -3806,7 +3806,7 @@ function adminRowsHTML(bs){
         const rows = bs.map(b => ({ b, h:hrStats(d, b), enr:state.kpi[b]?.cur.enrolled, fte:classTeachers(b) }));
         return `<div class="tbl-wrap"><table class="ttable hr"><thead><tr><th>원</th><th class="num">재직 교사</th><th class="num">휴직</th><th class="num">이번 달 입사 · 퇴사</th>
             <th class="num">평균 근속</th><th class="num">1년 이직률</th><th class="num">교사 1인당 원생</th></tr></thead><tbody>
-          ${rows.map(({ b, h, enr }) => `<tr><td><b>${esc(BRANCHES[b])}</b></td><td class="num">${h.active}명</td><td class="num">${h.leave}명</td>
+          ${rows.map(({ b, h, enr, fte }) => `<tr><td><b>${esc(BRANCHES[b])}</b></td><td class="num">${h.active}명</td><td class="num">${h.leave}명</td>
             <td class="num">${h.joined} · ${h.resigned}</td><td class="num">${h.avgMonths ? tenureLabel(h.avgMonths) : "-"}</td>
             <td class="num ${h.turnover >= 30 ? "warn" : ""}" data-tip="${esc(`최근 1년 퇴사 ${h.left12}명`)}">${h.turnover}%</td>
             <td class="num" data-tip="${esc(fte.n ? `재원생 ${enr}명 ÷ 수업 맡은 교사 ${Math.round(fte.n * 10) / 10}명\n${fte.list.join(", ")}` : "원생 명단을 올리면 나와요")}">${enr != null && fte.n ? (Math.round(enr / fte.n * 10) / 10) + "명" : "-"}<small class="sub2">${fte.n ? ` / ${Math.round(fte.n * 10) / 10}명` : ""}</small></td></tr>`).join("")}</tbody></table></div>
