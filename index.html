@@ -291,7 +291,9 @@
   .bmline{display:flex;align-items:center;gap:8px;margin-bottom:12px}
   .bmline .nm{font-size:15px;font-weight:800;color:var(--ink);white-space:nowrap;padding-left:10px;border-left:4px solid var(--lc)}
   .bmline .cnt{font-size:12px;font-weight:700;color:var(--text-sub)}
-  .bmline .rule{flex:1;height:2px;background:var(--lc);border-radius:1px;min-width:24px}
+  .bmline .rule{flex:1;height:2px;background:var(--lc);border-radius:1px;min-width:12px}
+  .bmline .nm{min-width:0;overflow:hidden;text-overflow:ellipsis}.bmline .icon-btn{flex:none}
+  @media (max-width:560px){ .bmline .icon-btn{padding:4px 8px;font-size:11px} }
   .bmline.preview{margin:0;padding:12px;background:#FAFAFA;border-radius:var(--r-btn)}
   .bms{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px}
   .bm{display:flex;align-items:center;gap:6px;padding:10px 8px 10px 12px;border:1px solid var(--line);border-radius:var(--r-card);background:#fff}
@@ -600,7 +602,7 @@
   .ad-v{text-align:right;font-variant-numeric:tabular-nums;color:var(--ink);font-weight:700}.ad-v small{color:var(--text-sub);font-weight:500;margin-left:4px;font-size:11px}
   .agetbl td,.agetbl th{padding:7px 6px}.agetbl .hc2{min-width:34px;border-radius:0}
   .agetbl tr.sumr td{background:#FAFAFA}
-  @media (max-width:900px){ .age-wrap{grid-template-columns:1fr} }
+  @media (max-width:900px){ .age-wrap{grid-template-columns:minmax(0,1fr)} .age-wrap > *{min-width:0} }
   .nl-tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
   .nl-t{border:1px solid var(--line);border-radius:var(--r-card);padding:12px 14px 6px}
   .nl-l{font-size:13px;font-weight:700;color:var(--text-sub)}
@@ -629,6 +631,7 @@
   .hf-row b{text-align:right;font-size:15px;color:var(--ink);font-variant-numeric:tabular-nums}
   .hf-lost{margin:3px 0 10px 78px;font-size:11px;font-weight:700;color:var(--text-sub)}
   .hf-gap{height:10px}
+  @media (max-width:760px){ .hfun-wrap{grid-template-columns:minmax(0,1fr) !important} .hf-b{text-align:left} }
   .vfun-wrap{display:grid;gap:16px}
   .vfun{display:flex;flex-direction:column;align-items:stretch}
   .vf-b{font-size:13px;font-weight:800;color:var(--ink);text-align:center;margin-bottom:6px}
