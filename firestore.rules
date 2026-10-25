@@ -127,11 +127,22 @@ service cloud.firestore {
     // 업무매뉴얼: 공지와 같은 범위 규칙. 이전 내용(history)은 5개까지
     match /portalManuals/{id} {
       allow read: if okRead();
+      // 내용 종류: type = text(글, body) · html(html 문자열, 900KB까지) · pdf(file = Storage 파일 정보)
       allow create: if okCreate() && request.resource.data.title is string && request.resource.data.title.size() <= 100
-        && request.resource.data.body is string && request.resource.data.body.size() <= 50000;
+        && request.resource.data.body is string && request.resource.data.body.size() <= 50000
+        && request.resource.data.get('type', 'text') in ['text', 'html', 'pdf']
+        && request.resource.data.get('html', '').size() <= 900000;
       allow update: if okUpdate() && request.resource.data.title.size() <= 100 && request.resource.data.body.size() <= 50000
+        && request.resource.data.get('type', 'text') in ['text', 'html', 'pdf']
+        && request.resource.data.get('html', '').size() <= 900000
         && request.resource.data.get('history', []).size() <= 5;
       allow delete: if okDelete();
+    }
+    // 업무매뉴얼 분류: 모두 읽고, 대표만 추가·이름 변경·순서·삭제
+    match /portalManCats/{id} {
+      allow read: if isMember();
+      allow create, update: if isAdmin() && request.resource.data.name is string && request.resource.data.name.size() <= 20;
+      allow delete: if isAdmin();
     }
     // 상담 현황: 대표 화면이 스케줄 매니저에서 최근 30일 교사별 상담 수만 세어 저장(내용·학생 이름 없음). 문서 ID = 원
     match /portalCounsel/{branch} {

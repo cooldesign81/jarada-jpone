@@ -472,6 +472,13 @@
   .mi-m{font-size:12px;color:var(--text-sub)}
   .tagk.pin{background:var(--ink);color:var(--brand-yellow)}
   .man-read{padding:20px 28px 28px}
+  .man-frame{display:block;width:100%;height:78vh;border:1px solid var(--line);border-radius:var(--r-card);background:#fff}
+  .man-fileacts{display:flex;gap:8px;align-items:center;margin:0 0 10px;font-size:13px;color:var(--text-sub)}
+  .man-type{display:flex;gap:6px;flex-wrap:wrap}.man-type label{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:var(--r-btn);padding:7px 12px;font-size:13px;font-weight:700;cursor:pointer}
+  .man-type label:has(input:checked){background:var(--ink);color:var(--brand-yellow);border-color:var(--ink)}.man-type input{position:absolute;opacity:0;pointer-events:none}
+  .man-pane[hidden]{display:none}
+  .up-prog{height:4px;background:#EEE;border-radius:2px;overflow:hidden;margin-top:8px}.up-prog[hidden]{display:none}.up-prog i{display:block;height:100%;width:0;background:var(--ink);transition:width .2s}
+  .man-desc{color:var(--text-sub);margin:0 0 8px}
   .man-top{display:flex;align-items:center;gap:8px;margin-bottom:12px}.man-top .sp{flex:1}
   .man-tags{display:flex;gap:6px;margin-bottom:8px}
   .man-title{font-size:24px;font-weight:800;color:var(--ink);margin:0 0 4px}
@@ -855,8 +862,8 @@ const BRANCH_KEYS = ["pyeongchon","banpo","daechi"];
 const SHORT = { pyeongchon:"평촌", banpo:"반포", daechi:"대치" };
 
 /* Firestore 컬렉션 이름 */
-const COLL = { notices:"portalNotices", events:"portalEvents", todos:"portalTodos", files:"portalFiles", bookmarks:"portalBookmarks", bmGroups:"portalBmGroups", kpi:"portalKpi", kpiPriv:"portalKpiPrivate", folders:"portalFolders", members:"portalMembers", birthdays:"portalBirthdays", teachers:"portalTeachers", manuals:"portalManuals", counsel:"portalCounsel", revenue:"portalRevenue" };
-const COLL_LABEL = { notices:"공지", events:"일정", todos:"할 일", files:"자료", bookmarks:"북마크", bmGroups:"북마크 구분", kpi:"운영지표", kpiPriv:"운영지표(금액)", folders:"자료실 폴더", members:"직원 계정", birthdays:"생일", teachers:"선생님 입사월", manuals:"업무매뉴얼", counsel:"상담 현황", revenue:"과거 매출" };
+const COLL = { notices:"portalNotices", events:"portalEvents", todos:"portalTodos", files:"portalFiles", bookmarks:"portalBookmarks", bmGroups:"portalBmGroups", kpi:"portalKpi", kpiPriv:"portalKpiPrivate", folders:"portalFolders", members:"portalMembers", birthdays:"portalBirthdays", teachers:"portalTeachers", manuals:"portalManuals", counsel:"portalCounsel", revenue:"portalRevenue", manCats:"portalManCats" };
+const COLL_LABEL = { notices:"공지", events:"일정", todos:"할 일", files:"자료", bookmarks:"북마크", bmGroups:"북마크 구분", kpi:"운영지표", kpiPriv:"운영지표(금액)", folders:"자료실 폴더", members:"직원 계정", birthdays:"생일", teachers:"선생님 입사월", manuals:"업무매뉴얼", counsel:"상담 현황", revenue:"과거 매출", manCats:"매뉴얼 분류" };
 /* 북마크 구분선 색 */
 const LINE_COLORS = [["#222222","검정"],["#DE8619","주황"],["#C98100","황토"],["#D1495B","빨강"],["#8B5CF6","보라"],["#2563A6","파랑"],["#1F7A4D","초록"],["#767676","회색"]];
 
@@ -984,7 +991,7 @@ function fileType(name){
 /* ========= 상태 ========= */
 const state = {
   user:null, isAdmin:false, wide:false, myBranch:null, myBranches:[], branch:"all", tab:"home",
-  notices:[], events:[], todos:[], files:[], bookmarks:[], bmGroups:[], kpi:{}, kpiPriv:{}, revenue:{}, folders:[], members:[], member:null, birthdays:[], ageP: +(store.get("portal.ageP") || 3), counsel:{}, manuals:[], manCat:"all", manQ:"", openManual:null, tSort:{ k:"enrolled", dir:-1 }, tQ:"", tWarn:false, loaded:{}, teachers:[], kpiPeriod: +(store.get("portal.kpiPeriod") || 3),
+  notices:[], events:[], todos:[], files:[], bookmarks:[], bmGroups:[], kpi:{}, kpiPriv:{}, revenue:{}, folders:[], members:[], member:null, birthdays:[], ageP: +(store.get("portal.ageP") || 3), counsel:{}, manuals:[], manCats:[], manCat:"all", manQ:"", openManual:null, tSort:{ k:"enrolled", dir:-1 }, tQ:"", tWarn:false, loaded:{}, teachers:[], kpiPeriod: +(store.get("portal.kpiPeriod") || 3),
   cal:{ y:new Date().getFullYear(), m:new Date().getMonth(), sel:todayISO() },
   openNotice:null, todoFilter:"open", folder:"all", fileQ:""
 };
@@ -1102,7 +1109,7 @@ const DB = (() => {
   };
   const save = () => store.set(MEM_KEY, JSON.stringify({ data: mem }));
   const emit = name => (subs[name] || []).forEach(cb => cb(mem[name].map(x => ({ ...x }))));
-  const ensure = () => { if (!mem) mem = load(); };
+  const ensure = () => { if (!mem) mem = load(); for (const k of Object.keys(COLL)) mem[k] ||= []; };
 
   return {
     watch(name, cb){
@@ -1314,7 +1321,7 @@ async function enter(user){
 
   state.kpiPriv = {};
   state.loaded = {};
-  ["notices","events","todos","files","bookmarks","bmGroups","kpi","folders","birthdays","teachers","manuals","counsel", ...(state.isAdmin ? ["kpiPriv","members","revenue"] : [])].forEach(name => {
+  ["notices","events","todos","files","bookmarks","bmGroups","kpi","folders","birthdays","teachers","manuals","manCats","counsel", ...(state.isAdmin ? ["kpiPriv","members","revenue"] : [])].forEach(name => {
     unsubs.push(DB.watch(name, list => {
       state[name] = name === "kpi" || name === "kpiPriv" || name === "counsel" || name === "revenue" ? Object.fromEntries(list.map(x => [x.id, x])) : list;
       onData(name);
@@ -1325,8 +1332,9 @@ async function enter(user){
 }
 function onData(name){
   if (name === "members") { renderMemList(); return; }
+  if (name === "manCats") state.loaded.manCats = true;
   if (name === "birthdays" || name === "teachers") { state.loaded[name] = true; if (bdPending && state.loaded.birthdays && state.loaded.teachers) { const x = bdPending; bdPending = null; syncPeople(x); } }
-  const uses = { home:["notices","events","todos","kpi","birthdays"], notice:["notices","events","birthdays","kpi","kpiPriv"], todo:["todos"], files:["files","folders"], manual:["manuals"], bm:["bookmarks","bmGroups"], kpi:["kpi","kpiPriv","teachers","counsel","revenue"] }[state.tab] || [];
+  const uses = { home:["notices","events","todos","kpi","birthdays"], notice:["notices","events","birthdays","kpi","kpiPriv"], todo:["todos"], files:["files","folders"], manual:["manuals","manCats"], bm:["bookmarks","bmGroups"], kpi:["kpi","kpiPriv","teachers","counsel","revenue"] }[state.tab] || [];
   if (uses.includes(name)) renderView({ keepFocus: true });
 }
 
@@ -2179,7 +2187,74 @@ function filesPageHTML(){
    교사 · 실장 · 상담 매뉴얼을 글로 써 두고 찾아 읽는 곳. 고치면 이전 내용 5개까지 남겨 둠(되돌리기 가능)
    글 쓰는 법(간단 표시): # 큰 제목, ## 작은 제목, - 목록, 1. 번호 목록, **굵게**, [글자](주소) 링크 */
 const MANUAL_CATS = [["teacher","교사"],["manager","실장"],["counsel","상담"],["common","공통"]];
-const manCatLabel = k => (MANUAL_CATS.find(c => c[0] === k) || [k, "기타"])[1];
+// 분류는 대표가 정함(portalManCats). 아직 없으면 기본 4개를 씀 — 대표가 매뉴얼 화면을 열면 같은 ID로 만들어 둠
+const manCatList = () => state.manCats.length ? state.manCats.slice().sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || (a.at || 0) - (b.at || 0)).map(c => [c.id, c.name])
+  : MANUAL_CATS;
+const manCatLabel = k => (manCatList().find(c => c[0] === k) || [k, "분류 안 됨"])[1];
+async function seedManCats(){
+  if (seedManCats.busy || state.manCats.length || !state.isAdmin) return; seedManCats.busy = true;
+  try { for (const [i, [id, name]] of MANUAL_CATS.entries()) await DB.set("manCats", id, { name, order:i + 1, branch:"all", at:Date.now(), createdBy:state.user.email, writer:writerName() }); }
+  finally { seedManCats.busy = false; }
+}
+function manCatForm(c){
+  const cl = state.manCats.slice().sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || (a.at || 0) - (b.at || 0));
+  const idx = c ? cl.findIndex(x => x.id === c.id) : -1, n = c ? state.manuals.filter(m => m.cat === c.id).length : 0;
+  openForm({
+    title: c ? "분류 수정" : "분류 추가",
+    fields: `${fText("분류 이름", "name", c?.name, 'required maxlength="20" placeholder="예: 신규 교사 교육"')}
+      ${c ? `<div class="fld"><span>순서</span><div class="ord">
+        <button type="button" class="icon-btn" data-ord="-1" ${idx <= 0 ? "disabled" : ""}>위로</button>
+        <button type="button" class="icon-btn" data-ord="1" ${idx >= cl.length - 1 ? "disabled" : ""}>아래로</button>
+        <span class="hint">${idx + 1}번째 / ${cl.length}개</span></div></div>
+        <p class="hint">이 분류에 매뉴얼 ${n}개가 있어요.${n ? " 분류를 지우면 매뉴얼은 지워지지 않고 '분류 안 됨'으로 옮겨져요." : ""}</p>` : ""}`,
+    saveLabel: c ? "저장" : "분류 추가",
+    async onSave(form){
+      const name = val(form, "name");
+      if (!name) return formErr("분류 이름을 넣어 주세요.");
+      if (cl.some(x => x.name === name && x.id !== c?.id)) return formErr("같은 이름의 분류가 이미 있어요.");
+      if (c) await DB.update("manCats", c.id, { name });
+      else await DB.add("manCats", { name, branch:"all", order: Math.max(0, ...cl.map(x => x.order || 0)) + 1 });
+      toast(c ? "분류 이름을 바꿨어요." : "분류를 추가했어요.");
+    },
+    onDelete: c && (async () => {
+      for (const m of state.manuals.filter(m => m.cat === c.id)) await DB.update("manuals", m.id, { cat:"" });
+      await DB.remove("manCats", c.id); if (state.manCat === c.id) state.manCat = "all";
+      toast(n ? `분류를 지우고 매뉴얼 ${n}개를 '분류 안 됨'으로 옮겼어요.` : "분류를 지웠어요.");
+    }),
+    deleteLabel: "분류 삭제"
+  });
+  dlgCtx.deleteMsg = c && `'${c.name}' 분류를 지울까요?${n ? ` 안의 매뉴얼 ${n}개는 '분류 안 됨'으로 옮겨져요.` : ""}`;
+  $("dlgBody").querySelectorAll("[data-ord]").forEach(b => b.addEventListener("click", async () => {
+    const j = idx + Number(b.dataset.ord), other = cl[j]; if (!other) return;
+    const a = c.order ?? idx + 1, d = other.order ?? j + 1;
+    await DB.update("manCats", c.id, { order: d === a ? d + Number(b.dataset.ord) : d }); await DB.update("manCats", other.id, { order: a });
+    const typed = val($("dlgForm"), "name");
+    $("dlg").close(); manCatForm(state.manCats.find(x => x.id === c.id));
+    if (typed) $("dlgForm").elements.name.value = typed; toast("순서를 바꿨어요.");
+  }));
+}
+// 내용 종류: text(글) · html(HTML 문서, 문서 안에 저장) · pdf(Storage 파일)
+const manType = m => m.type || "text";
+const htmlText = h => String(h || "").replace(/<(script|style|head|title)[\s\S]*?<\/\1>/gi, " ").replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim();
+const manSearchText = m => m.title + "\n" + (manType(m) === "html" ? htmlText(m.html) : manType(m) === "pdf" ? (m.file?.name || "") + " " + (m.body || "") : m.body || "");
+const manPreview = m => manType(m) === "pdf" ? `PDF · ${m.file?.name || ""}${m.body ? " · " + m.body : ""}` : manType(m) === "html" ? htmlText(m.html)
+  : String(m.body || "").split("\n").map(x => x.replace(/^[#\-*\d.)\s]+/, "").replace(/\*\*/g, "")).find(x => x.trim()) || "";
+function manViewHTML(m){
+  const t = manType(m);
+  if (t === "pdf"){
+    const url = m.file ? DB.fileUrl(m.file) : null;
+    if (!url) return `<p class="empty">PDF 파일을 찾지 못했어요.</p>`;
+    return `${m.body ? `<p class="man-desc">${esc(m.body)}</p>` : ""}<div class="man-fileacts"><span>${esc(m.file.name || "PDF")} · ${sizeLabel(m.file.size || 0)}</span>
+      <a class="icon-btn" href="${esc(url)}" target="_blank" rel="noopener">새 창으로 열기</a></div>
+      <iframe class="man-frame" src="${esc(url)}" title="${esc(m.title)}"></iframe>`;
+  }
+  if (t === "html"){
+    // 다른 출처로 격리해서 보여줌(allow-same-origin 없음) — 문서 안 스크립트가 JP ONE에 접근하지 못함
+    return `<div class="man-fileacts"><span>HTML 문서</span><button type="button" class="icon-btn" data-act="man-pop" data-id="${esc(m.id)}">새 창으로 보기</button></div>
+      <iframe class="man-frame" sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox allow-modals" srcdoc="${esc(m.html || "")}" title="${esc(m.title)}"></iframe>`;
+  }
+  return `<div class="man-body">${mdLite(m.body) || `<p class="empty">아직 내용이 없어요.</p>`}</div>`;
+}
 function mdLite(src){
   const inline = t => esc(t)
     .replace(/\*\*(.+?)\*\*/g, "<b>$1</b>")
@@ -2201,15 +2276,21 @@ function mdLite(src){
 function manualPageHTML(){
   const vis = state.manuals.filter(visible);
   const q = state.manQ.trim().toLowerCase();
-  const inCat = state.manCat === "all" ? vis : vis.filter(m => m.cat === state.manCat);
-  const list = inCat.filter(m => !q || (m.title + "\n" + (m.body || "")).toLowerCase().includes(q))
+  if (state.isAdmin && state.loaded.manCats && !state.manCats.length) seedManCats();
+  const known = new Set(manCatList().map(c => c[0])), loose = vis.filter(m => !known.has(m.cat));
+  const inCat = state.manCat === "all" ? vis : state.manCat === "_none" ? loose : vis.filter(m => m.cat === state.manCat);
+  const list = inCat.filter(m => !q || manSearchText(m).toLowerCase().includes(q))
     .sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || (b.updatedAt || b.at || 0) - (a.updatedAt || a.at || 0));
   const canWrite = branchOptions("manuals").length > 0;
   const open = state.openManual && vis.find(m => m.id === state.openManual);
-  const cats = [["all", "전체"], ...MANUAL_CATS];
+  const editable = state.isAdmin && state.manCats.length;
   const side = `<aside class="card fold">
-      <div class="card-h"><h2>분류</h2></div>
-      <ul class="folders">${cats.map(([k, l]) => `<li><button type="button" data-act="man-cat" data-id="${k}" aria-pressed="${state.manCat === k}"><span>${l}</span><b>${k === "all" ? vis.length : vis.filter(m => m.cat === k).length}</b></button></li>`).join("")}</ul>
+      <div class="card-h"><h2>분류</h2>${editable ? `<button type="button" class="icon-btn" data-act="mancat-new">분류 추가</button>` : ""}</div>
+      <ul class="folders">
+        <li><button type="button" data-act="man-cat" data-id="all" aria-pressed="${state.manCat === "all"}"><span>전체</span><b>${vis.length}</b></button></li>
+        ${manCatList().map(([k, l]) => `<li class="${editable ? "can-edit" : ""}"><button type="button" data-act="man-cat" data-id="${esc(k)}" aria-pressed="${state.manCat === k}"><span>${esc(l)}</span><b>${vis.filter(m => m.cat === k).length}</b></button>
+          ${editable ? `<button type="button" class="fold-ed" data-act="mancat-edit" data-id="${esc(k)}" aria-label="${esc(l)} 분류 수정">수정</button>` : ""}</li>`).join("")}
+        ${loose.length ? `<li><button type="button" data-act="man-cat" data-id="_none" aria-pressed="${state.manCat === "_none"}"><span>분류 안 됨</span><b>${loose.length}</b></button></li>` : ""}</ul>
     </aside>`;
   const reader = open ? `<section class="card man-read">
       <div class="man-top"><button type="button" class="linkish" data-act="man-close">← 목록</button>
@@ -2217,14 +2298,14 @@ function manualPageHTML(){
       <div class="man-tags"><span class="tagk">${esc(manCatLabel(open.cat))}</span><span class="tagb">${esc(scopeLabel(open.branch))}</span>${open.pinned ? `<span class="tagk pin">필독</span>` : ""}</div>
       <h1 class="man-title">${esc(open.title)}</h1>
       <p class="man-meta">${esc(open.editor || open.writer || "")} · ${new Date(open.updatedAt || open.at).toLocaleDateString("ko-KR")} ${open.updatedAt ? "수정" : "작성"}${(open.history || []).length ? ` · <button type="button" class="linkish" data-act="man-hist" data-id="${esc(open.id)}">이전 내용 ${open.history.length}개</button>` : ""}</p>
-      <div class="man-body">${mdLite(open.body) || `<p class="empty">아직 내용이 없어요.</p>`}</div></section>`
+      ${manViewHTML(open)}</section>`
     : `<section class="card flist">
-      <div class="card-h"><h2>${esc(state.manCat === "all" ? "전체 매뉴얼" : manCatLabel(state.manCat) + " 매뉴얼")}<span class="sub">필독 먼저, 최근 수정순</span></h2>
+      <div class="card-h"><h2>${esc(state.manCat === "all" ? "전체 매뉴얼" : state.manCat === "_none" ? "분류 안 된 매뉴얼" : manCatLabel(state.manCat) + " 매뉴얼")}<span class="sub">필독 먼저, 최근 수정순</span></h2>
         <label class="fsearch"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
           <input type="search" id="manQ" placeholder="제목·내용으로 찾기" value="${esc(state.manQ)}" data-fk="manQ" aria-label="매뉴얼 찾기"></label></div>
-      ${list.length ? `<ul class="man-list">${list.map(m => { const first = String(m.body || "").split("\n").map(x => x.replace(/^[#\-*\d.)\s]+/, "").replace(/\*\*/g, "")).find(x => x.trim()) || "";
+      ${list.length ? `<ul class="man-list">${list.map(m => { const first = manPreview(m), tl = { pdf:"PDF", html:"HTML" }[manType(m)];
           return `<li><button type="button" class="man-item" data-act="man-open" data-id="${esc(m.id)}">
-            <span class="mi-t">${m.pinned ? `<span class="tagk pin">필독</span>` : ""}<span class="tagk">${esc(manCatLabel(m.cat))}</span><b>${esc(m.title)}</b></span>
+            <span class="mi-t">${m.pinned ? `<span class="tagk pin">필독</span>` : ""}<span class="tagk">${esc(manCatLabel(m.cat))}</span>${tl ? `<span class="tagb">${tl}</span>` : ""}<b>${esc(m.title)}</b></span>
             <span class="mi-s">${esc(first.slice(0, 90))}</span>
             <span class="mi-m">${state.branch === "all" ? esc(scopeLabel(m.branch)) + " · " : ""}${mdOfMs(m.updatedAt || m.at)} ${esc(m.editor || m.writer || "")}</span></button></li>`; }).join("")}</ul>`
         : `<p class="empty">${q ? `'${esc(state.manQ)}'와 맞는 매뉴얼이 없어요.` : "아직 매뉴얼이 없어요."}</p>`}</section>`;
@@ -2232,33 +2313,74 @@ function manualPageHTML(){
     <div class="files">${side}${reader}</div>`;
 }
 function manualForm(m){
+  const t0 = m ? manType(m) : "text", cats = manCatList();
+  let pdf = null, htmlSrc = m?.html || "";
   openForm({
     title: m ? "매뉴얼 수정" : "매뉴얼 쓰기",
     fields: `${fText("제목", "title", m?.title, 'required maxlength="100" placeholder="예: 첫 수업 날 교사 체크리스트"')}
-      <div class="row2">${fSelect("분류", "cat", MANUAL_CATS, m?.cat || (state.manCat !== "all" ? state.manCat : "teacher"))}${fBranch("manuals", m?.branch)}</div>
-      ${fArea("내용", "body", m?.body, 'rows="16" maxlength="50000"')}
-      <p class="hint small">쓰는 법: <code># 큰 제목</code> <code>## 작은 제목</code> <code>- 목록</code> <code>1. 번호 목록</code> <code>**굵게**</code> <code>[글자](https://주소)</code></p>
+      <div class="row2">${fSelect("분류", "cat", cats.length ? cats : [["", "분류 없음"]], m?.cat && cats.some(c => c[0] === m.cat) ? m.cat : (state.manCat !== "all" && state.manCat !== "_none" ? state.manCat : cats[0]?.[0] || ""))}${fBranch("manuals", m?.branch)}</div>
+      <div class="fld"><span>내용 종류</span><div class="man-type" role="radiogroup">
+        ${[["text", "글로 쓰기"], ["html", "HTML 문서"], ["pdf", "PDF 파일"]].map(([k, l]) => `<label><input type="radio" name="mtype" value="${k}" ${t0 === k ? "checked" : ""}>${l}</label>`).join("")}</div></div>
+      <div class="man-pane" data-pane="text" ${t0 === "text" ? "" : "hidden"}>
+        ${fArea("내용", "body", t0 === "text" ? m?.body : "", 'rows="16" maxlength="50000"')}
+        <p class="hint small">쓰는 법: <code># 큰 제목</code> <code>## 작은 제목</code> <code>- 목록</code> <code>1. 번호 목록</code> <code>**굵게**</code> <code>[글자](https://주소)</code></p></div>
+      <div class="man-pane" data-pane="html" ${t0 === "html" ? "" : "hidden"}>
+        <div class="fld"><span>HTML 파일 <small>고르면 아래 칸에 들어가요</small></span><input type="file" class="inp" name="htmlFile" accept=".html,.htm,text/html"></div>
+        ${fArea("HTML 코드 <small>파일 대신 직접 붙여넣어도 돼요</small>", "html", htmlSrc, 'rows="12" spellcheck="false"')}
+        <p class="hint small">그림이 들어간 HTML은 그림이 인터넷 주소(https://)이거나 파일 안에 들어 있어야 보여요. 900KB까지.</p></div>
+      <div class="man-pane" data-pane="pdf" ${t0 === "pdf" ? "" : "hidden"}>
+        <div class="fld"><span>PDF 파일 ${m?.file ? `<small>지금: ${esc(m.file.name || "")} — 바꿀 때만 고르세요</small>` : ""}</span><input type="file" class="inp" name="pdfFile" accept=".pdf,application/pdf"></div>
+        ${fText("설명 <small>목록에 보이는 한 줄, 없어도 돼요</small>", "pdfDesc", t0 === "pdf" ? m?.body : "", 'maxlength="200"')}
+        <div class="up-prog" hidden><i></i></div></div>
       <label class="chk"><input type="checkbox" name="pinned" ${m?.pinned ? "checked" : ""}> 필독 (목록 맨 위에 표시)</label>
       ${m ? "" : fWriter()}`,
     saveLabel: m ? "수정 저장" : "올리기",
     async onSave(form){
-      const data = { title: val(form,"title"), cat: val(form,"cat"), body: form.elements.body.value, branch: val(form,"branch"), pinned: form.elements.pinned.checked, editor: writerName() };
+      const type = form.querySelector("[name=mtype]:checked")?.value || "text";
+      const data = { title: val(form,"title"), cat: val(form,"cat"), branch: val(form,"branch"), pinned: form.elements.pinned.checked, type };
       if (!data.title) return formErr("제목을 넣어 주세요.");
       if (!branchOptions("manuals").includes(data.branch)) return formErr("이 범위에는 매뉴얼을 올릴 수 없어요.");
+      if (type === "text") { data.body = form.elements.body.value; data.html = ""; }
+      if (type === "html") { data.html = form.elements.html.value; data.body = "";
+        if (!data.html.trim()) return formErr("HTML 파일을 고르거나 코드를 붙여넣어 주세요.");
+        if (data.html.length > 900000) return formErr("HTML이 너무 커요(900KB까지). 그림이 많으면 PDF로 올려 주세요."); }
+      if (type === "pdf") { data.body = val(form, "pdfDesc"); data.html = "";
+        if (!pdf && !m?.file) return formErr("PDF 파일을 골라 주세요.");
+        if (pdf && pdf.size > 100 * 1024 * 1024) return formErr("PDF는 100MB까지 올릴 수 있어요."); }
       keepWriter(form); data.editor = writerName();
+      const id = m?.id || DB.newId();
+      if (type === "pdf" && pdf){
+        const bar = $("dlgBody").querySelector(".up-prog"); bar.hidden = false;
+        data.file = { ...(await DB.putFile("man_" + id, pdf, p => bar.firstElementChild.style.width = p + "%")), name: pdf.name };
+      }
+      const oldFile = m?.file && (type !== "pdf" || data.file) ? m.file : null;
+      if (type !== "pdf") data.file = null;
       if (m){
-        // 고치기 전 내용을 5개까지 보관
-        const hist = [{ title: m.title, body: m.body || "", at: m.updatedAt || m.at || Date.now(), by: m.editor || m.writer || "" }, ...(m.history || [])].slice(0, 5);
-        if (data.body !== (m.body || "") || data.title !== m.title) data.history = hist;
+        // 글 매뉴얼만 고치기 전 내용을 5개까지 보관
+        if (manType(m) === "text" && type === "text" && (data.body !== (m.body || "") || data.title !== m.title))
+          data.history = [{ title: m.title, body: m.body || "", at: m.updatedAt || m.at || Date.now(), by: m.editor || m.writer || "" }, ...(m.history || [])].slice(0, 5);
         await DB.update("manuals", m.id, data);
-      } else state.openManual = await DB.add("manuals", data);
+      } else { await DB.addWithId("manuals", id, data); state.openManual = id; }
+      if (oldFile) DB.dropFiles([oldFile]);
       state.manCat = "all"; renderView();
       toast(m ? "매뉴얼을 수정했어요." : "매뉴얼을 올렸어요.");
     },
-    onDelete: m && (async () => { await DB.remove("manuals", m.id); state.openManual = null; toast("매뉴얼을 삭제했어요."); })
+    onDelete: m && (async () => { await DB.remove("manuals", m.id); if (m.file) DB.dropFiles([m.file]); state.openManual = null; toast("매뉴얼을 삭제했어요."); })
   });
-  $("dlg").classList.add("wide"); $("dlgBody").querySelector("textarea[name=body]")?.classList.add("mono");
-  dlgCtx.deleteMsg = m && `'${m.title}' 매뉴얼을 삭제할까요? 이전 내용까지 모두 지워지고 되돌릴 수 없어요.`;
+  $("dlg").classList.add("wide");
+  const body = $("dlgBody");
+  body.querySelectorAll("textarea[name=body], textarea[name=html]").forEach(x => x.classList.add("mono"));
+  body.addEventListener("change", async e => {
+    const el = e.target;
+    if (el.name === "mtype") body.querySelectorAll(".man-pane").forEach(p => p.hidden = p.dataset.pane !== el.value);
+    if (el.name === "pdfFile") pdf = el.files[0] || null;
+    if (el.name === "htmlFile" && el.files[0]) {
+      const txt = await el.files[0].text(); body.querySelector("textarea[name=html]").value = txt;
+      const f = $("dlgForm"); if (!val(f, "title")) { const tt = txt.match(/<title[^>]*>([^<]*)<\/title>/i)?.[1]?.trim(); f.elements.title.value = (tt || el.files[0].name.replace(/\.html?$/i, "")).slice(0, 100); }
+    }
+    if (el.name === "pdfFile" && pdf) { const f = $("dlgForm"); if (!val(f, "title")) f.elements.title.value = pdf.name.replace(/\.pdf$/i, "").slice(0, 100); }
+  });
+  dlgCtx.deleteMsg = m && `'${m.title}' 매뉴얼을 삭제할까요?${m.file ? " PDF 파일도 같이 지워지고" : " 이전 내용까지 모두 지워지고"} 되돌릴 수 없어요.`;
 }
 function manualHistory(m){
   const h = m.history || [];
@@ -2328,6 +2450,10 @@ $("view").addEventListener("click", e => {
     case "man-close": state.openManual = null; renderView(); break;
     case "man-edit": manualForm(state.manuals.find(x => x.id === id)); break;
     case "man-hist": manualHistory(state.manuals.find(x => x.id === id)); break;
+    case "mancat-new": manCatForm(null); break;
+    case "mancat-edit": manCatForm(state.manCats.find(x => x.id === id)); break;
+    case "man-pop": { const m = state.manuals.find(x => x.id === id); if (!m) break;
+      const u = URL.createObjectURL(new Blob([m.html || ""], { type:"text/html" })); window.open(u, "_blank", "noopener"); setTimeout(() => URL.revokeObjectURL(u), 60000); break; }
     case "gcal-set": gcalSettings(); break;
   }
 });
