@@ -706,6 +706,7 @@
   .rev-h{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:2px}.rev-h b{font-size:14px}.rev-h .rv{font-size:18px;font-weight:800;color:var(--ink);font-variant-numeric:tabular-nums}
   .rev-h .rg{font-size:12px;font-weight:700}.rev-h .rg.up{color:#1F7A4D}.rev-h .rg.down{color:#D1495B}
   @media (max-width:900px){ .rev-grid.multi{grid-template-columns:1fr} }
+  td small.sub2{color:var(--text-sub);font-weight:500;font-size:11px}
   .money-br{list-style:none;margin:0;padding:0;font-size:13px;color:var(--text);display:grid;gap:4px}
   .money-br i{display:inline-block;width:12px;height:3px;border-radius:2px;margin-right:6px;vertical-align:middle}
   .money-br b{font-size:13px;margin-left:4px}
@@ -3291,6 +3292,18 @@ async function loadPeople(db){
   }));
   return { emps: emps.map(({ updatedAt, ...e }) => e), bdays, starts };
 }
+/* 원생 명단 기준 '수업 맡은 교사' 수: 겸임 교사는 그 원 원생 비율만큼만 셈 (이진호 반포 42 · 대치 22 → 반포 0.66명) */
+function classTeachers(b){
+  const tot = {};
+  for (const s of Object.values(state.kpi)) for (const t of s.teachers || []) tot[t.name] = (tot[t.name] || 0) + (t.enrolled || 0);
+  let n = 0; const list = [];
+  for (const t of state.kpi[b]?.teachers || []){
+    if (!t.enrolled || (tot[t.name] || 0) < 10) continue;
+    if (state.teachers.length){ const st = teacherStart(t.name, b); if (!st || !st.active) continue; }
+    const w = t.enrolled / tot[t.name]; n += w; list.push(w < .999 ? `${t.name}(${Math.round(w * 100)}%)` : t.name);
+  }
+  return { n, list };
+}
 function hrStats(data, b){
   const t = todayISO(), ym = ymOf(t), y1 = addDays(t, -365);
   const list = data.emps.filter(e => (b === "all" || e.branch === b) && isTeacherEmp(e));
@@ -3790,14 +3803,14 @@ function adminRowsHTML(bs){
   <div>
     <section class="card"><h2>교사 현황 <span class="sub">JP People 기준, 대표만 보여요</span></h2>
       ${extBox("people", d => {
-        const rows = bs.map(b => ({ b, h:hrStats(d, b), enr:state.kpi[b]?.cur.enrolled }));
+        const rows = bs.map(b => ({ b, h:hrStats(d, b), enr:state.kpi[b]?.cur.enrolled, fte:classTeachers(b) }));
         return `<div class="tbl-wrap"><table class="ttable hr"><thead><tr><th>원</th><th class="num">재직 교사</th><th class="num">휴직</th><th class="num">이번 달 입사 · 퇴사</th>
             <th class="num">평균 근속</th><th class="num">1년 이직률</th><th class="num">교사 1인당 원생</th></tr></thead><tbody>
           ${rows.map(({ b, h, enr }) => `<tr><td><b>${esc(BRANCHES[b])}</b></td><td class="num">${h.active}명</td><td class="num">${h.leave}명</td>
             <td class="num">${h.joined} · ${h.resigned}</td><td class="num">${h.avgMonths ? tenureLabel(h.avgMonths) : "-"}</td>
             <td class="num ${h.turnover >= 30 ? "warn" : ""}" data-tip="${esc(`최근 1년 퇴사 ${h.left12}명`)}">${h.turnover}%</td>
-            <td class="num">${enr != null && h.active ? (Math.round(enr / h.active * 10) / 10) + "명" : "-"}</td></tr>`).join("")}</tbody></table></div>
-          <p class="fnote">원장·부원장·실장 직책은 교사 수에서 빼요. 퇴사일은 JP People 발령·변경 기록의 '퇴직' 날짜를 써요.</p>`; })}
+            <td class="num" data-tip="${esc(fte.n ? `재원생 ${enr}명 ÷ 수업 맡은 교사 ${Math.round(fte.n * 10) / 10}명\n${fte.list.join(", ")}` : "원생 명단을 올리면 나와요")}">${enr != null && fte.n ? (Math.round(enr / fte.n * 10) / 10) + "명" : "-"}<small class="sub2">${fte.n ? ` / ${Math.round(fte.n * 10) / 10}명` : ""}</small></td></tr>`).join("")}</tbody></table></div>
+          <p class="fnote">교사 1인당 원생 = 재원생 ÷ 원생 명단에서 실제로 반을 맡은 교사 수(원장·부원장도 반이 있으면 포함, 두 원을 맡으면 원생 비율로 나눠 셈, JP People 재직자이고 맡은 원생 10명 이상). 재직 교사·근속·이직률은 JP People 기준이라 원장·부원장·실장 직책은 빼요. 퇴사일은 JP People 발령·변경 기록의 '퇴직' 날짜를 써요.</p>`; })}
     </section>
   </div>`;
 }
