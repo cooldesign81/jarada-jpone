@@ -591,6 +591,16 @@
        white-space:pre;transform:translate(-50%,calc(-100% - 8px));box-shadow:0 6px 18px rgba(0,0,0,.2)}
   .tip::first-line{font-weight:800}
   .fun{margin-bottom:16px}
+  .hfun-wrap{display:grid;gap:20px}
+  .hf-b{text-align:center;font-size:13px;font-weight:800;color:var(--ink);margin-bottom:8px}
+  .hf-row{display:grid;grid-template-columns:72px minmax(0,1fr) 28px;align-items:center;gap:6px;font-size:12px}
+  .hf-l{color:var(--text);font-weight:600;white-space:nowrap}
+  .hf-bar{height:20px;background:#F2F2F2;border-radius:5px;overflow:hidden;display:flex}
+  .hf-bar i{display:block;height:100%}
+  .hf-bar u{display:block;height:100%;background:repeating-linear-gradient(135deg,#D6D6D6 0 4px,#F0F0F0 4px 8px)}
+  .hf-row b{text-align:right;font-size:15px;color:var(--ink);font-variant-numeric:tabular-nums}
+  .hf-lost{margin:3px 0 10px 78px;font-size:11px;font-weight:700;color:var(--text-sub)}
+  .hf-gap{height:10px}
   .vfun-wrap{display:grid;gap:16px}
   .vfun{display:flex;flex-direction:column;align-items:stretch}
   .vf-b{font-size:13px;font-weight:800;color:var(--ink);text-align:center;margin-bottom:6px}
@@ -901,7 +911,7 @@ const CHECKS = [
   ["critical","컴플레인 원생","오늘 기록이 아직 없어요","입력 전"],
   ["warn","휴원 문의 원생","상담 결과를 기록해 주세요","입력 전"],
   ["warn","명단 미갱신","마지막 업로드 2일 전","확인"],
-  ["info","샘플 후 30일 넘게 미등록","다시 연락할 대상","113명"]
+  ["info","샘플 후 3일 넘게 미등록","다시 연락할 대상","113명"]
 ];
 
 /* ========= 공통 도우미 ========= */
@@ -1286,7 +1296,7 @@ async function enter(user){
 function onData(name){
   if (name === "members") { renderMemList(); return; }
   if (name === "birthdays" || name === "teachers") { state.loaded[name] = true; if (bdPending && state.loaded.birthdays && state.loaded.teachers) { const x = bdPending; bdPending = null; syncPeople(x); } }
-  const uses = { home:["notices","events","todos","kpi","birthdays"], notice:["notices","events","birthdays"], todo:["todos"], files:["files","folders"], manual:["manuals"], bm:["bookmarks","bmGroups"], kpi:["kpi","kpiPriv","teachers"] }[state.tab] || [];
+  const uses = { home:["notices","events","todos","kpi","birthdays"], notice:["notices","events","birthdays","kpi","kpiPriv"], todo:["todos"], files:["files","folders"], manual:["manuals"], bm:["bookmarks","bmGroups"], kpi:["kpi","kpiPriv","teachers"] }[state.tab] || [];
   if (uses.includes(name)) renderView({ keepFocus: true });
 }
 
@@ -1672,7 +1682,7 @@ function homeHTML(){
   const cnt = k => bs.reduce((t, b) => t + (state.kpi[b] ? state.kpi[b].cur[k] : SAMPLE[b][k]?.[0] || 0), 0);
   const lst = k => bs.reduce((t, b) => t + (state.kpi[b]?.lists?.[k]?.length || 0), 0);
   const checks = [...CHECKS.filter(c => !(real && /샘플 후/.test(c[1]))),
-    ...(real ? [["critical","3주 이상 미납","결제를 확인해 주세요", cnt("unpaid") + "명"], ["info","샘플 후 30일 넘게 미등록","다시 연락할 대상", lst("sampleWait") + "명"]] : [])];
+    ...(real ? [["critical","3주 이상 미납","결제를 확인해 주세요", cnt("unpaid") + "명"], ["info","샘플 후 3일 넘게 미등록","다시 연락할 대상", lst("sampleWait") + "명"]] : [])];
   const notices = sortNotices(state.notices.filter(visible)).slice(0, 5);
   const open = sortTodos(state.todos.filter(t => visible(t) && !t.done));
   const canTodo = branchOptions("todos").length > 0;
@@ -2056,7 +2066,8 @@ function noticePageHTML(){
           ${canEdit(n) ? `<div class="ni-acts"><button type="button" class="icon-btn" data-act="notice-edit" data-id="${esc(n.id)}">수정</button></div>` : ""}</div>` : ""}
       </li>`; }).join("")}</ul>` : `<p class="empty">아직 공지가 없어요.${canWrite ? " 오른쪽 위 '공지 쓰기'로 첫 공지를 올려 보세요." : ""}</p>`}
   </section>
-  <section class="card">${calHTML("month")}</section>`;
+  <section class="card">${calHTML("month")}</section>
+  <section class="card" style="margin-top:16px"><h2>지금 확인이 필요한 것</h2>${checkListHTML()}</section>`;
 }
 
 /* ── To-do 화면 ── */
@@ -2825,7 +2836,7 @@ function buildSnapshot(rows, branch, base){
     lists: {
       unpaid: unpaid.sort((a, b) => dueOf(a).localeCompare(dueOf(b))).slice(0, 200).map(r => ({ name:r.name, teacher:r.teacher, since:dueOf(r), amt:r.unpaid > 1 ? r.unpaid : 0 })),
       expiring: active.filter(r => r.end && r.end >= base && r.end <= until14).sort((a,b) => a.end.localeCompare(b.end)).slice(0, 200).map(r => ({ name:r.name, teacher:r.teacher, end:r.end })),
-      sampleWait: rows.filter(r => r.status === "샘플수업" && r.reg && r.reg <= d30 && r.reg >= d180).sort((a,b) => b.reg.localeCompare(a.reg)).slice(0, 200).map(r => ({ name:r.name, reg:r.reg }))
+      sampleWait: rows.filter(r => r.status === "샘플수업" && r.reg && r.reg <= addDays(base, -3) && r.reg >= d180).sort((a,b) => b.reg.localeCompare(a.reg)).slice(0, 200).map(r => ({ name:r.name, reg:r.reg }))
     }
   };
 }
@@ -3248,20 +3259,37 @@ function ageHTML(snaps){
 
 /* ── 샘플 퍼널 (세로): 문의 → 샘플 진행 → 샘플 후 등록 → 정규 등록. 원이 여럿이면 원별로 나란히 ── */
 const FUNNEL = [["inq","문의"],["sample","샘플 진행"],["reg","샘플 후 등록"],["regular","정규 등록"]];
-const FUNNEL_C = ["#C9D9EE","#93B4DC","#5A8BC6","#2563A6"];   // 같은 파랑의 옅은 → 진한 단계
+// 보라 단계(신규 색 계열): 옅은 → 진한. 빠진 인원은 회색 빗금
+const FUNNEL_C = ["#E4D9FB","#C3AEF7","#9F7DF0","#6D3FD8"];
 function funnelHTML(snaps){
   const cols = snaps.map(s => ({ s, f: s.cur.funnel }));
   if (cols.some(c => !c.f)) return `<p class="warn-note">원생 명단을 다시 올리면 단계별 퍼널이 나와요.</p>`;
-  return `<div class="vfun-wrap" style="grid-template-columns:repeat(${cols.length},minmax(0,1fr))">${cols.map(({ s, f }) => {
-    const top = Math.max(1, f.inq);
-    return `<div class="vfun">${cols.length > 1 ? `<div class="vf-b">${esc(BRANCHES[s.branch])}</div>` : ""}
-      ${FUNNEL.map(([k, l], i) => { const v = f[k] || 0, prev = i ? f[FUNNEL[i - 1][0]] || 0 : null, w = Math.max(14, v / top * 100);
+  const top = Math.max(1, ...cols.map(c => c.f.inq));   // 세 원 공통 기준(가장 많은 문의)이라 원끼리 막대 길이를 비교할 수 있음
+  return `<div class="hfun-wrap" style="grid-template-columns:repeat(${cols.length},minmax(0,1fr))">${cols.map(({ s, f }) => `<div class="hfun">
+      ${cols.length > 1 ? `<div class="hf-b">${esc(BRANCHES[s.branch])}</div>` : ""}
+      ${FUNNEL.map(([k, l], i) => { const v = f[k] || 0, prev = i ? f[FUNNEL[i - 1][0]] || 0 : null, lost = prev != null ? Math.max(0, prev - v) : 0;
         const conv = prev != null ? (prev ? Math.round(v / prev * 100) : 0) : null;
-        return `${conv != null ? `<div class="vf-conv">↓ 전환 ${conv}%</div>` : ""}
-          <div class="vf-st" data-tip="${esc(`${BRANCHES[s.branch]} · ${l}\n${v}명${conv != null ? `\n앞 단계의 ${conv}%` : ""}`)}">
-            <div class="vf-bar" style="width:${w}%;background:${FUNNEL_C[i]};color:${i >= 2 ? "#fff" : "var(--ink)"}"><b>${v}</b></div><span class="vf-l">${l}</span></div>`; }).join("")}
-      <div class="vf-tot">문의 → 정규 등록 <b>${f.inq ? Math.round(f.regular / f.inq * 100) : 0}%</b></div></div>`; }).join("")}</div>
-    <p class="fnote">이번 달에 등록일이 있는 원생 기준. 샘플 진행 = '대기' 상태 제외, 샘플 후 등록 = 등록한 원생, 정규 등록 = 그중 지금 수업을 다니는 원생.</p>`;
+        return `<div class="hf-row" data-tip="${esc(`${BRANCHES[s.branch]} · ${l}\n${v}명${conv != null ? `\n앞 단계에서 ${lost}명 빠짐 (전환 ${conv}%)` : ""}`)}">
+            <span class="hf-l">${l}</span><span class="hf-bar"><i style="width:${v / top * 100}%;background:${FUNNEL_C[i]}"></i>${lost ? `<u style="width:${lost / top * 100}%"></u>` : ""}</span><b>${v}</b></div>
+          ${conv != null ? `<div class="hf-lost">${lost ? `−${lost}명 빠짐 · ` : ""}전환 ${conv}%</div>` : `<div class="hf-gap"></div>`}`; }).join("")}
+      <div class="vf-tot">문의 → 정규 등록 <b>${f.inq ? Math.round(f.regular / f.inq * 100) : 0}%</b></div></div>`).join("")}</div>
+    <p class="fnote">막대 길이는 ${cols.length > 1 ? "세 원 공통 기준(가장 많은 문의)이에요. " : ""}회색 빗금 = 앞 단계에서 빠진 인원. 이번 달에 등록일이 있는 원생 기준. 샘플 진행 = '대기' 상태 제외, 샘플 후 등록 = 등록한 원생, 정규 등록 = 그중 지금 수업을 다니는 원생.</p>`;
+}
+
+/* ── 지금 확인이 필요한 것 (공지 · 캘린더 화면에 표시): 원생 명단에서 뽑은 확인 대상 ── */
+function checkListHTML(){
+  const snaps = visBranches().map(b => state.kpi[b]).filter(Boolean);
+  if (!snaps.length) return `<p class="empty">원생 명단을 올리면 미납·미등록 원생이 여기 나와요.</p>`;
+  const L = k => snaps.flatMap(s => (s.lists?.[k] || []).map((x, i) => ({ ...x, branch:s.branch, amt: k === "unpaid" ? privAmts(s.branch)[i] || 0 : 0 })));
+  const lists = [
+    ["critical", "3주 이상 미납", L("unpaid"), x => `${x.name}${x.teacher ? ` (${x.teacher})` : ""}${x.since ? `, ${md(x.since)}부터` : ""}${state.isAdmin && x.amt ? `, ${won(x.amt)}` : ""}`],
+    ["info", "샘플 후 3일 넘게 미등록", L("sampleWait"), x => `${x.name}, ${md(x.reg)} 샘플`]
+  ];
+  return lists.map(([s, title, items, line]) => `<details class="chk-d ${s}"><summary>${ICON[s]}<span class="t">${title}</span><b>${items.length}명</b></summary>
+      ${items.length ? `<ul>${items.slice(0, 60).map(x => `<li>${state.branch === "all" ? `<span class="tagb">${SHORT[x.branch]}</span>` : ""}${esc(line(x))}</li>`).join("")}</ul>
+        ${items.length > 60 ? `<p class="empty">외 ${items.length - 60}명</p>` : ""}` : `<p class="empty">해당하는 원생이 없어요.</p>`}
+      ${branchOptions("todos").length && items.length ? `<button type="button" class="icon-btn" data-act="todo-new" data-title="${esc(title)} ${items.length}명 확인">할 일로 만들기</button>` : ""}</details>`).join("")
+    + `<p class="fnote">${esc(snaps.map(s => `${SHORT[s.branch]} ${md(s.base)}`).join(", "))} 올린 원생 명단 기준이에요.</p>`;
 }
 
 function kpiPageHTML(){
@@ -3312,35 +3340,24 @@ function kpiPageHTML(){
     </div><div class="heat-scale"><span>적음</span><i></i><span>많음</span></div>` : `<p class="empty">반 이름에서 요일·시간을 읽지 못했어요.</p>`;
   /* 선생님별 (기간 선택) */
   const teacherHTML = teacherTableHTML(snaps);
-  /* 확인 목록 */
-  const L = k => snaps.flatMap(s => (s.lists?.[k] || []).map((x, i) => ({ ...x, branch:s.branch, amt: k === "unpaid" ? privAmts(s.branch)[i] || 0 : 0 })));
-  const lists = [
-    ["critical", "3주 이상 미납", L("unpaid"), x => `${x.name}${x.teacher ? ` (${x.teacher})` : ""}${x.since ? `, ${md(x.since)}부터` : ""}${state.isAdmin && x.amt ? `, ${won(x.amt)}` : ""}`],
-    ["info", "샘플 후 30일 넘게 미등록", L("sampleWait"), x => `${x.name}, ${md(x.reg)} 샘플`]
-  ];
-  const checkHTML = lists.map(([s, title, items, line]) => `<details class="chk-d ${s}"><summary>${ICON[s]}<span class="t">${title}</span><b>${items.length}명</b></summary>
-      ${items.length ? `<ul>${items.slice(0, 60).map(x => `<li>${state.branch === "all" ? `<span class="tagb">${SHORT[x.branch]}</span>` : ""}${esc(line(x))}</li>`).join("")}</ul>
-        ${items.length > 60 ? `<p class="empty">외 ${items.length - 60}명</p>` : ""}` : `<p class="empty">해당하는 원생이 없어요.</p>`}
-      ${branchOptions("todos").length && items.length ? `<button type="button" class="icon-btn" data-act="todo-new" data-title="${esc(title)} ${items.length}명 확인">할 일로 만들기</button>` : ""}</details>`).join("");
-
   return head + `
   ${partial ? `<p class="warn-note">명단이 없는 원은 빈칸으로 보여요. 그 원에서 명단을 올리면 채워져요.</p>` : ""}
   <div class="kpis kpis7">${KPI_TILES.map(tile).join("")}</div>
   <section class="card"><h2>신규와 퇴원 <span class="sub">최근 12개월${snaps.length > 1 ? ", 원 합계" : ""}${hasLY ? ", 작년 같은 기간과 비교" : ""}</span></h2>
     ${nlTilesHTML(labels, nlSeries, hasLY)}</section>
+  <section class="card"><h2>샘플에서 등록까지 <span class="sub">이번 달</span></h2>${funnel}</section>
   <div class="grid2 even">
     <section class="card"><h2>재원생 추이 <span class="sub">최근 12개월, 월말 기준</span></h2>
       ${lineChart({ labels: restNote ? labels.map((l, i) => i === labels.length - 1 ? l + "*" : l) : labels, series:enrSeries, fmtV:v => v + "명", fixMin:100, fixMax:400, h:330, aria:"재원생 추이" })}${enrSeries.length > 1 ? legend(enrSeries) : ""}
       ${restNote ? `<p class="fnote">* ${esc(labels.at(-1))}(이번 명단)부터 휴원생 제외: ${esc(restNote)}. 지난 달들은 당시 휴원 여부를 알 수 없어 포함돼 있어요.</p>` : ""}</section>
-    <section class="card"><h2>샘플에서 등록까지 <span class="sub">이번 달</span></h2>${funnel}</section>
+    <section class="card"><h2>요일 · 시간대별 재원생 <span class="sub">${snaps.length > 1 ? "원 합계, " : ""}반 이름 기준</span></h2>${heatHTML}</section>
   </div>
-  <section class="card"><h2>요일 · 시간대별 재원생 <span class="sub">${snaps.length > 1 ? "원 합계, " : ""}반 이름 기준</span></h2>${heatHTML}</section>
   <section class="card tcard"><div class="card-h"><h2>선생님별 운영지표 <span class="sub">${esc(periodLabel())}</span></h2>
       ${state.isAdmin ? `<button type="button" class="icon-btn" data-act="people-resync" data-tip="JP People에서 입사일을 고쳤다면 눌러서 다시 맞춰요">JP People 다시 불러오기</button>` : ""}
       <div class="seg2 sm" role="group" aria-label="기간">${KPI_PERIODS.map(([n, l]) => `<button type="button" data-act="kpi-period" data-n="${n}" aria-pressed="${state.kpiPeriod === n}">${l}</button>`).join("")}</div></div>
     ${teacherHTML}</section>
   <section class="card"><h2>연령별 현황 <span class="sub">지금 재원생, ${snaps.length > 1 ? "원 합계, " : ""}자라다 시스템 '나이' 기준</span></h2>${ageHTML(snaps)}</section>
-  <section class="card"><h2>지금 확인이 필요한 것</h2>${checkHTML}</section>
+
   ${state.isAdmin ? adminRowsHTML(bs) : ""}`;
 }
 
