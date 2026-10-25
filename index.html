@@ -555,7 +555,7 @@
   .kpi-meta.left{text-align:left;margin:-8px 0 16px}
   .linkish{background:none;border:0;padding:0;margin-left:6px;font-size:12px;font-weight:700;color:var(--ink);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
   .warn-note{font-size:13px;color:var(--s-warn);background:var(--s-warn-bg);border-radius:var(--r-btn);padding:8px 12px;margin:0 0 12px}
-  .kpis.kpis7{grid-template-columns:repeat(7,minmax(0,1fr));margin-bottom:16px}
+  .kpis.kpis7{grid-template-columns:repeat(8,minmax(0,1fr));margin-bottom:16px}
   .kpi.multi .n.na{color:#BDBDBD}
   /* 운영지표 지표 칸: 항목 이름을 검정 띠 + 노랑 글자로 */
   .kpis7 .kpi{border-top:0;padding-top:0;overflow:hidden}
@@ -3126,7 +3126,8 @@ const legend = (series, kind = "line") => `<div class="legend">${series.filter(s
 const KPI_TILES = [
   { key:"enrolled", label:"재원생", unit:"명", good:"up" },
   { key:"newc", label:"신규생", unit:"명", good:"up" },
-  { key:"left", label:"퇴원", unit:"명", good:"down", sub:{ key:"leftRate", label:"퇴원율", unit:"%", good:"down", pp:true } },
+  { key:"left", label:"퇴원", unit:"명", good:"down" },
+  { key:"leftRate", label:"퇴원율", unit:"%", good:"down", pp:true },
   { key:"rest", label:"휴원생", unit:"명", good:"down" },
   { key:"inq", label:"샘플 문의", unit:"건", good:"up" },
   { key:"sampleRate", label:"샘플 등록율", unit:"%", good:"up", pp:true },
