@@ -2195,9 +2195,10 @@ const MANUAL_CATS = [["teacher","교사"],["manager","실장"],["counsel","상�
 const manCatList = () => state.manCats.length ? state.manCats.slice().sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || (a.at || 0) - (b.at || 0)).map(c => [c.id, c.name])
   : MANUAL_CATS;
 const manCatLabel = k => (manCatList().find(c => c[0] === k) || [k, "분류 안 됨"])[1];
-async function seedManCats(){
+async function seedManCats(loud){
   if (seedManCats.busy || state.manCats.length || !state.isAdmin) return; seedManCats.busy = true;
   try { for (const [i, [id, name]] of MANUAL_CATS.entries()) await DB.set("manCats", id, { name, order:i + 1, branch:"all", at:Date.now(), createdBy:state.user.email, writer:writerName() }); }
+  catch (err) { if (loud) throw err; }
   finally { seedManCats.busy = false; }
 }
 function manCatForm(c){
@@ -2287,7 +2288,7 @@ function manualPageHTML(){
     .sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || (b.updatedAt || b.at || 0) - (a.updatedAt || a.at || 0));
   const canWrite = branchOptions("manuals").length > 0;
   const open = state.openManual && vis.find(m => m.id === state.openManual);
-  const editable = state.isAdmin && state.manCats.length;
+  const editable = state.isAdmin;
   const side = `<aside class="card fold">
       <div class="card-h"><h2>분류</h2>${editable ? `<button type="button" class="icon-btn" data-act="mancat-new">분류 추가</button>` : ""}</div>
       <ul class="folders">
@@ -2454,8 +2455,12 @@ $("view").addEventListener("click", e => {
     case "man-close": state.openManual = null; renderView(); break;
     case "man-edit": manualForm(state.manuals.find(x => x.id === id)); break;
     case "man-hist": manualHistory(state.manuals.find(x => x.id === id)); break;
-    case "mancat-new": manCatForm(null); break;
-    case "mancat-edit": manCatForm(state.manCats.find(x => x.id === id)); break;
+    case "mancat-new": case "mancat-edit": (async () => {
+      // 분류가 아직 저장 안 됐으면(기본 4개) 먼저 만들고 엶. 실패하면 대개 Firestore 규칙이 아직 게시 안 된 것
+      if (!state.manCats.length){ try { await seedManCats(true); } catch (err) { toast(err.code === "permission-denied" ? "분류를 저장할 권한이 없어요. Firestore 규칙(portalManCats)을 게시했는지 확인해 주세요." : "분류를 만들지 못했어요."); return; } }
+      await new Promise(r => setTimeout(r, 300));
+      manCatForm(act === "mancat-new" ? null : state.manCats.find(x => x.id === id) || { id, name: manCatLabel(id), order: 0 });
+    })(); break;
     case "man-pop": { const m = state.manuals.find(x => x.id === id); if (!m) break;
       const u = URL.createObjectURL(new Blob([m.html || ""], { type:"text/html" })); window.open(u, "_blank", "noopener"); setTimeout(() => URL.revokeObjectURL(u), 60000); break; }
     case "gcal-set": gcalSettings(); break;
