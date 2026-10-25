@@ -3322,7 +3322,7 @@ function lineChart({ labels, series, fmtV = v => v, zero = false, fixMax = null,
     ${ticks.map(t => `<line x1="${CP.l}" x2="${CW-CP.r}" y1="${y(t)}" y2="${y(t)}" stroke="#ECECEC"/><text x="${CP.l-8}" y="${y(t)+4}" text-anchor="end" class="ax">${esc(fmtV(t))}</text>`).join("")}
     ${labels.map((l,i) => (labels.length <= 12 || i % 2 === 0) ? `<text x="${x(i)}" y="${CH-6}" text-anchor="middle" class="ax">${esc(l)}</text>` : "").join("")}
     ${series.map(s => `<polyline points="${s.values.map((v,i) => v == null ? "" : `${x(i)},${y(v)}`).filter(Boolean).join(" ")}" fill="none" stroke="${s.color}" stroke-width="${s.dash ? 1.6 : 2}"
-        ${s.dash ? `stroke-dasharray="5 4" opacity=".75"` : ""} stroke-linejoin="round" stroke-linecap="round"/>
+        ${s.dash ? `stroke-dasharray="${typeof s.dash === "string" ? s.dash : "5 4"}" opacity="${s.op ?? .75}"` : ""} stroke-linejoin="round" stroke-linecap="round"/>
       ${s.dash ? "" : `<circle cx="${x(s.values.length-1)}" cy="${y(s.values.at(-1))}" r="4" fill="${s.color}" stroke="#fff" stroke-width="2"/>`}`).join("")}
     ${labels.map((l,i) => `<rect class="hit" x="${x(i) - step/2}" y="${CP.t}" width="${step}" height="${CH-CP.t-CP.b}" fill="transparent" tabindex="-1"
       data-tip="${esc(l + "\n" + series.filter(s => s.values[i] != null).map(s => `${s.name} ${fmtV(s.values[i])}`).join("\n"))}"/>`).join("")}
@@ -3727,19 +3727,22 @@ function adminRowsHTML(bs){
   return `<div class="grid2 even">
     <section class="card"><h2>매출 <span class="sub">정규 + 신규생 + 다른 요일, 대표만 보여요</span></h2>
       ${extBox("pay", d => {
-        const lyOf = m => `${+m.slice(0, 4) - 1}${m.slice(4)}`;
+        const lyOf = (m, n = 1) => `${+m.slice(0, 4) - n}${m.slice(4)}`;
         const ser = bs.map(b => ({ name:BRANCHES[b], color:BRANCH_COLOR[b], values:d.months.map(m => revenueOf(b, m, d.ledger)) }));
         // 작년 같은 달: 같은 색 점선. 자료가 없는 달은 선을 그리지 않음
         const lySer = bs.map(b => ({ name:`작년 ${BRANCHES[b]}`, color:BRANCH_COLOR[b], dash:true, values:d.months.map(m => revenueOf(b, lyOf(m), d.ledger)) }))
           .filter(s => s.values.some(v => v != null && v > 0));
+        // 재작년 같은 달: 같은 색 점점선(더 연하게)
+        const ly2Ser = bs.map(b => ({ name:`재작년 ${BRANCHES[b]}`, color:BRANCH_COLOR[b], dash:"1.5 4", op:.55, values:d.months.map(m => revenueOf(b, lyOf(m, 2), d.ledger)) }))
+          .filter(s => s.values.some(v => v != null && v > 0));
         const tot = i => ser.reduce((t, s) => t + (s.values[i] || 0), 0), cur = tot(11), prev = tot(10), diff = cur - prev;
-        const lyCur = lySer.length ? lySer.reduce((t, s) => t + (s.values[11] || 0), 0) : 0;
+        const lyCur = lySer.length ? lySer.reduce((t, s) => t + (s.values[11] || 0), 0) : 0, ly2Cur = ly2Ser.length ? ly2Ser.reduce((t, s) => t + (s.values[11] || 0), 0) : 0;
         const hasPast = bs.some(b => Object.keys(state.revenue[b]?.monthly || {}).length || Object.keys(state.revenue[b]?.daily || {}).length);
         return `<div class="money"><div><span class="l">이번 달</span><b>${won(cur)}</b>
-            <span class="d ${diff >= 0 ? "up" : "down"}">${diff >= 0 ? "▲" : "▼"} ${won(Math.abs(diff))}</span><span class="pm">전월 ${won(prev)}${lyCur ? ` · 작년 ${+d.months[11].slice(5)}월 ${won(lyCur)}` : ""}</span></div>
+            <span class="d ${diff >= 0 ? "up" : "down"}">${diff >= 0 ? "▲" : "▼"} ${won(Math.abs(diff))}</span><span class="pm">전월 ${won(prev)}${lyCur ? ` · 작년 ${+d.months[11].slice(5)}월 ${won(lyCur)}` : ""}${ly2Cur ? ` · 재작년 ${won(ly2Cur)}` : ""}</span></div>
           ${bs.length > 1 ? `<ul class="money-br">${ser.map(s => `<li><i style="background:${s.color}"></i>${esc(s.name)} <b>${won(s.values[11] || 0)}</b></li>`).join("")}</ul>` : ""}</div>
-          ${lineChart({ labels:d.months.map(mLabel), series:[...lySer, ...ser], fmtV:man, zero:true, aria:"월별 매출" })}${ser.length > 1 ? legend(ser) : ""}
-          <p class="fnote">정규 + 신규생 + 다른 요일 결제만 합쳤어요(샘플 후 등록·기타·상자 제외). 점선 = 작년 같은 달.
+          ${lineChart({ labels:d.months.map(mLabel), series:[...ly2Ser, ...lySer, ...ser], fmtV:man, zero:true, aria:"월별 매출" })}${ser.length > 1 ? legend(ser) : ""}
+          <p class="fnote">정규 + 신규생 + 다른 요일 결제만 합쳤어요(샘플 후 등록·기타·상자 제외). 점선 = 작년, 점점선 = 재작년 같은 달${ly2Ser.length ? "" : "(재작년 자료를 올리면 나와요)"}.
             ${+LEDGER_FROM.slice(5, 7)}월 ${+LEDGER_FROM.slice(8)}일부터는 결제 매니저 장부, 그 전은 올린 과거 매출${hasPast ? "" : "(아직 없음)"}. 이번 달은 오늘까지 들어온 결제만이에요.</p>
           <div class="acts"><button type="button" class="btn btn-ghost btn-sm" data-act="rev-pick" data-tip="월별 매출표 또는 일별 매출표 엑셀. 원 이름(평촌·반포·대치)이 열 제목이나 '원' 열에 있으면 원별로 나눠요">과거 매출 올리기</button></div>`; })}
     </section>
@@ -3799,6 +3802,7 @@ function demoRevenue(){
   const months = ym12(), base = { pyeongchon:118e6, banpo:72e6, daechi:96e6 }, out = {};
   for (const b of BRANCH_KEYS){ const monthly = {}, daily = {};
     months.forEach((m, i) => { const ly = `${+m.slice(0, 4) - 1}${m.slice(4)}`;
+      monthly[`${+m.slice(0, 4) - 2}${m.slice(4)}`] = Math.round(base[b] * (0.7 + 0.01 * i + ((i * 3 + b.length) % 4) * 0.015) / 1000) * 1000;
       monthly[ly] = Math.round(base[b] * (0.82 + 0.01 * i + ((i * 5 + b.length) % 4) * 0.015) / 1000) * 1000;
       if (i < 11) monthly[m] = Math.round(base[b] * (0.9 + 0.012 * i + ((i * 7 + b.length) % 5) * 0.012) / 1000) * 1000; });
     for (let d = 1; d < 20; d++) daily[`${months[11]}-${pad2(d)}`] = Math.round(base[b] / 26 / 1000) * 1000;
