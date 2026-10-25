@@ -2066,8 +2066,8 @@ function noticePageHTML(){
           ${canEdit(n) ? `<div class="ni-acts"><button type="button" class="icon-btn" data-act="notice-edit" data-id="${esc(n.id)}">수정</button></div>` : ""}</div>` : ""}
       </li>`; }).join("")}</ul>` : `<p class="empty">아직 공지가 없어요.${canWrite ? " 오른쪽 위 '공지 쓰기'로 첫 공지를 올려 보세요." : ""}</p>`}
   </section>
-  <section class="card">${calHTML("month")}</section>
-  <section class="card" style="margin-top:16px"><h2>지금 확인이 필요한 것</h2>${checkListHTML()}</section>`;
+  <section class="card" style="margin-bottom:16px"><h2>지금 확인이 필요한 것</h2>${checkListHTML()}</section>
+  <section class="card">${calHTML("month")}</section>`;
 }
 
 /* ── To-do 화면 ── */
