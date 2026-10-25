@@ -124,6 +124,15 @@ service cloud.firestore {
         && request.resource.data.name is string && request.resource.data.name.size() <= 30;
       allow delete: if isAdmin();
     }
+    // 업무매뉴얼: 공지와 같은 범위 규칙. 이전 내용(history)은 5개까지
+    match /portalManuals/{id} {
+      allow read: if okRead();
+      allow create: if okCreate() && request.resource.data.title is string && request.resource.data.title.size() <= 100
+        && request.resource.data.body is string && request.resource.data.body.size() <= 50000;
+      allow update: if okUpdate() && request.resource.data.title.size() <= 100 && request.resource.data.body.size() <= 50000
+        && request.resource.data.get('history', []).size() <= 5;
+      allow delete: if okDelete();
+    }
     match /portalBmGroups/{id} {
       allow read: if okRead();
       allow create: if okCreate() && request.resource.data.name is string && request.resource.data.name.size() <= 20;

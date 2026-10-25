@@ -463,6 +463,30 @@
 
   /* ───────── 자료실 ───────── */
   .files{display:grid;grid-template-columns:260px minmax(0,1fr);gap:16px;align-items:start}
+  .man-list{list-style:none;margin:0;padding:0}
+  .man-item{display:grid;gap:4px;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--line);padding:14px 4px;cursor:pointer;font:inherit}
+  .man-list li:first-child .man-item{border-top:0}
+  .man-item:hover b{text-decoration:underline;text-underline-offset:3px}
+  .mi-t{display:flex;align-items:center;gap:6px;min-width:0}.mi-t b{font-size:15px;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .mi-s{font-size:13px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .mi-m{font-size:12px;color:var(--text-sub)}
+  .tagk.pin{background:var(--ink);color:var(--brand-yellow)}
+  .man-read{padding:20px 28px 28px}
+  .man-top{display:flex;align-items:center;gap:8px;margin-bottom:12px}.man-top .sp{flex:1}
+  .man-tags{display:flex;gap:6px;margin-bottom:8px}
+  .man-title{font-size:24px;font-weight:800;color:var(--ink);margin:0 0 4px}
+  .man-meta{font-size:12px;color:var(--text-sub);margin:0 0 20px}
+  .man-body{max-width:76ch;font-size:15px;line-height:1.75;color:var(--text)}
+  .man-body h2{font-size:19px;color:var(--ink);margin:24px 0 8px;padding-bottom:6px;border-bottom:2px solid var(--brand-yellow)}
+  .man-body h3{font-size:16px;color:var(--ink);margin:18px 0 6px}
+  .man-body h4{font-size:15px;color:var(--ink);margin:14px 0 4px}
+  .man-body p{margin:6px 0}.man-body ul,.man-body ol{margin:6px 0 10px;padding-left:22px}.man-body li{margin:3px 0}
+  .man-body a{color:var(--s-info);font-weight:700}
+  .man-body b{color:var(--ink)}
+  .man-body.small{font-size:13px;margin:8px 0}
+  .man-h{border-top:1px solid var(--line);padding:10px 0}.man-h summary{cursor:pointer;font-size:13px}
+  textarea.mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;line-height:1.6}
+  .hint code{background:#F2F2F2;border-radius:4px;padding:1px 5px;font-size:12px}
   .fold{display:flex;flex-direction:column;position:sticky;top:16px}
   .folders{list-style:none;margin:0 0 16px;padding:0;display:grid;gap:2px}
   .folders button{display:flex;justify-content:space-between;align-items:center;width:100%;border:0;background:none;padding:10px 12px;border-radius:var(--r-btn);
@@ -793,8 +817,8 @@ const BRANCH_KEYS = ["pyeongchon","banpo","daechi"];
 const SHORT = { pyeongchon:"평촌", banpo:"반포", daechi:"대치" };
 
 /* Firestore 컬렉션 이름 */
-const COLL = { notices:"portalNotices", events:"portalEvents", todos:"portalTodos", files:"portalFiles", bookmarks:"portalBookmarks", bmGroups:"portalBmGroups", kpi:"portalKpi", kpiPriv:"portalKpiPrivate", folders:"portalFolders", members:"portalMembers", birthdays:"portalBirthdays", teachers:"portalTeachers" };
-const COLL_LABEL = { notices:"공지", events:"일정", todos:"할 일", files:"자료", bookmarks:"북마크", bmGroups:"북마크 구분", kpi:"운영지표", kpiPriv:"운영지표(금액)", folders:"자료실 폴더", members:"직원 계정", birthdays:"생일", teachers:"선생님 입사월" };
+const COLL = { notices:"portalNotices", events:"portalEvents", todos:"portalTodos", files:"portalFiles", bookmarks:"portalBookmarks", bmGroups:"portalBmGroups", kpi:"portalKpi", kpiPriv:"portalKpiPrivate", folders:"portalFolders", members:"portalMembers", birthdays:"portalBirthdays", teachers:"portalTeachers", manuals:"portalManuals" };
+const COLL_LABEL = { notices:"공지", events:"일정", todos:"할 일", files:"자료", bookmarks:"북마크", bmGroups:"북마크 구분", kpi:"운영지표", kpiPriv:"운영지표(금액)", folders:"자료실 폴더", members:"직원 계정", birthdays:"생일", teachers:"선생님 입사월", manuals:"업무매뉴얼" };
 /* 북마크 구분선 색 */
 const LINE_COLORS = [["#222222","검정"],["#DE8619","주황"],["#C98100","황토"],["#D1495B","빨강"],["#8B5CF6","보라"],["#2563A6","파랑"],["#1F7A4D","초록"],["#767676","회색"]];
 
@@ -820,6 +844,7 @@ const TABS = [
   { id: "notice", label: "공지 · 캘린더" },
   { id: "todo",   label: "워크허브" },
   { id: "mission",label: "미션허브" },
+  { id: "manual", label: "업무매뉴얼" },
   { id: "files",  label: "자료실" },
   { id: "bm",     label: "북마크" }
 ];
@@ -921,7 +946,7 @@ function fileType(name){
 /* ========= 상태 ========= */
 const state = {
   user:null, isAdmin:false, wide:false, myBranch:null, myBranches:[], branch:"all", tab:"home",
-  notices:[], events:[], todos:[], files:[], bookmarks:[], bmGroups:[], kpi:{}, kpiPriv:{}, folders:[], members:[], member:null, birthdays:[], tSort:{ k:"enrolled", dir:-1 }, tQ:"", tWarn:false, loaded:{}, teachers:[], kpiPeriod: +(store.get("portal.kpiPeriod") || 3),
+  notices:[], events:[], todos:[], files:[], bookmarks:[], bmGroups:[], kpi:{}, kpiPriv:{}, folders:[], members:[], member:null, birthdays:[], manuals:[], manCat:"all", manQ:"", openManual:null, tSort:{ k:"enrolled", dir:-1 }, tQ:"", tWarn:false, loaded:{}, teachers:[], kpiPeriod: +(store.get("portal.kpiPeriod") || 3),
   cal:{ y:new Date().getFullYear(), m:new Date().getMonth(), sel:todayISO() },
   openNotice:null, todoFilter:"open", folder:"all", fileQ:""
 };
@@ -997,6 +1022,14 @@ function seed(){
         .map(([e, name, m, branch]) => ({ id:`${e}_${branch}`, empId:e, name, md:m, branch, at:ago(5), createdBy:ADMIN, writer:"JP People" })); })(),
     teachers: BRANCH_KEYS.flatMap(b => DEMO_TEACH[b].map((n, i) => ({ id:`${b}${i}_${b}`, empId:b + i, name:n, branch:b,
       startYm: (i === 4 ? addDays(todayISO(), -5) : addDays(todayISO(), -(60 + i * 240))).slice(0, 7), active: !(b === "banpo" && i === 3), at:ago(5), createdBy:ADMIN, writer:"JP People" }))),
+    manuals: [
+      { id:"m1", title:"첫 수업 날 교사 체크리스트", cat:"teacher", branch:"all", pinned:true, at:ago(20), updatedAt:ago(3), createdBy:ADMIN, writer:"대표", editor:"대표",
+        body:"# 수업 전\n- 출석부와 사진 확인\n- 재료 미리 꺼내 두기 (재료 요청 앱에서 부족분 신청)\n\n# 수업 중\n1. 인사하고 이름 불러 주기\n2. **오늘의 목표**를 한 문장으로 말해 주기\n3. 마무리 10분 전 정리 시작\n\n# 수업 후\n- 관찰일지 사진 올리기: [자비스 업로더](https://jarvis-webapp-8yim.onrender.com/)\n- 특이사항은 스케줄 매니저 메모에 남기기" },
+      { id:"m2", title:"샘플 상담 흐름", cat:"counsel", branch:"all", at:ago(15), createdBy:ADMIN, writer:"대표",
+        body:"## 1. 첫 통화\n- 아이 나이, 관심사, 원하는 요일 묻기\n- 샘플 수업 날짜 잡기\n\n## 2. 샘플 당일\n- 수업 후 **5분 피드백** (작품 사진 보여 주기)\n\n## 3. 등록 안내\n- 교육비 안내판 기준으로 설명\n- 3일 안에 다시 연락" },
+      { id:"m3", title:"월말 마감 순서", cat:"manager", branch:"pyeongchon", at:ago(8), createdBy:PC, writer:"평촌원 실장",
+        body:"1. 결제 매니저에서 미납 확인\n2. 원생 명단 엑셀 내려받아 JP ONE 운영지표에 올리기\n3. 다음 달 시간표 확정" }
+    ],
     members: DEMO_MEMBERS.map(m => ({ id:m.email, ...m, active:true, source:"people", at:ago(20), by:ADMIN })),
     bmGroups: [
       { id:"g1", name:"자주 쓰는 사이트", color:"#DE8619", branch:"all", order:1, at:ago(30), createdBy:ADMIN, writer:"대표" },
@@ -1241,7 +1274,7 @@ async function enter(user){
 
   state.kpiPriv = {};
   state.loaded = {};
-  ["notices","events","todos","files","bookmarks","bmGroups","kpi","folders","birthdays","teachers", ...(state.isAdmin ? ["kpiPriv","members"] : [])].forEach(name => {
+  ["notices","events","todos","files","bookmarks","bmGroups","kpi","folders","birthdays","teachers","manuals", ...(state.isAdmin ? ["kpiPriv","members"] : [])].forEach(name => {
     unsubs.push(DB.watch(name, list => {
       state[name] = name === "kpi" || name === "kpiPriv" ? Object.fromEntries(list.map(x => [x.id, x])) : list;
       onData(name);
@@ -1253,7 +1286,7 @@ async function enter(user){
 function onData(name){
   if (name === "members") { renderMemList(); return; }
   if (name === "birthdays" || name === "teachers") { state.loaded[name] = true; if (bdPending && state.loaded.birthdays && state.loaded.teachers) { const x = bdPending; bdPending = null; syncPeople(x); } }
-  const uses = { home:["notices","events","todos","kpi","birthdays"], notice:["notices","events","birthdays"], todo:["todos"], files:["files","folders"], bm:["bookmarks","bmGroups"], kpi:["kpi","kpiPriv","teachers"] }[state.tab] || [];
+  const uses = { home:["notices","events","todos","kpi","birthdays"], notice:["notices","events","birthdays"], todo:["todos"], files:["files","folders"], manual:["manuals"], bm:["bookmarks","bmGroups"], kpi:["kpi","kpiPriv","teachers"] }[state.tab] || [];
   if (uses.includes(name)) renderView({ keepFocus: true });
 }
 
@@ -1556,6 +1589,7 @@ function renderView({ keepFocus = false } = {}){
     : state.tab === "notice" ? noticePageHTML()
     : state.tab === "todo" ? todoPageHTML()
     : state.tab === "files" ? filesPageHTML()
+    : state.tab === "manual" ? manualPageHTML()
     : state.tab === "kpi" ? kpiPageHTML()
     : soonHTML(state.tab);
   if (focusKey) v.querySelector(`[data-fk="${CSS.escape(focusKey)}"]`)?.focus();
@@ -2100,6 +2134,110 @@ function filesPageHTML(){
   </div>`;
 }
 
+/* ========= 업무매뉴얼 =========
+   교사 · 실장 · 상담 매뉴얼을 글로 써 두고 찾아 읽는 곳. 고치면 이전 내용 5개까지 남겨 둠(되돌리기 가능)
+   글 쓰는 법(간단 표시): # 큰 제목, ## 작은 제목, - 목록, 1. 번호 목록, **굵게**, [글자](주소) 링크 */
+const MANUAL_CATS = [["teacher","교사"],["manager","실장"],["counsel","상담"],["common","공통"]];
+const manCatLabel = k => (MANUAL_CATS.find(c => c[0] === k) || [k, "기타"])[1];
+function mdLite(src){
+  const inline = t => esc(t)
+    .replace(/\*\*(.+?)\*\*/g, "<b>$1</b>")
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (m, a, u) => `<a href="${u}" target="_blank" rel="noopener">${a}</a>`);
+  const out = []; let list = null;
+  const close = () => { if (list) { out.push(`</${list}>`); list = null; } };
+  for (const raw of String(src || "").split("\n")){
+    const l = raw.trimEnd();
+    let m;
+    if ((m = l.match(/^(#{1,3})\s+(.*)$/))) { close(); const h = m[1].length + 1; out.push(`<h${h}>${inline(m[2])}</h${h}>`); }
+    else if ((m = l.match(/^\s*[-*]\s+(.*)$/))) { if (list !== "ul") { close(); out.push("<ul>"); list = "ul"; } out.push(`<li>${inline(m[1])}</li>`); }
+    else if ((m = l.match(/^\s*\d+[.)]\s+(.*)$/))) { if (list !== "ol") { close(); out.push("<ol>"); list = "ol"; } out.push(`<li>${inline(m[1])}</li>`); }
+    else if (!l.trim()) { close(); }
+    else { close(); out.push(`<p>${inline(l)}</p>`); }
+  }
+  close();
+  return out.join("");
+}
+function manualPageHTML(){
+  const vis = state.manuals.filter(visible);
+  const q = state.manQ.trim().toLowerCase();
+  const inCat = state.manCat === "all" ? vis : vis.filter(m => m.cat === state.manCat);
+  const list = inCat.filter(m => !q || (m.title + "\n" + (m.body || "")).toLowerCase().includes(q))
+    .sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || (b.updatedAt || b.at || 0) - (a.updatedAt || a.at || 0));
+  const canWrite = branchOptions("manuals").length > 0;
+  const open = state.openManual && vis.find(m => m.id === state.openManual);
+  const cats = [["all", "전체"], ...MANUAL_CATS];
+  const side = `<aside class="card fold">
+      <div class="card-h"><h2>분류</h2></div>
+      <ul class="folders">${cats.map(([k, l]) => `<li><button type="button" data-act="man-cat" data-id="${k}" aria-pressed="${state.manCat === k}"><span>${l}</span><b>${k === "all" ? vis.length : vis.filter(m => m.cat === k).length}</b></button></li>`).join("")}</ul>
+    </aside>`;
+  const reader = open ? `<section class="card man-read">
+      <div class="man-top"><button type="button" class="linkish" data-act="man-close">← 목록</button>
+        <span class="sp"></span>${canEdit(open) ? `<button type="button" class="icon-btn" data-act="man-edit" data-id="${esc(open.id)}">수정</button>` : ""}</div>
+      <div class="man-tags"><span class="tagk">${esc(manCatLabel(open.cat))}</span><span class="tagb">${esc(scopeLabel(open.branch))}</span>${open.pinned ? `<span class="tagk pin">필독</span>` : ""}</div>
+      <h1 class="man-title">${esc(open.title)}</h1>
+      <p class="man-meta">${esc(open.editor || open.writer || "")} · ${new Date(open.updatedAt || open.at).toLocaleDateString("ko-KR")} ${open.updatedAt ? "수정" : "작성"}${(open.history || []).length ? ` · <button type="button" class="linkish" data-act="man-hist" data-id="${esc(open.id)}">이전 내용 ${open.history.length}개</button>` : ""}</p>
+      <div class="man-body">${mdLite(open.body) || `<p class="empty">아직 내용이 없어요.</p>`}</div></section>`
+    : `<section class="card flist">
+      <div class="card-h"><h2>${esc(state.manCat === "all" ? "전체 매뉴얼" : manCatLabel(state.manCat) + " 매뉴얼")}<span class="sub">필독 먼저, 최근 수정순</span></h2>
+        <label class="fsearch"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input type="search" id="manQ" placeholder="제목·내용으로 찾기" value="${esc(state.manQ)}" data-fk="manQ" aria-label="매뉴얼 찾기"></label></div>
+      ${list.length ? `<ul class="man-list">${list.map(m => { const first = String(m.body || "").split("\n").map(x => x.replace(/^[#\-*\d.)\s]+/, "").replace(/\*\*/g, "")).find(x => x.trim()) || "";
+          return `<li><button type="button" class="man-item" data-act="man-open" data-id="${esc(m.id)}">
+            <span class="mi-t">${m.pinned ? `<span class="tagk pin">필독</span>` : ""}<span class="tagk">${esc(manCatLabel(m.cat))}</span><b>${esc(m.title)}</b></span>
+            <span class="mi-s">${esc(first.slice(0, 90))}</span>
+            <span class="mi-m">${state.branch === "all" ? esc(scopeLabel(m.branch)) + " · " : ""}${mdOfMs(m.updatedAt || m.at)} ${esc(m.editor || m.writer || "")}</span></button></li>`; }).join("")}</ul>`
+        : `<p class="empty">${q ? `'${esc(state.manQ)}'와 맞는 매뉴얼이 없어요.` : "아직 매뉴얼이 없어요."}</p>`}</section>`;
+  return `<div class="head"><h1>업무매뉴얼</h1><div class="acts">${canWrite ? `<button type="button" class="btn btn-primary btn-sm" data-act="man-new">매뉴얼 쓰기</button>` : ""}</div></div>
+    <div class="files">${side}${reader}</div>`;
+}
+function manualForm(m){
+  openForm({
+    title: m ? "매뉴얼 수정" : "매뉴얼 쓰기",
+    fields: `${fText("제목", "title", m?.title, 'required maxlength="100" placeholder="예: 첫 수업 날 교사 체크리스트"')}
+      <div class="row2">${fSelect("분류", "cat", MANUAL_CATS, m?.cat || (state.manCat !== "all" ? state.manCat : "teacher"))}${fBranch("manuals", m?.branch)}</div>
+      ${fArea("내용", "body", m?.body, 'rows="16" maxlength="50000"')}
+      <p class="hint small">쓰는 법: <code># 큰 제목</code> <code>## 작은 제목</code> <code>- 목록</code> <code>1. 번호 목록</code> <code>**굵게**</code> <code>[글자](https://주소)</code></p>
+      <label class="chk"><input type="checkbox" name="pinned" ${m?.pinned ? "checked" : ""}> 필독 (목록 맨 위에 표시)</label>
+      ${m ? "" : fWriter()}`,
+    saveLabel: m ? "수정 저장" : "올리기",
+    async onSave(form){
+      const data = { title: val(form,"title"), cat: val(form,"cat"), body: form.elements.body.value, branch: val(form,"branch"), pinned: form.elements.pinned.checked, editor: writerName() };
+      if (!data.title) return formErr("제목을 넣어 주세요.");
+      if (!branchOptions("manuals").includes(data.branch)) return formErr("이 범위에는 매뉴얼을 올릴 수 없어요.");
+      keepWriter(form); data.editor = writerName();
+      if (m){
+        // 고치기 전 내용을 5개까지 보관
+        const hist = [{ title: m.title, body: m.body || "", at: m.updatedAt || m.at || Date.now(), by: m.editor || m.writer || "" }, ...(m.history || [])].slice(0, 5);
+        if (data.body !== (m.body || "") || data.title !== m.title) data.history = hist;
+        await DB.update("manuals", m.id, data);
+      } else state.openManual = await DB.add("manuals", data);
+      state.manCat = "all"; renderView();
+      toast(m ? "매뉴얼을 수정했어요." : "매뉴얼을 올렸어요.");
+    },
+    onDelete: m && (async () => { await DB.remove("manuals", m.id); state.openManual = null; toast("매뉴얼을 삭제했어요."); })
+  });
+  $("dlg").classList.add("wide"); $("dlgBody").querySelector("textarea[name=body]")?.classList.add("mono");
+  dlgCtx.deleteMsg = m && `'${m.title}' 매뉴얼을 삭제할까요? 이전 내용까지 모두 지워지고 되돌릴 수 없어요.`;
+}
+function manualHistory(m){
+  const h = m.history || [];
+  openForm({
+    title: "이전 내용",
+    fields: `<p class="hint">고치기 전 내용이에요. 최근 것부터 5개까지 남아요. '이 내용으로 되돌리기'를 누르면 지금 내용도 이전 내용으로 남겨요.</p>
+      ${h.map((x, i) => `<details class="man-h"><summary><b>${new Date(x.at).toLocaleString("ko-KR", { month:"numeric", day:"numeric", hour:"2-digit", minute:"2-digit" })}</b> ${esc(x.by || "")} · ${esc(x.title)}</summary>
+        <div class="man-body small">${mdLite(x.body)}</div>${canEdit(m) ? `<button type="button" class="btn btn-ghost btn-sm" data-restore="${i}">이 내용으로 되돌리기</button>` : ""}</details>`).join("")}`,
+    saveLabel: "닫기", async onSave(){ return true; }
+  });
+  $("dlg").classList.add("wide");
+  $("dlgBody").addEventListener("click", async e => {
+    const i = e.target.closest("[data-restore]")?.dataset.restore; if (i == null) return;
+    const x = h[+i];
+    const hist = [{ title: m.title, body: m.body || "", at: m.updatedAt || m.at || Date.now(), by: m.editor || m.writer || "" }, ...h.filter((_, j) => j !== +i)].slice(0, 5);
+    try { await DB.update("manuals", m.id, { title: x.title, body: x.body, history: hist, editor: writerName() }); $("dlg").close(); toast("이전 내용으로 되돌렸어요."); }
+    catch (err) { formErr("되돌리지 못했어요. " + (err.code || "")); }
+  });
+}
+
 /* ========= 화면 동작 (클릭은 모두 여기 한 곳에서 처리) ========= */
 $("view").addEventListener("click", e => {
   const el = e.target.closest("[data-act]"); if (!el) return;
@@ -2140,6 +2278,12 @@ $("view").addEventListener("click", e => {
     case "bmg-new": bmGroupForm(null); break;
     case "bmg-edit": bmGroupForm(state.bmGroups.find(x => x.id === id)); break;
     case "gcal-connect": gcalConnect(); break;
+    case "man-new": manualForm(null); break;
+    case "man-cat": state.manCat = id; state.openManual = null; renderView(); break;
+    case "man-open": state.openManual = id; renderView(); scrollTo(0, 0); break;
+    case "man-close": state.openManual = null; renderView(); break;
+    case "man-edit": manualForm(state.manuals.find(x => x.id === id)); break;
+    case "man-hist": manualHistory(state.manuals.find(x => x.id === id)); break;
     case "gcal-set": gcalSettings(); break;
   }
 });
@@ -2152,6 +2296,7 @@ $("view").addEventListener("change", async e => {
   } catch (err) { cb.checked = !cb.checked; toast("바꾸지 못했어요. (" + (err.code || "") + ")"); }
 });
 $("view").addEventListener("input", e => {
+  if (e.target.id === "manQ"){ state.manQ = e.target.value; const pos = e.target.selectionStart; renderView(); const q = $("manQ"); if (q) { q.focus(); q.setSelectionRange(pos, pos); } return; }
   if (e.target.id === "tQ"){ state.tQ = e.target.value; const pos = e.target.selectionStart; renderView(); const q = $("tQ"); if (q) { q.focus(); q.setSelectionRange(pos, pos); } return; }
   if (e.target.id !== "fileQ") return;
   state.fileQ = e.target.value; const pos = e.target.selectionStart;
