@@ -175,7 +175,7 @@ service cloud.firestore {
         || (resource.data.createdBy == email() && resource.data.assignee == email() && request.resource.data.assignee == email()
             && request.resource.data.createdBy == email() && canWrite(request.resource.data.branch))
         || (resource.data.assignee == email()
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'checks', 'note', 'files', 'log', 'submittedAt', 'doneAt', 'updatedAt', 'updatedBy'])
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'checks', 'note', 'files', 'versions', 'log', 'submittedAt', 'doneAt', 'updatedAt', 'updatedBy'])
             && request.resource.data.status in ['todo', 'doing', 'submitted', 'done', 'revise']
             && (request.resource.data.status != 'done' || resource.data.needCheck == false)
             && (request.resource.data.status != 'revise' || resource.data.status == 'revise')));
@@ -187,6 +187,20 @@ service cloud.firestore {
       allow create: if isManagerOf(request.resource.data.branch) && request.resource.data.branch in ['pyeongchon', 'banpo', 'daechi']
         && request.resource.data.createdBy == email() && request.resource.data.title is string && request.resource.data.title.size() <= 100;
       allow update: if isManagerOf(resource.data.branch) && isManagerOf(request.resource.data.branch);
+      allow delete: if isManagerOf(resource.data.branch);
+    }
+    // 미션허브 미션(과제 정의): 같은 원 사람이 보고, 관리자가 만들고 고침. '모든 원' 미션은 대표만
+    match /portalMissions/{id} {
+      allow read: if okRead();
+      allow create: if request.resource.data.createdBy == email() && request.resource.data.title is string && request.resource.data.title.size() <= 100
+        && ((request.resource.data.branch == 'all' && isAdmin()) || (request.resource.data.branch in ['pyeongchon', 'banpo', 'daechi'] && isManagerOf(request.resource.data.branch)));
+      allow update, delete: if (resource.data.branch == 'all' && isAdmin()) || (resource.data.branch in ['pyeongchon', 'banpo', 'daechi'] && isManagerOf(resource.data.branch));
+    }
+    // 미션 평가(문서 ID = 업무 ID): 관리자는 자기 원 평가를 쓰고 봄. 교사는 자기 평가 중 '공개'된 것만 봄(다른 교사 점수는 못 봄)
+    match /portalEvals/{id} {
+      allow read: if isMember() && (isManagerOf(resource.data.branch) || (resource.data.teacher == email() && resource.data.published == true));
+      allow create, update: if isManagerOf(request.resource.data.branch) && (resource == null || isManagerOf(resource.data.branch))
+        && request.resource.data.teacher is string && request.resource.data.published is bool;
       allow delete: if isManagerOf(resource.data.branch);
     }
     match /portalBmGroups/{id} {

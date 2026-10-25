@@ -475,6 +475,24 @@
   .mi-s{font-size:13px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .mi-m{font-size:12px;color:var(--text-sub)}
   .tagk.pin{background:var(--ink);color:var(--brand-yellow)}
+  /* 미션허브 */
+  .mh-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+  .mh-card{all:unset;box-sizing:border-box;background:#fff;border-radius:var(--r-card);padding:16px;display:grid;gap:8px;cursor:pointer;border:1px solid var(--line)}.mh-card:hover{border-color:#CFCFCF}.mh-card.off{opacity:.6}
+  .mh-card b{font-size:16px;color:var(--ink)}.mh-meta{font-size:12px;color:var(--text-sub)}
+  .mh-prog{position:relative;height:8px;background:#F0F0F0;border-radius:4px;overflow:hidden}.mh-prog i,.mh-prog em{position:absolute;left:0;top:0;bottom:0;border-radius:4px}.mh-prog i{background:#C3AEF7}.mh-prog em{background:#6D3FD8}
+  .mh-score{font-weight:800;color:#6D3FD8;font-variant-numeric:tabular-nums}
+  .mh-scores{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:var(--text)}.mh-scores b{color:var(--ink)}
+  .mh-rub{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px}.mh-rub label{display:grid;grid-template-columns:1fr 70px auto;align-items:center;gap:6px;font-size:13px}
+  .mh-rub input{padding:6px 8px;text-align:right}
+  .mh-eval{background:#F6F2FE;border-radius:var(--r-card);padding:12px 14px;margin-bottom:12px}
+  .mh-ph{display:flex;flex-wrap:wrap;align-items:center;gap:8px}.mh-ph b{color:var(--ink);font-size:15px}
+  .mh-vers{list-style:none;padding:0;margin:0;display:grid;gap:10px;font-size:13px}.mh-vers>li{border-left:3px solid var(--line);padding-left:10px}
+  .mh-ai{border:1px dashed #C3AEF7;border-radius:var(--r-card);padding:10px 12px;margin:8px 0 12px}.mh-ai summary{cursor:pointer;font-weight:800;color:#6D3FD8}
+  .mh-sub{background:#FAFAFA;border-radius:var(--r-card);padding:10px 12px;margin-bottom:12px}
+  .mh-who{max-width:320px;margin-bottom:12px}
+  .mh-sum{display:flex;flex-wrap:wrap;gap:8px 18px;font-size:13px;margin-bottom:12px}
+  .mh-port{list-style:none;padding:0;margin:0;display:grid;gap:12px}.mh-port>li{border:1px solid var(--line);border-radius:var(--r-card);padding:12px 14px;display:grid;gap:6px}
+  .tagb.ok{background:#E8F5EE;color:#1F7A4D}
   /* 워크허브 */
   .wh-tabs{margin-bottom:16px;flex-wrap:wrap}
   .wh-list{list-style:none;margin:0;padding:0;display:grid;gap:8px}
@@ -905,8 +923,8 @@ const BRANCH_KEYS = ["pyeongchon","banpo","daechi"];
 const SHORT = { pyeongchon:"평촌", banpo:"반포", daechi:"대치" };
 
 /* Firestore 컬렉션 이름 */
-const COLL = { notices:"portalNotices", events:"portalEvents", todos:"portalTodos", files:"portalFiles", bookmarks:"portalBookmarks", bmGroups:"portalBmGroups", kpi:"portalKpi", kpiPriv:"portalKpiPrivate", folders:"portalFolders", members:"portalMembers", birthdays:"portalBirthdays", teachers:"portalTeachers", manuals:"portalManuals", counsel:"portalCounsel", revenue:"portalRevenue", manCats:"portalManCats", tasks:"portalTasks", routines:"portalRoutines" };
-const COLL_LABEL = { notices:"공지", events:"일정", todos:"할 일", files:"자료", bookmarks:"북마크", bmGroups:"북마크 구분", kpi:"운영지표", kpiPriv:"운영지표(금액)", folders:"자료실 폴더", members:"직원 계정", birthdays:"생일", teachers:"선생님 입사월", manuals:"업무매뉴얼", counsel:"상담 현황", revenue:"과거 매출", manCats:"매뉴얼 분류", tasks:"워크허브 업무", routines:"루틴" };
+const COLL = { notices:"portalNotices", events:"portalEvents", todos:"portalTodos", files:"portalFiles", bookmarks:"portalBookmarks", bmGroups:"portalBmGroups", kpi:"portalKpi", kpiPriv:"portalKpiPrivate", folders:"portalFolders", members:"portalMembers", birthdays:"portalBirthdays", teachers:"portalTeachers", manuals:"portalManuals", counsel:"portalCounsel", revenue:"portalRevenue", manCats:"portalManCats", tasks:"portalTasks", routines:"portalRoutines", missions:"portalMissions", evals:"portalEvals" };
+const COLL_LABEL = { notices:"공지", events:"일정", todos:"할 일", files:"자료", bookmarks:"북마크", bmGroups:"북마크 구분", kpi:"운영지표", kpiPriv:"운영지표(금액)", folders:"자료실 폴더", members:"직원 계정", birthdays:"생일", teachers:"선생님 입사월", manuals:"업무매뉴얼", counsel:"상담 현황", revenue:"과거 매출", manCats:"매뉴얼 분류", tasks:"워크허브 업무", routines:"루틴", missions:"미션", evals:"미션 평가" };
 /* 북마크 구분선 색 */
 const LINE_COLORS = [["#222222","검정"],["#DE8619","주황"],["#C98100","황토"],["#D1495B","빨강"],["#8B5CF6","보라"],["#2563A6","파랑"],["#1F7A4D","초록"],["#767676","회색"]];
 
@@ -1034,7 +1052,7 @@ function fileType(name){
 /* ========= 상태 ========= */
 const state = {
   user:null, isAdmin:false, wide:false, myBranch:null, myBranches:[], branch:"all", tab:"home",
-  notices:[], events:[], todos:[], files:[], bookmarks:[], bmGroups:[], kpi:{}, kpiPriv:{}, revenue:{}, folders:[], members:[], member:null, birthdays:[], ageP: +(store.get("portal.ageP") || 3), counsel:{}, manuals:[], manCats:[], tasks:[], routines:[], whView:"mine", whFilter:"open", whWho:"", manCat:"all", manQ:"", openManual:null, tSort:{ k:"enrolled", dir:-1 }, tQ:"", tWarn:false, loaded:{}, teachers:[], kpiPeriod: +(store.get("portal.kpiPeriod") || 3),
+  notices:[], events:[], todos:[], files:[], bookmarks:[], bmGroups:[], kpi:{}, kpiPriv:{}, revenue:{}, folders:[], members:[], member:null, birthdays:[], ageP: +(store.get("portal.ageP") || 3), counsel:{}, manuals:[], manCats:[], tasks:[], routines:[], whView:"mine", whFilter:"open", whWho:"", missions:[], evals:{}, mhView:"list", mhOpen:null, mhWho:"", manCat:"all", manQ:"", openManual:null, tSort:{ k:"enrolled", dir:-1 }, tQ:"", tWarn:false, loaded:{}, teachers:[], kpiPeriod: +(store.get("portal.kpiPeriod") || 3),
   cal:{ y:new Date().getFullYear(), m:new Date().getMonth(), sel:todayISO() },
   openNotice:null, todoFilter:"open", folder:"all", fileQ:""
 };
@@ -1095,7 +1113,25 @@ function seed(){
         checklist:[], checks:[], files:[], note:"10월 작품 18점으로 교체했어요. 이름표도 새로 붙임.", at:ago(6), createdBy:ADMIN, writer:"대표", log:[] },
       { id:"w5", title:"주차 쿠폰 잔여 2개 이하 학부모 안내", branch:"pyeongchon", due:d(3), assignee:"jaehong.teacher@gmail.com", assigneeName:"허재홍", status:"revise", needCheck:true,
         review:{ by:"sihyung.manager@gmail.com", name:"이시형", at:ago(.5), note:"안내 문자 보낸 학부모 명단도 같이 적어 주세요.", decision:"revise" },
-        checklist:["대상 학부모 확인","안내 문자 발송"], checks:[true,true], files:[], note:"5명 안내 완료", at:ago(5), createdBy:"sihyung.manager@gmail.com", writer:"이시형", log:[] }
+        checklist:["대상 학부모 확인","안내 문자 발송"], checks:[true,true], files:[], note:"5명 안내 완료", at:ago(5), createdBy:"sihyung.manager@gmail.com", writer:"이시형", log:[] },
+      { id:"w6", title:"11월 연구 PPT — 남아 협동 그리기 수업 설계", branch:"pyeongchon", due:d(10), assignee:"minsu.teacher@gmail.com", assigneeName:"김민수", status:"submitted", needCheck:true, missionId:"m1", mType:"research",
+        checklist:M_TYPES.research.req, checks:[true,true,true,true], files:[], note:"짝 그리기 3회차 수업으로 설계했어요.", submittedAt:ago(1),
+        versions:[{ v:1, at:ago(1), note:"짝 그리기 3회차 수업으로 설계했어요. 참고: 협동학습 논문 2편.", files:[], checks:[true,true,true,true] }], at:ago(5), createdBy:ADMIN, writer:"대표", log:[] },
+      { id:"w7", title:"11월 연구 PPT — 남아 협동 그리기 수업 설계", branch:"banpo", due:d(10), assignee:"jimin.teacher@gmail.com", assigneeName:"한지민", status:"todo", needCheck:true, missionId:"m1", mType:"research",
+        checklist:M_TYPES.research.req, checks:[false,false,false,false], files:[], note:"", versions:[], at:ago(5), createdBy:ADMIN, writer:"대표", log:[] },
+      { id:"w9", title:"할로윈 샘플작", branch:"banpo", due:d(-5), assignee:"jaehong.teacher@gmail.com", assigneeName:"허재홍", status:"done", needCheck:true, missionId:"m2", mType:"sample", doneAt:ago(3),
+        checklist:M_TYPES.sample.req, checks:[true,true,true,true], files:[], note:"", versions:[{ v:1, at:ago(6), note:"호박 등불 만들기", files:[], checks:[true,true,true,true] }], at:ago(20), createdBy:ADMIN, writer:"대표", log:[] }
+    ],
+    missions: [
+      { id:"m1", title:"11월 연구 PPT — 남아 협동 그리기 수업 설계", type:"research", branch:"all", status:"open", due:d(10), goal:"짝 활동으로 사회성을 키우는 그리기 수업을 설계하고 근거를 정리해요.",
+        guide:"- 연구 질문 1개\n- 참고 자료 2개 이상\n- 슬라이드 10장 안팎(PPTX와 PDF)\n- 우리 원 수업에 적용할 계획", required:M_TYPES.research.req, rubric:M_TYPES.research.rubric,
+        targets:[{ email:"minsu.teacher@gmail.com", name:"김민수", branch:"pyeongchon" }, { email:"jimin.teacher@gmail.com", name:"한지민", branch:"banpo" }], at:ago(5), createdBy:ADMIN, writer:"대표" },
+      { id:"m2", title:"할로윈 샘플작", type:"sample", branch:"banpo", status:"closed", due:d(-5), goal:"할로윈 주제 샘플작과 제작 과정 정리", guide:"", required:M_TYPES.sample.req, rubric:M_TYPES.sample.rubric,
+        targets:[{ email:"jaehong.teacher@gmail.com", name:"허재홍", branch:"banpo" }], at:ago(20), createdBy:ADMIN, writer:"대표" }
+    ],
+    evals: [
+      { id:"w9", branch:"banpo", teacher:"jaehong.teacher@gmail.com", teacherName:"허재홍", missionId:"m2", missionTitle:"할로윈 샘플작", mType:"sample", rubric:M_TYPES.sample.rubric, scores:[26,20,21,18], total:85, max:100,
+        strengths:"재료 선택과 과정 사진이 또렷해서 다른 원에서도 따라 하기 쉬워요.", gaps:"대상 연령별 난이도 조절 방법이 빠져 있어요.", next:"6세·9세 버전을 나눠 한 장씩 추가해 보세요.", version:1, published:true, publishedAt:ago(3), by:ADMIN, name:"대표", at:ago(3) }
     ],
     routines: [
       { id:"rt1", title:"마감 점검", branch:"pyeongchon", freq:"weekly", days:[2,3,4,5,6], dom:1, start:d(-10), active:true, needCheck:false, skipHol:true,
@@ -1168,13 +1204,17 @@ const DB = (() => {
   const ensure = () => { if (!mem) mem = load(); for (const k of Object.keys(COLL)) mem[k] ||= []; };
 
   return {
-    watch(name, cb){
+    watch(name, cb, opts){
+      const W = opts?.where;
+      const pass = x => !W || W.every(([k, op, v]) => op === "in" ? v.includes(x[k]) : x[k] === v);
       if (DEMO){
-        ensure(); (subs[name] ||= []).push(cb); cb(mem[name].map(x => ({ ...x })));
-        return () => { subs[name] = (subs[name] || []).filter(x => x !== cb); };
+        ensure(); const c = list => cb(list.filter(pass)); (subs[name] ||= []).push(c); c(mem[name].map(x => ({ ...x })));
+        return () => { subs[name] = (subs[name] || []).filter(x => x !== c); };
       }
       const { F, db } = fb;
       let q = F.collection(db, COLL[name]);
+      if (W) { q = W.length ? F.query(q, ...W.map(w => F.where(...w))) : q;
+        return F.onSnapshot(q, snap => cb(snap.docs.map(d => ({ id: d.id, ...d.data() }))), err => toast(`${COLL_LABEL[name]}을(를) 불러오지 못했어요. (${err.code})`)); }
       // 원 계정은 "모든 원 + 우리 원" 문서만 요청 (보안 규칙이 이 조건을 요구함)
       if (!state.wide && name !== "members") q = F.query(q, F.where("branch", "in", ["all", ...(state.myBranches.length ? state.myBranches : ["none"])]));
       return F.onSnapshot(q, snap => cb(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
@@ -1384,12 +1424,21 @@ async function enter(user){
 
   state.kpiPriv = {};
   state.loaded = {};
-  ["notices","events","tasks","routines","members","files","bookmarks","bmGroups","kpi","folders","birthdays","teachers","manuals","manCats","counsel", ...(state.isAdmin ? ["kpiPriv","revenue"] : [])].forEach(name => {
+  ["notices","events","tasks","routines","missions","members","files","bookmarks","bmGroups","kpi","folders","birthdays","teachers","manuals","manCats","counsel", ...(state.isAdmin ? ["kpiPriv","revenue"] : [])].forEach(name => {
     unsubs.push(DB.watch(name, list => {
       state[name] = name === "kpi" || name === "kpiPriv" || name === "counsel" || name === "revenue" ? Object.fromEntries(list.map(x => [x.id, x])) : list;
       onData(name);
     }));
   });
+  // 미션 평가: 대표는 전부, 관리자는 자기 원 전부(확정 전 포함), 교사는 자기 것 중 공개된 것만 (보안 규칙과 같은 조건으로 요청)
+  state.evals = {}; const evParts = {};
+  const evSet = (k, list) => { evParts[k] = list; state.evals = Object.fromEntries(Object.values(evParts).flat().map(x => [x.id, x])); onData("evals"); };
+  if (state.isAdmin) unsubs.push(DB.watch("evals", l => evSet("all", l), { where: [] }));
+  else {
+    const mb = BRANCH_KEYS.filter(b => !!state.member?.manager && state.myBranches.includes(b));
+    if (mb.length) unsubs.push(DB.watch("evals", l => evSet("mgr", l), { where: [["branch", "in", mb]] }));
+    unsubs.push(DB.watch("evals", l => evSet("me", l), { where: [["teacher", "==", state.user.email], ["published", "==", true]] }));
+  }
   ext.pay = { status:"off" }; ext.people = { status:"off" };
   if (state.isAdmin) { extConnect("pay", false); extConnect("people", false); setTimeout(() => counselSync(false), 1500); }
 }
@@ -1398,7 +1447,7 @@ function onData(name){
   if (name === "manCats") state.loaded.manCats = true;
   if (name === "tasks" || name === "routines") { state.loaded[name] = true; clearTimeout(onData.gt); onData.gt = setTimeout(genRoutineTasks, 800); }
   if (name === "birthdays" || name === "teachers") { state.loaded[name] = true; if (bdPending && state.loaded.birthdays && state.loaded.teachers) { const x = bdPending; bdPending = null; syncPeople(x); } }
-  const uses = { home:["notices","events","tasks","kpi","birthdays"], notice:["notices","events","birthdays","kpi","kpiPriv"], todo:["tasks","routines","members"], files:["files","folders"], manual:["manuals","manCats"], bm:["bookmarks","bmGroups"], kpi:["kpi","kpiPriv","teachers","counsel","revenue"] }[state.tab] || [];
+  const uses = { home:["notices","events","tasks","kpi","birthdays"], notice:["notices","events","birthdays","kpi","kpiPriv"], todo:["tasks","routines","members"], mission:["tasks","missions","evals","members"], files:["files","folders"], manual:["manuals","manCats"], bm:["bookmarks","bmGroups"], kpi:["kpi","kpiPriv","teachers","counsel","revenue"] }[state.tab] || [];
   if (uses.includes(name)) renderView({ keepFocus: true });
 }
 
@@ -1700,6 +1749,7 @@ function renderView({ keepFocus = false } = {}){
     : state.tab === "bm" ? bmPageHTML()
     : state.tab === "notice" ? noticePageHTML()
     : state.tab === "todo" ? workHubHTML()
+    : state.tab === "mission" ? missionHubHTML()
     : state.tab === "files" ? filesPageHTML()
     : state.tab === "manual" ? manualPageHTML()
     : state.tab === "kpi" ? kpiPageHTML()
@@ -2253,7 +2303,7 @@ const whKey = e => String(e).toLowerCase().replace(/[^a-z0-9]/g, "_").slice(0, 6
 function whRow(t, { who = true } = {}){
   const { n, c } = whChecks(t), today = todayISO();
   return `<li><button type="button" class="wh-item ${t.status}" data-act="wh-open" data-id="${esc(t.id)}">
-    <span class="wh-t">${t.routineId ? `<span class="tagk">루틴</span>` : ""}${t.needCheck ? `<span class="tagb">확인 필요</span>` : ""}<b>${esc(t.title)}</b></span>
+    <span class="wh-t">${t.routineId ? `<span class="tagk">루틴</span>` : ""}${t.missionId ? `<span class="tagk">미션 · ${esc(mTypeLabel(t.mType))}</span>` : ""}${t.needCheck ? `<span class="tagb">확인 필요</span>` : ""}<b>${esc(t.title)}</b></span>
     <span class="wh-m">${stPill(t)}${who ? `<span>${esc(t.assigneeName || "")}</span>` : ""}${state.branch === "all" ? `<span>${SHORT[t.branch] || ""}</span>` : ""}
       ${n ? `<span class="wh-ck">☑ ${c}/${n}</span>` : ""}${(t.files || []).length ? `<span>📎 ${t.files.length}</span>` : ""}
       ${t.due && t.status !== "done" ? `<span class="due ${whOpenPast(t) ? "late" : t.due === today ? "today" : ""}">${t.routineId ? md(t.due) + " " : ""}${dueLabel(t.due)}</span>` : ""}
@@ -2552,6 +2602,282 @@ async function genRoutineTasks(){
   } finally { genRoutineTasks.busy = false; }
 }
 
+/* ========= 미션허브 =========
+   관리자가 미션(과제)을 만들어 교사에게 배정 → 워크허브 '내 업무'와 캘린더에 함께 뜸 → 교사는 여기서 결과물을 올려 제출(버전으로 남음)
+   → 관리자가 평가 기준표로 점수·피드백(AI는 대표가 직접: 평가 요청문 복사 → AI 결과 붙여넣기) → 확정하면 교사에게 공개 → 포트폴리오로 쌓임
+   portalMissions = 미션 정의, portalTasks(missionId 있음) = 교사별 실행 건 + 제출 버전, portalEvals/{업무ID} = 평가(확정 전에는 관리자만 봄)
+   파일: 지금은 Firebase Storage(portal-files/mission_{업무ID}/). NAS 저장은 대치원 서버 PC 커넥터가 이어받음(2단계) */
+const M_TYPES = {
+  sample:   { label:"샘플작",       req:["대표 작품 사진","제작 과정 사진","재료·소요 시간·대상 연령","지도 의도와 안전 유의점"], rubric:[["교육 적합성",30],["과정 설명",25],["재현 가능성",25],["안전",20]] },
+  report:   { label:"교육 후 보고서", req:["교육명·일시","핵심 학습 내용","현장 적용 계획","성찰"], rubric:[["이해도",25],["현장 적용",35],["구체성",20],["성찰",20]] },
+  research: { label:"연구 PPT",     req:["연구 질문","참고 자료","PPT 파일(PPTX 또는 PDF)","수업 적용 계획"], rubric:[["근거",30],["논리",25],["현장 적용",30],["전달",15]] },
+  data:     { label:"데이터 수집",   req:["수집 목적·대상·기간","데이터 파일(CSV·XLSX)","수집 방법","관찰 요약"], rubric:[["정확성",35],["완전성",25],["출처",20],["활용성",20]] },
+  survey:   { label:"설문지 작성",   req:["설문 목적·대상","설문 문항(파일 또는 링크)","동의 안내"], rubric:[["목표 적합성",30],["문항 품질",30],["구성",20],["윤리·안내",20]] },
+  exam:     { label:"이론 시험",     req:["답안 제출"], rubric:[["점수",100]] }
+};
+const mTypeLabel = k => M_TYPES[k]?.label || "미션";
+const isMissionTask = t => !!t.missionId;
+const evalOf = t => state.evals[t.id];
+const mTasks = mid => state.tasks.filter(t => t.missionId === mid && t.status !== "canceled");
+const lastVer = t => (t.versions || []).at(-1);
+const isImg = f => /^image\//.test(f.type || "") || /\.(jpe?g|png|gif|webp|heic)$/i.test(f.name || "");
+const fileLinks = files => (files || []).map(f => { const u = DB.fileUrl(f); return `<li>${isImg(f) && u ? `<a href="${esc(u)}" target="_blank" rel="noopener"><img src="${esc(u)}" alt=""></a>` : ""}<a href="${esc(u || "#")}" target="_blank" rel="noopener">${esc(f.name)}</a><small>${sizeLabel(f.size || 0)}</small>${f.nas === "done" ? `<span class="tagb ok">NAS 보관</span>` : ""}</li>`; }).join("");
+
+function missionHubHTML(){
+  const mgr = anyMgr();
+  if (!mgr && !["mine","portfolio"].includes(state.mhView)) state.mhView = "mine";
+  if (mgr && state.mhView === "mine" && !state.tasks.some(t => isMissionTask(t) && whMine(t))) state.mhView = "list";
+  const v = state.mhView;
+  const pend = state.tasks.filter(t => isMissionTask(t) && visible(t) && isMgr(t.branch) && t.status === "submitted").length;
+  const myN = state.tasks.filter(t => isMissionTask(t) && whMine(t) && WH_OPEN.includes(t.status)).length;
+  const tabs = [...(mgr ? [["list","미션 목록"], ["review", `평가 대기 ${pend}`]] : []), ...(!mgr || state.tasks.some(t => isMissionTask(t) && whMine(t)) ? [["mine", `내 미션 ${myN}`]] : []), ["portfolio", mgr ? "교사 포트폴리오" : "내 포트폴리오"]];
+  let body;
+  if (state.mhOpen && mgr && v === "list") body = missionDetailHTML(state.missions.find(m => m.id === state.mhOpen));
+  else if (v === "list") body = missionListHTML();
+  else if (v === "review") { const L = state.tasks.filter(t => isMissionTask(t) && visible(t) && isMgr(t.branch) && t.status === "submitted").sort((a, b) => (a.submittedAt || 0) - (b.submittedAt || 0));
+    body = L.length ? `<section class="card"><ul class="wh-list">${L.map(t => mRow(t, true)).join("")}</ul></section>` : `<div class="soon"><h2>평가할 제출이 없어요</h2><p>교사가 미션을 제출하면 여기에 모여요.</p></div>`; }
+  else if (v === "mine") { const L = state.tasks.filter(t => isMissionTask(t) && whMine(t)).sort((a, b) => (WH_OPEN.includes(b.status) - WH_OPEN.includes(a.status)) || whSort(a, b));
+    body = L.length ? `<section class="card"><ul class="wh-list">${L.map(t => mRow(t, false)).join("")}</ul></section>` : `<div class="soon"><h2>받은 미션이 없어요</h2><p>관리자가 미션을 배정하면 여기와 워크허브 '내 업무'에 함께 나와요.</p></div>`; }
+  else body = portfolioHTML();
+  return `<div class="head"><h1>미션허브</h1><div class="acts">${mgr ? `<button type="button" class="btn btn-primary btn-sm" data-act="mh-new">미션 만들기</button>` : ""}</div></div>
+    <div class="seg2 wh-tabs" role="tablist">${tabs.map(([k, l]) => `<button type="button" data-act="mh-view" data-v="${k}" aria-pressed="${v === k}">${l}</button>`).join("")}</div>${body}`;
+}
+function mRow(t, who){
+  const e = evalOf(t), lv = lastVer(t);
+  return `<li><button type="button" class="wh-item ${t.status}" data-act="mh-open-task" data-id="${esc(t.id)}">
+    <span class="wh-t"><span class="tagk">${esc(mTypeLabel(t.mType))}</span><b>${esc(t.title)}</b></span>
+    <span class="wh-m">${stPill(t)}${who ? `<span>${esc(t.assigneeName)}</span>` : ""}${state.branch === "all" ? `<span>${SHORT[t.branch] || ""}</span>` : ""}
+      ${lv ? `<span>v${lv.v} · ${mdOfMs(lv.at)} 제출</span>` : ""}${e?.published ? `<span class="mh-score">${e.total}/${e.max}점</span>` : e ? `<span>평가 작성 중</span>` : ""}
+      ${t.due && !["done"].includes(t.status) ? `<span class="due ${whLate(t) ? "late" : ""}">${dueLabel(t.due)}</span>` : ""}</span></button></li>`;
+}
+function missionListHTML(){
+  const L = state.missions.filter(visible).sort((a, b) => (a.status === "closed") - (b.status === "closed") || (b.at || 0) - (a.at || 0));
+  if (!L.length) return `<div class="soon"><h2>아직 미션이 없어요</h2><p>'미션 만들기'로 샘플작·교육 후 보고서·연구 PPT 같은 과제를 교사에게 배정해 보세요.</p></div>`;
+  return `<div class="mh-grid">${L.map(m => { const T = mTasks(m.id), sub = T.filter(t => (t.versions || []).length).length, ev = T.filter(t => evalOf(t)?.published).length;
+    return `<button type="button" class="card mh-card ${m.status === "closed" ? "off" : ""}" data-act="mh-open" data-id="${esc(m.id)}">
+      <span class="wh-t"><span class="tagk">${esc(mTypeLabel(m.type))}</span>${m.status === "closed" ? `<span class="tagb">마감</span>` : ""}</span><b>${esc(m.title)}</b>
+      <span class="mh-meta">${esc(scopeLabel(m.branch))} · 마감 ${m.due ? md(m.due) : "-"} · ${T.length}명</span>
+      <span class="mh-prog"><i style="width:${T.length ? sub / T.length * 100 : 0}%"></i><em style="width:${T.length ? ev / T.length * 100 : 0}%"></em></span>
+      <span class="mh-meta">제출 ${sub}/${T.length} · 평가 확정 ${ev}</span></button>`; }).join("")}</div>`;
+}
+function missionDetailHTML(m){
+  if (!m) { state.mhOpen = null; return missionListHTML(); }
+  const T = mTasks(m.id).sort((a, b) => (a.branch || "").localeCompare(b.branch || "") || (a.assigneeName || "").localeCompare(b.assigneeName || ""));
+  return `<section class="card"><div class="man-top"><button type="button" class="linkish" data-act="mh-close">← 미션 목록</button><span class="sp"></span>
+      ${(m.branch === "all" ? state.isAdmin : isMgr(m.branch)) ? `<button type="button" class="icon-btn" data-act="mh-edit" data-id="${esc(m.id)}">미션 수정·대상 추가</button>` : ""}</div>
+    <div class="man-tags"><span class="tagk">${esc(mTypeLabel(m.type))}</span><span class="tagb">${esc(scopeLabel(m.branch))}</span>${m.status === "closed" ? `<span class="tagb">마감</span>` : ""}</div>
+    <h1 class="man-title">${esc(m.title)}</h1><p class="man-meta">마감 ${m.due ? md(m.due) : "-"} · ${esc(m.writer || "")} 작성</p>
+    ${m.goal ? `<div class="man-body small"><p><b>목표</b> ${esc(m.goal)}</p></div>` : ""}
+    <div class="tbl-wrap"><table class="ttable"><thead><tr><th>교사</th><th>원</th><th>상태</th><th class="num">제출</th><th class="num">점수</th><th></th></tr></thead><tbody>
+      ${T.map(t => { const e = evalOf(t), lv = lastVer(t); return `<tr><td><b>${esc(t.assigneeName)}</b></td><td>${SHORT[t.branch] || ""}</td><td>${stPill(t)}</td>
+        <td class="num">${lv ? `v${lv.v} · ${mdOfMs(lv.at)}` : "-"}</td><td class="num">${e ? `${e.total}/${e.max}${e.published ? "" : " <small>작성 중</small>"}` : "-"}</td>
+        <td><button type="button" class="icon-btn" data-act="mh-eval" data-id="${esc(t.id)}">${lv ? "평가" : "보기"}</button></td></tr>`; }).join("")}</tbody></table></div></section>`;
+}
+function portfolioHTML(){
+  const mgr = anyMgr();
+  const people = mgr ? [...new Map(state.tasks.filter(t => isMissionTask(t) && visible(t) && isMgr(t.branch)).map(t => [t.assignee, t.assigneeName])).entries()].sort((a, b) => a[1].localeCompare(b[1])) : [];
+  const who = mgr ? (state.mhWho && people.some(p => p[0] === state.mhWho) ? state.mhWho : people[0]?.[0]) : myEmail();
+  const evs = Object.values(state.evals).filter(e => e.teacher === who && e.published).sort((a, b) => (b.publishedAt || 0) - (a.publishedAt || 0));
+  const byType = {}; evs.forEach(e => { const k = e.mType; (byType[k] ||= []).push(e.total / e.max * 100); });
+  return `${mgr ? `<div class="mh-who">${people.length ? fSelect("교사", "mhWho", people, who, 'data-mh-who="1"') : `<p class="empty">아직 평가할 교사가 없어요.</p>`}</div>` : ""}
+    ${who ? `<section class="card"><div class="card-h"><h2>${esc(mgr ? (people.find(p => p[0] === who)?.[1] || "") : writerName())} 포트폴리오<span class="sub">확정된 평가만 모아요</span></h2></div>
+      <div class="mh-sum">${Object.entries(byType).map(([k, a]) => `<span><b>${esc(mTypeLabel(k))}</b> ${a.length}건 · 평균 ${Math.round(a.reduce((x, y) => x + y, 0) / a.length)}%</span>`).join("") || `<span class="empty">아직 확정된 평가가 없어요.</span>`}</div>
+      <ul class="mh-port">${evs.map(e => { const t = state.tasks.find(x => x.id === e.id), lv = t && (t.versions || []).find(x => x.v === e.version) || (t && lastVer(t));
+        return `<li><div class="mh-ph"><span class="tagk">${esc(mTypeLabel(e.mType))}</span><b>${esc(e.missionTitle)}</b><span class="mh-score">${e.total}/${e.max}점</span><span class="mh-meta">${mdOfMs(e.publishedAt || e.at)} · ${esc(e.name || "")} 평가 · v${e.version || 1}</span></div>
+          <div class="mh-scores">${(e.rubric || []).map((r, i) => `<span>${esc(r[0])} <b>${e.scores?.[i] ?? "-"}</b>/${r[1]}</span>`).join("")}</div>
+          ${e.strengths ? `<p class="wh-note"><b>잘한 점</b> ${esc(e.strengths)}</p>` : ""}${e.gaps ? `<p class="wh-note"><b>보완할 점</b> ${esc(e.gaps)}</p>` : ""}${e.next ? `<p class="wh-note"><b>다음 단계</b> ${esc(e.next)}</p>` : ""}
+          ${lv?.files?.length ? `<ul class="wh-files-l">${fileLinks(lv.files)}</ul>` : ""}</li>`; }).join("")}</ul></section>` : ""}`;
+}
+
+/* ── 미션 만들기 · 수정 ── */
+function missionForm(m){
+  const mgrs = mgrBranches(); if (!mgrs.length) return;
+  const scopes = state.isAdmin ? ["all", ...BRANCH_KEYS] : mgrs;
+  const t0 = m?.type || "research", b0 = m?.branch || (scopes.includes(state.branch) ? state.branch : scopes[0]);
+  const peopleOf = sc => (sc === "all" ? BRANCH_KEYS : [sc]).flatMap(b => whPeople(b).filter(p => !(state.isAdmin && p.email === myEmail() && !state.members.some(x => x.id === p.email))).map(p => ({ ...p, branch:b })))
+    .filter((p, i, a) => a.findIndex(x => x.email === p.email) === i);
+  const have = new Set(m ? mTasks(m.id).map(t => t.assignee) : []);
+  const pplHTML = sc => `<div class="fld"><span>대상 교사 ${m ? "<small>이미 배정된 사람은 빼고 새로 고른 사람만 추가돼요</small>" : ""}</span><div class="wh-ppl"><label class="all"><input type="checkbox" name="pplAll">전원</label>
+    ${peopleOf(sc).map(p => `<label class="${have.has(p.email) ? "dim" : ""}"><input type="checkbox" name="ppl" value="${esc(p.email)}" data-name="${esc(p.name)}" data-branch="${p.branch}" ${have.has(p.email) ? "checked disabled" : ""}>${esc(p.name)}${sc === "all" ? `<small>${SHORT[p.branch]}</small>` : ""}</label>`).join("")}</div></div>`;
+  const rub = m?.rubric || M_TYPES[t0].rubric;
+  openForm({
+    title: m ? "미션 수정" : "미션 만들기",
+    fields: `<div class="row2">${fSelect("미션 종류", "type", Object.entries(M_TYPES).map(([k, x]) => [k, x.label]), t0, m ? "disabled" : "")}
+        ${fSelect("범위", "branch", scopes.map(b => [b, scopeLabel(b)]), b0, m ? "disabled" : "")}</div>
+      ${fText("미션 이름", "title", m?.title, 'required maxlength="100" placeholder="예: 11월 연구 PPT — 남아 협동 그리기 수업 설계"')}
+      ${fArea("목표", "goal", m?.goal ?? "", 'rows="2" maxlength="1000"')}
+      ${fArea("안내 <small>무엇을, 어떻게, 어떤 형식으로</small>", "guide", m?.guide ?? "", 'rows="4" maxlength="5000"')}
+      ${fArea("필수 항목 <small>한 줄에 하나, 교사가 모두 체크해야 제출돼요</small>", "req", (m?.required || M_TYPES[t0].req).join("\n"), 'rows="4"')}
+      ${fArea("평가 기준표 <small>한 줄에 '항목 배점' (합계 100 권장)</small>", "rubric", rub.map(r => `${r[0]} ${r[1]}`).join("\n"), 'rows="4"')}
+      ${fDate("마감일", "due", m?.due || addDays(todayISO(), 14))}
+      <div id="mhPpl">${pplHTML(b0)}</div>
+      ${m ? `<label class="chk"><input type="checkbox" name="closed" ${m.status === "closed" ? "checked" : ""}> 마감 (더 이상 새 제출을 받지 않아요)</label>` : ""}`,
+    saveLabel: m ? "수정 저장" : "미션 배정",
+    async onSave(form){
+      const type = m?.type || val(form, "type"), branch = m?.branch || val(form, "branch"), title = val(form, "title");
+      if (!title) return formErr("미션 이름을 넣어 주세요.");
+      const rubric = form.elements.rubric.value.split("\n").map(x => x.trim()).filter(Boolean).map(x => { const mm = x.match(/^(.*?)[\s:·]+(\d+)\s*(점)?$/); return mm ? [mm[1].trim(), +mm[2]] : null; });
+      if (!rubric.length || rubric.some(r => !r)) return formErr("평가 기준표는 한 줄에 '항목 배점' 형식으로 적어 주세요. 예: 근거 30");
+      const required = form.elements.req.value.split("\n").map(x => x.trim()).filter(Boolean).slice(0, 20);
+      const ppl = [...form.querySelectorAll("input[name=ppl]:checked:not(:disabled)")].map(x => ({ email:x.value, name:x.dataset.name, branch:x.dataset.branch }));
+      if (!m && !ppl.length) return formErr("대상 교사를 한 명 이상 골라 주세요.");
+      const due = val(form, "due"), data = { title, goal: form.elements.goal.value.trim(), guide: form.elements.guide.value.trim(), required, rubric, due };
+      let mid = m?.id;
+      if (m) await DB.update("missions", m.id, { ...data, status: form.elements.closed.checked ? "closed" : "open", targets:[...(m.targets || []), ...ppl] });
+      else mid = await DB.add("missions", { ...data, type, branch, status:"open", targets: ppl });
+      for (const p of ppl) await DB.add("tasks", { title, branch:p.branch, due, desc: [data.goal && `**목표** ${data.goal}`, data.guide].filter(Boolean).join("\n\n"), checklist: required, checks: required.map(() => false),
+        needCheck:true, assignee:p.email, assigneeName:p.name, status:"todo", files:[], note:"", versions:[], missionId:mid, mType:type, log:[{ at:Date.now(), by:writerName(), act:`미션 배정 → ${p.name}` }] });
+      if (m){ // 기존 배정 건의 제목·마감·필수 항목 맞추기(이미 체크한 항목은 유지)
+        for (const t of mTasks(m.id).filter(t => !["done"].includes(t.status))) await DB.update("tasks", t.id, { title, due, checklist: required, checks: required.map((x, i) => (t.checklist || []).indexOf(x) >= 0 ? !!(t.checks || [])[(t.checklist || []).indexOf(x)] : false) });
+      }
+      toast(m ? `미션을 수정했어요${ppl.length ? `. ${ppl.length}명을 새로 배정했어요` : ""}.` : `${ppl.length}명에게 미션을 배정했어요. 워크허브 '내 업무'와 캘린더에도 떠요.`);
+      state.mhView = "list"; state.mhOpen = mid; renderView();
+    },
+    onDelete: m && (async () => { for (const t of mTasks(m.id)) { if ((t.versions || []).length) await DB.update("tasks", t.id, { status:"canceled" }); else await DB.remove("tasks", t.id); }
+      await DB.remove("missions", m.id); state.mhOpen = null; toast("미션을 지웠어요. 이미 제출된 자료는 남겨 뒀어요."); }),
+    deleteLabel: "미션 삭제"
+  });
+  $("dlg").classList.add("wide");
+  dlgCtx.deleteMsg = m && `'${m.title}' 미션을 지울까요? 아직 제출하지 않은 배정은 지워지고, 제출된 자료와 평가는 남아요.`;
+  $("dlgBody").addEventListener("change", e => {
+    const b = $("dlgBody");
+    if (e.target.name === "type" && !m){ const T = M_TYPES[e.target.value]; b.querySelector("[name=req]").value = T.req.join("\n"); b.querySelector("[name=rubric]").value = T.rubric.map(r => `${r[0]} ${r[1]}`).join("\n"); }
+    if (e.target.name === "branch" && !m) $("mhPpl").innerHTML = pplHTML(e.target.value);
+    if (e.target.name === "pplAll") b.querySelectorAll("input[name=ppl]:not(:disabled)").forEach(x => x.checked = e.target.checked);
+  });
+}
+
+/* ── 교사: 미션 열기·제출 (제출할 때마다 버전이 하나씩 쌓임) ── */
+function missionTaskDialog(t){
+  const m = state.missions.find(x => x.id === t.missionId), mine = whMine(t), e = evalOf(t);
+  if (!mine && isMgr(t.branch)) return evalDialog(t);
+  const editable = mine && ["todo","doing","revise"].includes(t.status) && m?.status !== "closed";
+  openForm({
+    title: t.title,
+    fields: `<div class="wh-meta">${stPill(t)}<span class="tagk">${esc(mTypeLabel(t.mType))}</span>${t.due ? `<span class="due ${whLate(t) ? "late" : ""}">마감 ${md(t.due)} (${dueLabel(t.due)})</span>` : ""}${m?.status === "closed" ? `<span class="tagb">마감된 미션</span>` : ""}</div>
+      ${t.status === "revise" && t.review?.note ? `<div class="wh-callout">보완 요청 (${esc(t.review.name || "")}): ${esc(t.review.note)}</div>` : ""}
+      ${e?.published ? evalCardHTML(e) : ""}
+      ${m?.goal ? `<p class="wh-note"><b>목표</b> ${esc(m.goal)}</p>` : ""}${m?.guide ? `<div class="man-body small wh-desc">${mdLite(m.guide)}</div>` : ""}
+      ${m?.rubric ? `<div class="fld"><span>평가 기준</span><div class="mh-scores">${m.rubric.map(r => `<span>${esc(r[0])} <b>${r[1]}</b>점</span>`).join("")}</div></div>` : ""}
+      ${(t.checklist || []).length ? `<div class="fld"><span>필수 항목</span><ul class="wh-cl">${t.checklist.map((x, i) => `<li><label><input type="checkbox" name="ck${i}" ${(t.checks || [])[i] ? "checked" : ""} ${editable ? "" : "disabled"}>${esc(x)}</label></li>`).join("")}</ul></div>` : ""}
+      ${editable ? fArea("설명 <small>무엇을 했는지, 의도, 참고한 것</small>", "note", t.note || "", 'rows="4" maxlength="5000"') : ""}
+      ${editable ? `<div class="fld"><span>결과물 파일 <small>PDF·PPTX·DOCX·XLSX·CSV·사진, 파일당 100MB</small></span><ul class="wh-files-l">${(t.files || []).map((f, i) => `<li>${esc(f.name)} <small>${sizeLabel(f.size || 0)}</small><button type="button" class="icon-btn" data-mh-del="${i}">빼기</button></li>`).join("")}</ul>
+        <input type="file" class="inp" name="mFiles" multiple accept="image/*,.pdf,.pptx,.ppt,.docx,.doc,.xlsx,.xls,.csv,.hwp"><div class="up-prog" hidden><i></i></div></div>` : ""}
+      ${(t.versions || []).length ? `<div class="fld"><span>제출 기록</span><ul class="mh-vers">${t.versions.slice().reverse().map(v => `<li><b>v${v.v}</b> ${new Date(v.at).toLocaleString("ko-KR", { month:"numeric", day:"numeric", hour:"2-digit", minute:"2-digit" })}${v.note ? `<p class="wh-note">${esc(v.note)}</p>` : ""}<ul class="wh-files-l">${fileLinks(v.files)}</ul></li>`).join("")}</ul></div>` : ""}
+      <div class="wh-acts">${editable ? `<button type="button" class="btn btn-ghost btn-sm" data-mh="save">임시 저장</button><button type="button" class="btn btn-primary btn-sm" data-mh="submit">${(t.versions || []).length ? "다시 제출" : "제출하기"}</button>` : ""}
+        ${mine && t.status === "submitted" && !e ? `<button type="button" class="btn btn-ghost btn-sm" data-mh="unsubmit">제출 취소</button>` : ""}</div>`,
+    saveLabel: "닫기", async onSave(){ return true; }
+  });
+  $("dlg").classList.add("wide");
+  const body = $("dlgBody");
+  body.addEventListener("click", async ev => {
+    const b = ev.target.closest("[data-mh],[data-mh-del]"); if (!b) return;
+    try {
+      if (b.dataset.mhDel != null){ const i = +b.dataset.mhDel, files = t.files.filter((_, j) => j !== i); await DB.update("tasks", t.id, { files }); $("dlg").close(); missionTaskDialog({ ...t, files }); return; }
+      const a = b.dataset.mh; b.disabled = true;
+      if (a === "unsubmit") { const vers = (t.versions || []).slice(0, -1); await DB.update("tasks", t.id, { status:"doing", versions:vers, log: whLog(t, "제출 취소") }); $("dlg").close(); toast("제출을 취소했어요."); return; }
+      const f = $("dlgForm"), checks = (t.checklist || []).map((_, i) => !!f.elements["ck" + i]?.checked), note = (f.elements.note?.value || "").trim();
+      const inp = body.querySelector("input[name=mFiles]"), fs = [...(inp?.files || [])];
+      if (fs.some(x => x.size > 100 * 1024 * 1024)) { b.disabled = false; return formErr("파일당 100MB까지 올릴 수 있어요."); }
+      let files = [...(t.files || [])];
+      if (fs.length){ const bar = body.querySelector(".up-prog"); bar.hidden = false;
+        for (const [i, x] of fs.entries()){ const v = await DB.putFile("mission_" + t.id, x, p => bar.firstElementChild.style.width = Math.round((i + p / 100) / fs.length * 100) + "%"); files.push({ ...v, name:x.name, type:x.type || "", nas:"wait" }); } }
+      if (a === "submit"){
+        if (checks.some(x => !x)) { b.disabled = false; return formErr("필수 항목을 모두 체크해야 제출할 수 있어요."); }
+        if (!files.length) { b.disabled = false; return formErr("결과물 파일을 하나 이상 올려 주세요."); }
+        const v = ((t.versions || []).at(-1)?.v || 0) + 1;
+        await DB.update("tasks", t.id, { checks, note, files, status:"submitted", submittedAt:Date.now(), versions:[...(t.versions || []), { v, at:Date.now(), note, files, checks }].slice(-10), log: whLog(t, `제출 v${v}`) });
+        toast(`제출했어요 (v${v}). 관리자가 평가하면 알려 드려요.`);
+      } else { await DB.update("tasks", t.id, { checks, note, files, status: t.status === "revise" ? "revise" : "doing", log: whLog(t, "임시 저장") }); toast("임시 저장했어요."); }
+      $("dlg").close();
+    } catch (err) { b.disabled = false; formErr("저장하지 못했어요. " + (err.code || err.message || "")); }
+  });
+}
+const evalCardHTML = e => `<div class="mh-eval"><div class="mh-ph"><b>평가 결과</b><span class="mh-score">${e.total}/${e.max}점</span><span class="mh-meta">${esc(e.name || "")} · ${mdOfMs(e.publishedAt || e.at)}</span></div>
+  <div class="mh-scores">${(e.rubric || []).map((r, i) => `<span>${esc(r[0])} <b>${e.scores?.[i] ?? "-"}</b>/${r[1]}</span>`).join("")}</div>
+  ${e.strengths ? `<p class="wh-note"><b>잘한 점</b> ${esc(e.strengths)}</p>` : ""}${e.gaps ? `<p class="wh-note"><b>보완할 점</b> ${esc(e.gaps)}</p>` : ""}${e.next ? `<p class="wh-note"><b>다음 단계</b> ${esc(e.next)}</p>` : ""}</div>`;
+
+/* ── 관리자: 평가 (AI는 대표가 직접 — 요청문 복사 → AI 답 붙여넣기 → 확인·수정 → 확정) ── */
+function aiPrompt(t, m, lv){
+  return `당신은 남아미술학원 '자라다'의 교사 미션 평가를 돕는 평가 보조자입니다. 아래 평가 기준표에 따라 첨부한 제출물을 평가해 주세요.
+근거가 부족한 항목은 점수를 낮게 주지 말고 '판단 보류'라고 적어 주세요. 사진만으로 확인할 수 없는 사실(실제 수업 성과·안전 등)은 추정하지 마세요.
+
+[미션] ${m?.title || t.title} (${mTypeLabel(t.mType)})
+[목표] ${m?.goal || "-"}
+[안내] ${m?.guide || "-"}
+[필수 항목] ${(t.checklist || []).join(" / ")}
+[교사 설명] ${lv?.note || "-"}
+[제출 파일] ${(lv?.files || []).map(f => f.name).join(", ") || "-"}
+
+[평가 기준표]
+${(m?.rubric || []).map((r, i) => `${i + 1}. ${r[0]} (${r[1]}점)`).join("\n")}
+
+아래 JSON 형식으로만 답해 주세요(설명 문장 없이).
+{"scores":[${(m?.rubric || []).map(r => `<${r[0]} 점수, 0~${r[1]}>`).join(", ")}],
+ "evidence":["항목별 근거(파일·쪽·슬라이드 번호)"],
+ "strengths":"잘한 점 2~3문장",
+ "gaps":"보완할 점 2~3문장",
+ "next":"다음에 해 볼 구체적 행동 1~2개"}`;
+}
+function evalDialog(t){
+  const m = state.missions.find(x => x.id === t.missionId), e = evalOf(t) || {}, lv = lastVer(t), rub = m?.rubric || e.rubric || [];
+  const sumOf = f => rub.reduce((a, r, i) => a + (Math.min(r[1], Math.max(0, +f.elements["sc" + i]?.value || 0))), 0), max = rub.reduce((a, r) => a + r[1], 0);
+  openForm({
+    title: `${t.assigneeName} · ${t.title}`,
+    fields: `<div class="wh-meta">${stPill(t)}<span class="tagk">${esc(mTypeLabel(t.mType))}</span><span>${esc(BRANCHES[t.branch])}</span>${lv ? `<span>v${lv.v} · ${new Date(lv.at).toLocaleString("ko-KR", { month:"numeric", day:"numeric", hour:"2-digit", minute:"2-digit" })} 제출</span>` : `<span class="tagb">아직 제출 전</span>`}${e.published ? `<span class="tagb ok">공개됨</span>` : ""}</div>
+      ${lv ? `<div class="mh-sub">${lv.note ? `<p class="wh-note">${esc(lv.note)}</p>` : ""}<ul class="wh-files-l">${fileLinks(lv.files)}</ul>
+        ${(t.versions || []).length > 1 ? `<details class="wh-log"><summary>이전 제출 ${t.versions.length - 1}개</summary><ul class="mh-vers">${t.versions.slice(0, -1).reverse().map(v => `<li><b>v${v.v}</b> ${mdOfMs(v.at)}${v.note ? ` — ${esc(v.note.slice(0, 80))}` : ""}<ul class="wh-files-l">${fileLinks(v.files)}</ul></li>`).join("")}</ul></details>` : ""}</div>` : ""}
+      <details class="mh-ai" ${lv ? "" : "hidden"}><summary>AI로 평가 초안 만들기 (직접)</summary>
+        <p class="hint small">① 요청문을 복사해 AI(Claude 등)에 붙여넣고, 위 제출 파일을 함께 올려요 ② AI가 준 답(JSON)을 아래 칸에 붙여넣으면 점수·피드백 칸이 채워져요 ③ 확인·수정한 뒤 확정해요. AI 답은 초안일 뿐이에요.</p>
+        <div class="wh-acts" style="justify-content:flex-start;border:0;margin:6px 0;padding:0"><button type="button" class="btn btn-ghost btn-sm" data-ev="copy">평가 요청문 복사</button></div>
+        <textarea class="inp mono" name="aiRaw" rows="4" placeholder='AI 답을 여기에 붙여넣기 — {"scores":[...], "strengths":"...", ...}'></textarea>
+        <div class="wh-acts" style="justify-content:flex-start;border:0;margin:6px 0;padding:0"><button type="button" class="btn btn-ghost btn-sm" data-ev="paste">붙여넣은 답으로 채우기</button></div></details>
+      <div class="fld"><span>평가 기준표 <small id="evSum">합계 ${e.total ?? 0} / ${max}</small></span><div class="mh-rub">${rub.map((r, i) => `<label><span>${esc(r[0])}</span><input class="inp" type="number" name="sc${i}" min="0" max="${r[1]}" step="1" value="${e.scores?.[i] ?? ""}"><small>/ ${r[1]}</small></label>`).join("")}</div></div>
+      ${fArea("잘한 점", "strengths", e.strengths || "", 'rows="2" maxlength="2000"')}
+      ${fArea("보완할 점", "gaps", e.gaps || "", 'rows="2" maxlength="2000"')}
+      ${fArea("다음 단계", "next", e.next || "", 'rows="2" maxlength="1000"')}
+      ${e.aiUsed ? `<p class="hint small">AI 초안을 참고했어요.</p>` : ""}
+      <div class="wh-acts"><button type="button" class="btn btn-ghost btn-sm" data-ev="save">임시 저장</button>
+        ${lv && t.status !== "done" ? `<button type="button" class="btn btn-ghost btn-sm" data-ev="revise">보완 요청</button>` : ""}
+        ${lv ? `<button type="button" class="btn btn-primary btn-sm" data-ev="publish">${e.published ? "다시 확정" : "확정하고 공개"}</button>` : ""}</div>`,
+    saveLabel: "닫기", async onSave(){ return true; }
+  });
+  $("dlg").classList.add("wide");
+  const body = $("dlgBody"), F = () => $("dlgForm");
+  let aiUsed = !!e.aiUsed;
+  body.addEventListener("input", ev => { if (/^sc\d+$/.test(ev.target.name)) $("evSum").textContent = `합계 ${sumOf(F())} / ${max}`; });
+  body.addEventListener("click", async ev => {
+    const b = ev.target.closest("[data-ev]"); if (!b) return; const a = b.dataset.ev;
+    if (a === "copy"){ try { await navigator.clipboard.writeText(aiPrompt(t, m, lv)); toast("평가 요청문을 복사했어요. AI 채팅에 붙여넣고 제출 파일을 함께 올려 주세요."); } catch { formErr("복사하지 못했어요. 브라우저 권한을 확인해 주세요."); } return; }
+    if (a === "paste"){
+      const raw = F().elements.aiRaw.value, j = raw.slice(raw.indexOf("{"), raw.lastIndexOf("}") + 1);
+      try { const o = JSON.parse(j); (o.scores || []).forEach((s, i) => { const el = F().elements["sc" + i]; if (el && s !== "" && s != null && !isNaN(+s)) el.value = Math.min(rub[i][1], Math.max(0, Math.round(+s))); });
+        ["strengths","gaps","next"].forEach(k => { if (o[k]) F().elements[k].value = String(o[k]); });
+        aiUsed = true; $("evSum").textContent = `합계 ${sumOf(F())} / ${max}`; toast("AI 답으로 칸을 채웠어요. 확인하고 고쳐 주세요."); $("dlgErr").textContent = ""; }
+      catch { formErr("AI 답에서 JSON을 찾지 못했어요. { 로 시작해서 } 로 끝나는 부분을 붙여넣어 주세요."); }
+      return;
+    }
+    const f = F(), scores = rub.map((r, i) => f.elements["sc" + i].value === "" ? null : Math.min(r[1], Math.max(0, Math.round(+f.elements["sc" + i].value))));
+    const base = { branch:t.branch, teacher:t.assignee, teacherName:t.assigneeName, missionId:t.missionId, missionTitle:m?.title || t.title, mType:t.mType, rubric:rub, scores, total:sumOf(f), max,
+      strengths:f.elements.strengths.value.trim(), gaps:f.elements.gaps.value.trim(), next:f.elements.next.value.trim(), version: lv?.v || 0, aiUsed, by:myEmail(), name:writerName(), at:Date.now() };
+    b.disabled = true;
+    try {
+      if (a === "publish"){
+        if (scores.some(s => s == null)) { b.disabled = false; return formErr("모든 항목에 점수를 넣어야 확정할 수 있어요."); }
+        await DB.set("evals", t.id, { ...base, published:true, publishedAt:Date.now(), history:[...(e.history || []), ...(e.published ? [{ total:e.total, at:e.publishedAt, by:e.name }] : [])].slice(-10) });
+        await DB.update("tasks", t.id, { status:"done", doneAt:Date.now(), review:{ by:myEmail(), name:writerName(), at:Date.now(), note:"평가 확정", decision:"approve" }, log: whLog(t, `평가 확정 ${base.total}/${max}`) });
+        toast("평가를 확정했어요. 교사에게 점수와 피드백이 공개돼요.");
+      } else if (a === "revise"){
+        const note = base.gaps || ""; if (!note) { b.disabled = false; return formErr("'보완할 점'에 무엇을 보완할지 적어 주세요."); }
+        await DB.set("evals", t.id, { ...base, published:false, history:e.history || [] });
+        await DB.update("tasks", t.id, { status:"revise", review:{ by:myEmail(), name:writerName(), at:Date.now(), note, decision:"revise" }, revCount:(t.revCount || 0) + 1, log: whLog(t, "보완 요청", note) });
+        toast("보완을 요청했어요.");
+      } else { await DB.set("evals", t.id, { ...base, published:!!e.published, publishedAt:e.publishedAt || null, history:e.history || [] }); toast("임시 저장했어요. 교사에게는 아직 안 보여요."); }
+      $("dlg").close();
+    } catch (err) { b.disabled = false; formErr("저장하지 못했어요. " + (err.code || err.message || "")); }
+  });
+}
+
 /* ── 자료실 화면 ── */
 function filesPageHTML(){
   const vis = state.files.filter(visible);
@@ -2839,7 +3165,13 @@ $("view").addEventListener("click", e => {
     case "notice-open": state.openNotice = id; goTab("notice"); break;
     case "notice-toggle": state.openNotice = state.openNotice === id ? null : id; renderView(); $("view").querySelector(`[data-fk="n-${id}"]`)?.focus(); break;
     case "todo-new": case "wh-new": taskForm(null, { title: el.dataset.title || "" }); break;
-    case "wh-open": { const t = state.tasks.find(x => x.id === id); if (t) taskDialog(t); break; }
+    case "wh-open": case "mh-open-task": { const t = state.tasks.find(x => x.id === id); if (t) (t.missionId ? missionTaskDialog : taskDialog)(t); break; }
+    case "mh-view": state.mhView = el.dataset.v; state.mhOpen = null; renderView(); break;
+    case "mh-new": missionForm(null); break;
+    case "mh-open": state.mhOpen = id; renderView(); scrollTo(0, 0); break;
+    case "mh-close": state.mhOpen = null; renderView(); break;
+    case "mh-edit": missionForm(state.missions.find(x => x.id === id)); break;
+    case "mh-eval": { const t = state.tasks.find(x => x.id === id); if (t) evalDialog(t); break; }
     case "wh-view": state.whView = el.dataset.v; renderView(); break;
     case "wh-filter": state.whFilter = el.dataset.f; renderView(); break;
     case "wh-who": state.whWho = id || ""; renderView(); break;
@@ -3465,6 +3797,7 @@ async function readLMSFile(file){
   const aoa = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header:1, raw:true, defval:"" });
   return rowsFromSheet(aoa);
 }
+document.addEventListener("change", e => { if (e.target.matches?.("[data-mh-who]")) { state.mhWho = e.target.value; renderView(); } });
 $("lmsPick")?.addEventListener("change", async e => {
   const fs = [...e.target.files]; e.target.value = ""; if (!fs.length) return;
   const ok = [];
