@@ -3012,7 +3012,7 @@ const won = n => Math.round(n).toLocaleString("ko-KR") + "원";
 const man = n => n >= 1e7 ? (Math.round(n / 1e7) / 10) + "억" : n >= 1e4 ? Math.round(n / 1e4).toLocaleString("ko-KR") + "만" : String(n);
 
 /* ── 차트 (축 하나, 마우스를 올리면 숫자) ── */
-const CW = 560, CH = 200, CP = { l:44, r:16, t:16, b:26 };
+const CW = 560, CH = 200, CH0 = 200, CP = { l:44, r:16, t:16, b:26 };
 function niceTicks(min, max, count = 4){
   if (max === min) { max = min + 1; }
   const raw = (max - min) / count, mag = Math.pow(10, Math.floor(Math.log10(raw)));
@@ -3022,11 +3022,12 @@ function niceTicks(min, max, count = 4){
   return out;
 }
 const mLabel = ym => +ym.slice(5) + "월";
-function lineChart({ labels, series, fmtV = v => v, zero = false, fixMax = null, aria }){
+function lineChart({ labels, series, fmtV = v => v, zero = false, fixMax = null, fixMin = null, h = null, aria }){
+  const CH = h || CH0;
   const all = series.flatMap(s => s.values).filter(v => v != null);
   const mn = Math.min(...all), mx = Math.max(...all), pad = (mx - mn) * .15 || 2;
   // fixMax: 세로 최댓값을 고정(데이터가 더 크면 늘림)하고 0부터 그림
-  const ticks = fixMax ? niceTicks(0, Math.max(fixMax, mx)) : niceTicks(zero ? 0 : Math.max(0, mn - pad), mx + pad), y0 = ticks[0], y1 = ticks.at(-1);
+  const ticks = fixMax ? niceTicks(fixMin != null ? Math.min(fixMin, Math.floor(mn / 50) * 50) : 0, Math.max(fixMax, mx)) : niceTicks(zero ? 0 : Math.max(0, mn - pad), mx + pad), y0 = ticks[0], y1 = ticks.at(-1);
   const x = i => CP.l + (CW - CP.l - CP.r) * (labels.length === 1 ? .5 : i / (labels.length - 1));
   const y = v => CP.t + (CH - CP.t - CP.b) * (1 - (v - y0) / (y1 - y0));
   const step = (CW - CP.l - CP.r) / Math.max(1, labels.length - 1);
@@ -3328,7 +3329,7 @@ function kpiPageHTML(){
     ${nlTilesHTML(labels, nlSeries, hasLY)}</section>
   <div class="grid2 even">
     <section class="card"><h2>재원생 추이 <span class="sub">최근 12개월, 월말 기준</span></h2>
-      ${lineChart({ labels, series:enrSeries, fmtV:v => v + "명", fixMax:400, aria:"재원생 추이" })}${enrSeries.length > 1 ? legend(enrSeries) : ""}</section>
+      ${lineChart({ labels, series:enrSeries, fmtV:v => v + "명", fixMin:100, fixMax:400, h:330, aria:"재원생 추이" })}${enrSeries.length > 1 ? legend(enrSeries) : ""}</section>
     <section class="card"><h2>샘플에서 등록까지 <span class="sub">이번 달</span></h2>${funnel}</section>
   </div>
   <section class="card"><h2>요일 · 시간대별 재원생 <span class="sub">${snaps.length > 1 ? "원 합계, " : ""}반 이름 기준</span></h2>${heatHTML}</section>
