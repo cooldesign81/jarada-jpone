@@ -589,7 +589,7 @@
   .age-dist{display:grid;gap:6px}
   .ad-row{display:grid;grid-template-columns:64px minmax(0,1fr) 72px;align-items:center;gap:8px;font-size:13px}
   .ad-k{color:var(--ink);font-weight:700}
-  .ad-bar{height:14px;background:#F2F2F2;border-radius:4px;overflow:hidden}.ad-bar i{display:block;height:100%;background:var(--c-enrolled);border-radius:4px}
+  .ad-bar{height:14px;background:#F2F2F2;border-radius:7px;overflow:hidden}.ad-bar i{display:block;height:100%;background:linear-gradient(90deg,#7CC5B8,#0B5F57);border-radius:7px}
   .ad-v{text-align:right;font-variant-numeric:tabular-nums;color:var(--ink);font-weight:700}.ad-v small{color:var(--text-sub);font-weight:500;margin-left:4px;font-size:11px}
   .agetbl td,.agetbl th{padding:7px 6px}.agetbl .hc2{min-width:34px;border-radius:0}
   .agetbl tr.sumr td{background:#FAFAFA}
@@ -3337,7 +3337,7 @@ function ageHTML(snaps){
     .filter(({ t, s }) => { if (!state.teachers.length) return true; const st = teacherStart(t.name, s.branch); return st && st.active; })
     .filter(({ t }) => t.ages && Object.keys(t.ages).length).sort((a, b) => b.t.enrolled - a.t.enrolled);
   const cmax = Math.max(1, ...rows.flatMap(({ t }) => AGE_KEYS.map(k => t.ages[k] || 0)));
-  const cell = (v, strong) => { const a = v / cmax; return `<td class="num hc2" style="background:${v ? `rgba(37,99,166,${(0.08 + a * 0.8).toFixed(2)})` : "transparent"};color:${a > .55 ? "#fff" : v ? "var(--ink)" : "#C4C4C4"}${strong ? ";font-weight:700" : ""}">${v || "·"}</td>`; };
+  const cell = (v, strong) => { const a = v / cmax; return `<td class="num hc2" style="background:${v ? tealOf(Math.min(1, a)) : "transparent"};color:${a > .55 ? "#fff" : v ? "var(--ink)" : "#C4C4C4"}${a > .55 || strong ? ";font-weight:700" : ""}">${v || "·"}</td>`; };
   const colSum = k => rows.reduce((a, { t }) => a + (t.ages[k] || 0), 0);
   const table = rows.length ? `<div class="tbl-wrap"><table class="ttable agetbl"><thead><tr><th>교사</th>${state.branch === "all" ? "<th>원</th>" : ""}${AGE_KEYS.map(k => `<th class="num">${k === "5" ? "~5세" : k === "13" ? "13세~" : k + "세"}</th>`).join("")}<th class="num sep">합계</th></tr></thead><tbody>
       ${rows.map(({ t, s }) => { const tsum = AGE_KEYS.reduce((a, k) => a + (t.ages[k] || 0), 0);
