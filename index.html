@@ -622,7 +622,7 @@
   .heat .hc{height:30px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px}
   .heat .hc:hover{outline:2px solid var(--ink)}
   .heat-scale{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text-sub);margin-top:8px;justify-content:flex-end}
-  .heat-scale i{width:120px;height:8px;border-radius:4px;background:linear-gradient(90deg,rgba(37,99,166,.12),rgba(37,99,166,1))}
+  .heat-scale i{width:120px;height:8px;border-radius:4px;background:linear-gradient(90deg,#E0F2EE,#0B5F57)}
   .tbl-wrap{overflow-x:auto}
   .ttable{width:100%;border-collapse:collapse;font-size:13px}
   .ttable th{font-size:12px;font-weight:600;color:var(--text-sub);text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
@@ -3292,6 +3292,8 @@ function checkListHTML(){
     + `<p class="fnote">${esc(snaps.map(s => `${SHORT[s.branch]} ${md(s.base)}`).join(", "))} 올린 원생 명단 기준이에요.</p>`;
 }
 
+/* 요일·시간대 표 색: 옅은 청록 #E0F2EE → 진한 청록 #0B5F57 (t = 0~1) */
+const tealOf = t => { const A = [0xE0,0xF2,0xEE], B = [0x0B,0x5F,0x57]; return `rgb(${A.map((v, i) => Math.round(v + (B[i] - v) * Math.max(0, Math.min(1, t)))).join(",")})`; };
 function kpiPageHTML(){
   const bs = visBranches(), snaps = bs.map(b => state.kpi[b]).filter(Boolean), canUp = branchOptions("kpi").some(b => b !== "all");
   const metaLine = bs.map(b => state.kpi[b] ? `${BRANCHES[b]} ${md(state.kpi[b].base)} 기준` : `${BRANCHES[b]} 명단 없음`).join(", ");
@@ -3336,7 +3338,7 @@ function kpiPageHTML(){
   const heatHTML = days.length ? `<div class="heat" style="grid-template-columns:28px repeat(${hours.length},minmax(0,1fr))">
       <span></span>${hours.map(h => `<span class="hh">${h}시</span>`).join("")}
       ${days.map(d => `<span class="hd">${d}</span>${hours.map(h => { const n = heat[d][h] || 0, a = n / hmax;
-        return `<span class="hc" style="background:${n ? `rgba(37,99,166,${(0.12 + a * 0.88).toFixed(2)})` : "#F4F4F4"};color:${a > .55 ? "#fff" : "var(--ink)"}" data-tip="${esc(`${d}요일 ${h}시\n재원 ${n}명`)}">${n || ""}</span>`; }).join("")}`).join("")}
+        return `<span class="hc" style="background:${n ? tealOf(a) : "#F4F4F4"};color:${a > .5 ? "#fff" : "var(--ink)"}" data-tip="${esc(`${d}요일 ${h}시\n재원 ${n}명`)}">${n || ""}</span>`; }).join("")}`).join("")}
     </div><div class="heat-scale"><span>적음</span><i></i><span>많음</span></div>` : `<p class="empty">반 이름에서 요일·시간을 읽지 못했어요.</p>`;
   /* 선생님별 (기간 선택) */
   const teacherHTML = teacherTableHTML(snaps);
