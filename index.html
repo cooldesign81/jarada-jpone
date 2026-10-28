@@ -488,7 +488,7 @@
   .pm-evs{border-top:1px dashed var(--line);padding-top:6px}
   .pm-e{all:unset;cursor:pointer;display:grid;grid-template-columns:8px auto 1fr;align-items:center;gap:6px;font-size:12px;color:var(--text);width:100%}
   .pm-e i{width:8px;height:8px;border-radius:2px}.pm-e .d{color:var(--text-sub);font-variant-numeric:tabular-nums}.pm-e .t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .pm-e.major .t{font-weight:800;color:var(--ink)}.pm-e small{color:var(--text-sub)}
+  .pm-e .t{color:var(--ink);font-weight:700}.pm-e small{color:var(--text-sub)}
   .pm-more,.pm-none{font-size:11px;color:var(--text-sub);margin:0}
   @media (max-width:1100px){ .plan-grid{grid-template-columns:repeat(3,minmax(0,1fr))} }
   @media (max-width:760px){ .plan-grid{grid-template-columns:repeat(2,minmax(0,1fr))} }
@@ -1116,8 +1116,8 @@ function seed(){
       { id:"e3", title:"학부모 상담 주간", kind:"event", date:d(-2), end:d(2), branch:"pyeongchon", at:ago(9), createdBy:PC, writer:"평촌원" },
       { id:"e4", title:"할로윈 수업", kind:"event", date:d(7), branch:"daechi", at:ago(9), createdBy:DC, writer:"대치원" },
       { id:"e5", title:"할로윈 파티", kind:"event", date:d(7), branch:"banpo", at:ago(8), createdBy:BP, writer:"반포원" },
-      { id:"e6", title:"신규 교사 교육 시작", kind:"edu", date:d(9), branch:"all", at:ago(5), createdBy:ADMIN, writer:"대표" },
-      { id:"e7", title:"교사 학회", kind:"edu", date:d(21), branch:"all", at:ago(5), createdBy:ADMIN, writer:"대표" },
+      { id:"e6", title:"신규 교사 교육 시작", kind:"edu", major:true, date:d(9), branch:"all", at:ago(5), createdBy:ADMIN, writer:"대표" },
+      { id:"e7", title:"교사 학회", kind:"edu", major:true, date:d(21), branch:"all", at:ago(5), createdBy:ADMIN, writer:"대표" },
       { id:"e8", title:"대치원 휴원 (건물 점검)", kind:"off", date:d(12), branch:"daechi", at:ago(2), createdBy:DC, writer:"대치원" }
     ],
     todos: [],
@@ -2268,34 +2268,31 @@ function noticePageHTML(){
       </li>`; }).join("")}</ul>` : `<p class="empty">아직 공지가 없어요.${canWrite ? " 오른쪽 위 '공지 쓰기'로 첫 공지를 올려 보세요." : ""}</p>`}
   </section>
   <section class="card" style="margin-bottom:16px"><h2>지금 확인이 필요한 것</h2>${checkListHTML()}</section>
-  <section class="card">
-    <div class="seg2 cal-views" role="tablist" aria-label="캘린더 보기">
-      <button type="button" data-act="cal-view" data-v="month" aria-pressed="${state.calView !== "plan"}">달력</button>
-      <button type="button" data-act="cal-view" data-v="plan" aria-pressed="${state.calView === "plan"}">월간 계획표</button></div>
-    ${state.calView === "plan" ? planBoardHTML() : calHTML("month")}</section>`;
+  <section class="card" style="margin-bottom:16px">${calHTML("month")}</section>
+  <section class="card">${planBoardHTML()}</section>`;
 }
 /* ── 월간 계획표: 한 해 12달을 한눈에. 달마다 '이달의 계획'(날짜 없는 목표·할 일) + 그 달 일정(★ = 주요 일정) ── */
 function planBoardHTML(){
   const y = state.planY, now = ymOf(todayISO()), canAdd = branchOptions("events").length > 0;
-  const plans = state.plans.filter(visible), evs = state.events.filter(e => visible(e) && e.repeat !== "weekly");
+  const plans = state.plans.filter(visible), evs = state.events.filter(e => visible(e) && e.major);
   const months = Array.from({ length:12 }, (_, i) => `${y}-${pad2(i + 1)}`);
   return `<div class="cal-head"><h2>${y}년 월간 계획표</h2><div class="cal-nav">
       <button type="button" data-act="plan-y" data-d="-1" aria-label="이전 해"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></button>
       <button type="button" data-act="plan-y" data-d="0">올해</button>
       <button type="button" data-act="plan-y" data-d="1" aria-label="다음 해"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
       ${canAdd ? `<button type="button" data-act="plan-new" data-ym="${y === +now.slice(0, 4) ? now : months[0]}">계획 추가</button>` : ""}</div></div>
-    <p class="hint small">달마다 위쪽은 이달의 계획(목표·할 일), 아래쪽은 그 달 일정이에요. ★는 '주요 일정'으로 표시한 일정이에요. 매주 반복 일정은 빼고 보여요.</p>
+    <p class="hint small">달마다 위쪽은 이달의 계획(목표·할 일), 아래쪽은 일정을 만들 때 '월간 계획표에 올리기'를 체크한 주요 일정이에요.</p>
     <div class="plan-grid">${months.map(ym => {
       const P = plans.filter(p => p.ym === ym).sort((a, b) => (a.done ? 1 : 0) - (b.done ? 1 : 0) || (a.at || 0) - (b.at || 0));
-      const E = evs.filter(e => (e.date || "").slice(0, 7) === ym || (e.end && e.date.slice(0, 7) < ym && e.end.slice(0, 7) >= ym)).sort((a, b) => (b.major ? 1 : 0) - (a.major ? 1 : 0) || a.date.localeCompare(b.date));
+      const E = evs.filter(e => (e.date || "").slice(0, 7) === ym || (e.end && e.date.slice(0, 7) < ym && e.end.slice(0, 7) >= ym)).sort((a, b) => a.date.localeCompare(b.date));
       const past = ym < now;
       return `<div class="plan-m ${ym === now ? "cur" : ""} ${past ? "past" : ""}">
         <div class="pm-h"><b>${+ym.slice(5)}월</b>${ym === now ? `<span class="tagk">이번 달</span>` : ""}${canAdd ? `<button type="button" class="icon-btn" data-act="plan-new" data-ym="${ym}" aria-label="${+ym.slice(5)}월 계획 추가">+ 계획</button>` : ""}</div>
         ${P.length ? `<ul class="pm-plans">${P.map(p => `<li class="${p.done ? "done" : ""}">
             <input type="checkbox" data-plan-done="${esc(p.id)}" ${p.done ? "checked" : ""} ${canEdit(p) ? "" : "disabled"} aria-label="${esc(p.title)} 완료">
             <button type="button" class="pm-t" data-act="plan-edit" data-id="${esc(p.id)}">${esc(p.title)}${state.branch === "all" && p.branch !== "all" ? ` <small>${SHORT[p.branch]}</small>` : ""}</button></li>`).join("")}</ul>` : ""}
-        ${E.length ? `<ul class="pm-evs">${E.slice(0, 8).map(e => `<li><button type="button" class="pm-e ${e.major ? "major" : ""}" data-act="plan-ev" data-day="${e.date}"><i style="background:${CAL_KIND[e.kind]?.color || "#999"}"></i>
-            <span class="d">${md(e.date)}${e.end && e.end > e.date ? `~${md(e.end)}` : ""}</span><span class="t">${e.major ? "★ " : ""}${esc(e.title)}${state.branch === "all" && e.branch !== "all" ? ` <small>${SHORT[e.branch]}</small>` : ""}</span></button></li>`).join("")}
+        ${E.length ? `<ul class="pm-evs">${E.slice(0, 8).map(e => `<li><button type="button" class="pm-e" data-act="plan-ev" data-day="${e.date}"><i style="background:${CAL_KIND[e.kind]?.color || "#999"}"></i>
+            <span class="d">${md(e.date)}${e.end && e.end > e.date ? `~${md(e.end)}` : ""}</span><span class="t">${esc(e.title)}${state.branch === "all" && e.branch !== "all" ? ` <small>${SHORT[e.branch]}</small>` : ""}</span></button></li>`).join("")}
             ${E.length > 8 ? `<li class="pm-more">외 ${E.length - 8}개</li>` : ""}</ul>` : ""}
         ${!P.length && !E.length ? `<p class="pm-none">아직 없어요</p>` : ""}
       </div>`; }).join("")}</div>`;
@@ -3252,7 +3249,7 @@ $("view").addEventListener("click", e => {
     case "plan-y": state.planY = +el.dataset.d ? state.planY + +el.dataset.d : new Date().getFullYear(); renderView(); break;
     case "plan-new": planForm(null, el.dataset.ym); break;
     case "plan-edit": { const p = state.plans.find(x => x.id === id); if (p) (canEdit(p) ? planForm(p) : toast(p.memo || p.title)); break; }
-    case "plan-ev": { const d = parse(el.dataset.day); state.cal = { y:d.getFullYear(), m:d.getMonth(), sel:el.dataset.day }; state.calView = "month"; store.set("portal.calView", "month"); renderView(); break; }
+    case "plan-ev": { const d = parse(el.dataset.day); state.cal = { y:d.getFullYear(), m:d.getMonth(), sel:el.dataset.day }; renderView(); document.querySelector(".cal-head")?.scrollIntoView({ behavior:"smooth", block:"start" }); break; }
     case "event-edit": eventForm(state.events.find(x => x.id === id)); break;
     case "notice-new": noticeForm(null); break;
     case "notice-edit": noticeForm(state.notices.find(x => x.id === id)); break;
@@ -3369,7 +3366,7 @@ function eventForm(ev, date){
       <div class="row2">${fSelect("반복", "repeat", [["none","반복 안 함"],["weekly","매주 같은 요일"]], ev?.repeat || "none")}
         ${fDate("반복 끝 <small>비우면 계속</small>", "until", ev?.until || "")}</div>
       ${fArea("메모", "memo", ev?.memo, 'maxlength="500" rows="3"')}
-      <label class="chk"><input type="checkbox" name="major" ${ev?.major ? "checked" : ""}> 주요 일정 (월간 계획표 맨 위에 ★로 표시)</label>
+      <label class="chk"><input type="checkbox" name="major" ${ev?.major ? "checked" : ""}> 월간 계획표에 올리기 (주요 일정)</label>
       ${ev ? "" : fWriter()}`,
     saveLabel: ev ? "수정 저장" : "일정 추가",
     async onSave(form){
