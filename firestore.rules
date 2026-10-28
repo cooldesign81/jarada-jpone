@@ -61,6 +61,14 @@ service cloud.firestore {
       allow update: if okUpdate();
       allow delete: if okDelete();
     }
+    // 월간 계획표 '이달의 계획'(날짜 없는 목표·할 일). 일정과 같은 범위 규칙
+    match /portalPlans/{id} {
+      allow read: if okRead();
+      allow create: if okCreate() && request.resource.data.ym is string && request.resource.data.ym.matches('^[0-9]{4}-[0-9]{2}$')
+        && request.resource.data.title is string && request.resource.data.title.size() <= 80;
+      allow update: if okUpdate() && request.resource.data.ym.matches('^[0-9]{4}-[0-9]{2}$') && request.resource.data.title.size() <= 80;
+      allow delete: if okDelete();
+    }
     match /portalTodos/{id} {
       allow read: if okRead();
       // 할 일은 반드시 한 원에 속함

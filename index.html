@@ -475,6 +475,24 @@
   .mi-s{font-size:13px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .mi-m{font-size:12px;color:var(--text-sub)}
   .tagk.pin{background:var(--ink);color:var(--brand-yellow)}
+  /* 월간 계획표 */
+  .cal-views{margin-bottom:12px}
+  .plan-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+  .plan-m{border:1px solid var(--line);border-radius:var(--r-card);padding:10px 12px;min-height:150px;display:flex;flex-direction:column;gap:6px;background:#fff}
+  .plan-m.cur{border:2px solid var(--ink)}.plan-m.past{background:#FAFAFA}.plan-m.past .pm-h b{color:var(--text-sub)}
+  .pm-h{display:flex;align-items:center;gap:6px}.pm-h b{font-size:16px;color:var(--ink)}.pm-h .icon-btn{margin-left:auto;padding:2px 8px;font-size:11px}
+  .pm-plans,.pm-evs{list-style:none;margin:0;padding:0;display:grid;gap:3px}
+  .pm-plans li{display:flex;align-items:flex-start;gap:6px;font-size:13px}.pm-plans input{margin-top:3px;accent-color:var(--ink)}
+  .pm-plans li.done .pm-t{text-decoration:line-through;color:var(--text-sub)}
+  .pm-t{all:unset;cursor:pointer;color:var(--ink);font-weight:700;line-height:1.4}.pm-t small{color:var(--text-sub);font-weight:500}
+  .pm-evs{border-top:1px dashed var(--line);padding-top:6px}
+  .pm-e{all:unset;cursor:pointer;display:grid;grid-template-columns:8px auto 1fr;align-items:center;gap:6px;font-size:12px;color:var(--text);width:100%}
+  .pm-e i{width:8px;height:8px;border-radius:2px}.pm-e .d{color:var(--text-sub);font-variant-numeric:tabular-nums}.pm-e .t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pm-e.major .t{font-weight:800;color:var(--ink)}.pm-e small{color:var(--text-sub)}
+  .pm-more,.pm-none{font-size:11px;color:var(--text-sub);margin:0}
+  @media (max-width:1100px){ .plan-grid{grid-template-columns:repeat(3,minmax(0,1fr))} }
+  @media (max-width:760px){ .plan-grid{grid-template-columns:repeat(2,minmax(0,1fr))} }
+  @media (max-width:480px){ .plan-grid{grid-template-columns:minmax(0,1fr)} }
   /* 미션허브 */
   .mh-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
   .mh-card{all:unset;box-sizing:border-box;background:#fff;border-radius:var(--r-card);padding:16px;display:grid;gap:8px;cursor:pointer;border:1px solid var(--line)}.mh-card:hover{border-color:#CFCFCF}.mh-card.off{opacity:.6}
@@ -925,8 +943,8 @@ const BRANCH_KEYS = ["pyeongchon","banpo","daechi"];
 const SHORT = { pyeongchon:"평촌", banpo:"반포", daechi:"대치" };
 
 /* Firestore 컬렉션 이름 */
-const COLL = { notices:"portalNotices", events:"portalEvents", todos:"portalTodos", files:"portalFiles", bookmarks:"portalBookmarks", bmGroups:"portalBmGroups", kpi:"portalKpi", kpiPriv:"portalKpiPrivate", folders:"portalFolders", members:"portalMembers", birthdays:"portalBirthdays", teachers:"portalTeachers", manuals:"portalManuals", counsel:"portalCounsel", revenue:"portalRevenue", manCats:"portalManCats", tasks:"portalTasks", routines:"portalRoutines", missions:"portalMissions", evals:"portalEvals", nasJobs:"portalNasJobs", nasStatus:"portalNasStatus" };
-const COLL_LABEL = { notices:"공지", events:"일정", todos:"할 일", files:"자료", bookmarks:"북마크", bmGroups:"북마크 구분", kpi:"운영지표", kpiPriv:"운영지표(금액)", folders:"자료실 폴더", members:"직원 계정", birthdays:"생일", teachers:"선생님 입사월", manuals:"업무매뉴얼", counsel:"상담 현황", revenue:"과거 매출", manCats:"매뉴얼 분류", tasks:"워크허브 업무", routines:"루틴", missions:"미션", evals:"미션 평가", nasJobs:"NAS 작업", nasStatus:"NAS 커넥터 상태" };
+const COLL = { notices:"portalNotices", events:"portalEvents", todos:"portalTodos", files:"portalFiles", bookmarks:"portalBookmarks", bmGroups:"portalBmGroups", kpi:"portalKpi", kpiPriv:"portalKpiPrivate", folders:"portalFolders", members:"portalMembers", birthdays:"portalBirthdays", teachers:"portalTeachers", manuals:"portalManuals", counsel:"portalCounsel", revenue:"portalRevenue", manCats:"portalManCats", tasks:"portalTasks", routines:"portalRoutines", missions:"portalMissions", evals:"portalEvals", nasJobs:"portalNasJobs", nasStatus:"portalNasStatus", plans:"portalPlans" };
+const COLL_LABEL = { notices:"공지", events:"일정", todos:"할 일", files:"자료", bookmarks:"북마크", bmGroups:"북마크 구분", kpi:"운영지표", kpiPriv:"운영지표(금액)", folders:"자료실 폴더", members:"직원 계정", birthdays:"생일", teachers:"선생님 입사월", manuals:"업무매뉴얼", counsel:"상담 현황", revenue:"과거 매출", manCats:"매뉴얼 분류", tasks:"워크허브 업무", routines:"루틴", missions:"미션", evals:"미션 평가", nasJobs:"NAS 작업", nasStatus:"NAS 커넥터 상태", plans:"월간 계획" };
 /* 북마크 구분선 색 */
 const LINE_COLORS = [["#222222","검정"],["#DE8619","주황"],["#C98100","황토"],["#D1495B","빨강"],["#8B5CF6","보라"],["#2563A6","파랑"],["#1F7A4D","초록"],["#767676","회색"]];
 
@@ -1055,7 +1073,7 @@ function fileType(name){
 const state = {
   user:null, isAdmin:false, wide:false, myBranch:null, myBranches:[], branch:"all", tab:"home",
   notices:[], events:[], todos:[], files:[], bookmarks:[], bmGroups:[], kpi:{}, kpiPriv:{}, revenue:{}, nasStatus:{}, folders:[], members:[], member:null, birthdays:[], ageP: +(store.get("portal.ageP") || 3), counsel:{}, manuals:[], manCats:[], tasks:[], routines:[], whView:"mine", whFilter:"open", whWho:"", missions:[], evals:{}, mhView:"list", mhOpen:null, mhWho:"", manCat:"all", manQ:"", openManual:null, tSort:{ k:"enrolled", dir:-1 }, tQ:"", tWarn:false, loaded:{}, teachers:[], kpiPeriod: +(store.get("portal.kpiPeriod") || 3),
-  cal:{ y:new Date().getFullYear(), m:new Date().getMonth(), sel:todayISO() },
+  cal:{ y:new Date().getFullYear(), m:new Date().getMonth(), sel:todayISO() }, calView: store.get("portal.calView") || "month", planY: new Date().getFullYear(), plans:[],
   openNotice:null, todoFilter:"open", folder:"all", fileQ:""
 };
 let fb = null, unsubs = [];
@@ -1123,6 +1141,11 @@ function seed(){
         checklist:M_TYPES.research.req, checks:[false,false,false,false], files:[], note:"", versions:[], at:ago(5), createdBy:ADMIN, writer:"대표", log:[] },
       { id:"w9", title:"할로윈 샘플작", branch:"banpo", due:d(-5), assignee:"jaehong.teacher@gmail.com", assigneeName:"허재홍", status:"done", needCheck:true, missionId:"m2", mType:"sample", doneAt:ago(3),
         checklist:M_TYPES.sample.req, checks:[true,true,true,true], files:[], note:"", versions:[{ v:1, at:ago(6), note:"호박 등불 만들기", files:[], checks:[true,true,true,true] }], at:ago(20), createdBy:ADMIN, writer:"대표", log:[] }
+    ],
+    plans: [
+      { id:"p1", ym:t.slice(0, 7), title:"겨울방학 특강 모집 시작", branch:"all", memo:"", done:false, at:ago(3), createdBy:ADMIN, writer:"대표" },
+      { id:"p2", ym:t.slice(0, 7), title:"신규 교사 2명 채용", branch:"pyeongchon", memo:"", done:true, at:ago(5), createdBy:ADMIN, writer:"대표" },
+      { id:"p3", ym:addDays(t, 35).slice(0, 7), title:"학부모 상담 주간 운영", branch:"all", memo:"", done:false, at:ago(2), createdBy:ADMIN, writer:"대표" }
     ],
     missions: [
       { id:"m1", title:"11월 연구 PPT — 남아 협동 그리기 수업 설계", type:"research", branch:"all", status:"open", due:d(10), goal:"짝 활동으로 사회성을 키우는 그리기 수업을 설계하고 근거를 정리해요.",
@@ -1428,7 +1451,7 @@ async function enter(user){
 
   state.kpiPriv = {};
   state.loaded = {};
-  ["notices","events","tasks","routines","missions","members","files","bookmarks","bmGroups","kpi","folders","birthdays","teachers","manuals","manCats","counsel", ...(state.isAdmin ? ["kpiPriv","revenue","nasStatus"] : [])].forEach(name => {
+  ["notices","events","plans","tasks","routines","missions","members","files","bookmarks","bmGroups","kpi","folders","birthdays","teachers","manuals","manCats","counsel", ...(state.isAdmin ? ["kpiPriv","revenue","nasStatus"] : [])].forEach(name => {
     unsubs.push(DB.watch(name, list => {
       state[name] = name === "kpi" || name === "kpiPriv" || name === "counsel" || name === "revenue" || name === "nasStatus" ? Object.fromEntries(list.map(x => [x.id, x])) : list;
       onData(name);
@@ -1451,7 +1474,7 @@ function onData(name){
   if (name === "manCats") state.loaded.manCats = true;
   if (name === "tasks" || name === "routines") { state.loaded[name] = true; clearTimeout(onData.gt); onData.gt = setTimeout(genRoutineTasks, 800); }
   if (name === "birthdays" || name === "teachers") { state.loaded[name] = true; if (bdPending && state.loaded.birthdays && state.loaded.teachers) { const x = bdPending; bdPending = null; syncPeople(x); } }
-  const uses = { home:["notices","events","tasks","kpi","birthdays"], notice:["notices","events","birthdays","kpi","kpiPriv"], todo:["tasks","routines","members"], mission:["tasks","missions","evals","members","nasStatus"], files:["files","folders"], manual:["manuals","manCats"], bm:["bookmarks","bmGroups"], kpi:["kpi","kpiPriv","teachers","counsel","revenue"] }[state.tab] || [];
+  const uses = { home:["notices","events","tasks","kpi","birthdays"], notice:["notices","events","plans","birthdays","kpi","kpiPriv"], todo:["tasks","routines","members"], mission:["tasks","missions","evals","members","nasStatus"], files:["files","folders"], manual:["manuals","manCats"], bm:["bookmarks","bmGroups"], kpi:["kpi","kpiPriv","teachers","counsel","revenue"] }[state.tab] || [];
   if (uses.includes(name)) renderView({ keepFocus: true });
 }
 
@@ -2245,7 +2268,59 @@ function noticePageHTML(){
       </li>`; }).join("")}</ul>` : `<p class="empty">아직 공지가 없어요.${canWrite ? " 오른쪽 위 '공지 쓰기'로 첫 공지를 올려 보세요." : ""}</p>`}
   </section>
   <section class="card" style="margin-bottom:16px"><h2>지금 확인이 필요한 것</h2>${checkListHTML()}</section>
-  <section class="card">${calHTML("month")}</section>`;
+  <section class="card">
+    <div class="seg2 cal-views" role="tablist" aria-label="캘린더 보기">
+      <button type="button" data-act="cal-view" data-v="month" aria-pressed="${state.calView !== "plan"}">달력</button>
+      <button type="button" data-act="cal-view" data-v="plan" aria-pressed="${state.calView === "plan"}">월간 계획표</button></div>
+    ${state.calView === "plan" ? planBoardHTML() : calHTML("month")}</section>`;
+}
+/* ── 월간 계획표: 한 해 12달을 한눈에. 달마다 '이달의 계획'(날짜 없는 목표·할 일) + 그 달 일정(★ = 주요 일정) ── */
+function planBoardHTML(){
+  const y = state.planY, now = ymOf(todayISO()), canAdd = branchOptions("events").length > 0;
+  const plans = state.plans.filter(visible), evs = state.events.filter(e => visible(e) && e.repeat !== "weekly");
+  const months = Array.from({ length:12 }, (_, i) => `${y}-${pad2(i + 1)}`);
+  return `<div class="cal-head"><h2>${y}년 월간 계획표</h2><div class="cal-nav">
+      <button type="button" data-act="plan-y" data-d="-1" aria-label="이전 해"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></button>
+      <button type="button" data-act="plan-y" data-d="0">올해</button>
+      <button type="button" data-act="plan-y" data-d="1" aria-label="다음 해"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
+      ${canAdd ? `<button type="button" data-act="plan-new" data-ym="${y === +now.slice(0, 4) ? now : months[0]}">계획 추가</button>` : ""}</div></div>
+    <p class="hint small">달마다 위쪽은 이달의 계획(목표·할 일), 아래쪽은 그 달 일정이에요. ★는 '주요 일정'으로 표시한 일정이에요. 매주 반복 일정은 빼고 보여요.</p>
+    <div class="plan-grid">${months.map(ym => {
+      const P = plans.filter(p => p.ym === ym).sort((a, b) => (a.done ? 1 : 0) - (b.done ? 1 : 0) || (a.at || 0) - (b.at || 0));
+      const E = evs.filter(e => (e.date || "").slice(0, 7) === ym || (e.end && e.date.slice(0, 7) < ym && e.end.slice(0, 7) >= ym)).sort((a, b) => (b.major ? 1 : 0) - (a.major ? 1 : 0) || a.date.localeCompare(b.date));
+      const past = ym < now;
+      return `<div class="plan-m ${ym === now ? "cur" : ""} ${past ? "past" : ""}">
+        <div class="pm-h"><b>${+ym.slice(5)}월</b>${ym === now ? `<span class="tagk">이번 달</span>` : ""}${canAdd ? `<button type="button" class="icon-btn" data-act="plan-new" data-ym="${ym}" aria-label="${+ym.slice(5)}월 계획 추가">+ 계획</button>` : ""}</div>
+        ${P.length ? `<ul class="pm-plans">${P.map(p => `<li class="${p.done ? "done" : ""}">
+            <input type="checkbox" data-plan-done="${esc(p.id)}" ${p.done ? "checked" : ""} ${canEdit(p) ? "" : "disabled"} aria-label="${esc(p.title)} 완료">
+            <button type="button" class="pm-t" data-act="plan-edit" data-id="${esc(p.id)}">${esc(p.title)}${state.branch === "all" && p.branch !== "all" ? ` <small>${SHORT[p.branch]}</small>` : ""}</button></li>`).join("")}</ul>` : ""}
+        ${E.length ? `<ul class="pm-evs">${E.slice(0, 8).map(e => `<li><button type="button" class="pm-e ${e.major ? "major" : ""}" data-act="plan-ev" data-day="${e.date}"><i style="background:${CAL_KIND[e.kind]?.color || "#999"}"></i>
+            <span class="d">${md(e.date)}${e.end && e.end > e.date ? `~${md(e.end)}` : ""}</span><span class="t">${e.major ? "★ " : ""}${esc(e.title)}${state.branch === "all" && e.branch !== "all" ? ` <small>${SHORT[e.branch]}</small>` : ""}</span></button></li>`).join("")}
+            ${E.length > 8 ? `<li class="pm-more">외 ${E.length - 8}개</li>` : ""}</ul>` : ""}
+        ${!P.length && !E.length ? `<p class="pm-none">아직 없어요</p>` : ""}
+      </div>`; }).join("")}</div>`;
+}
+function planForm(p, ym){
+  openForm({
+    title: p ? "계획 수정" : "계획 추가",
+    fields: `${fText("계획", "title", p?.title, 'required maxlength="80" placeholder="예: 겨울방학 특강 모집 시작, 신규 교사 2명 채용"')}
+      <div class="row2"><label class="fld"><span>달</span><input class="inp" type="month" name="ym" value="${esc(p?.ym || ym || ymOf(todayISO()))}" required></label>${fBranch("events", p?.branch)}</div>
+      ${fArea("메모", "memo", p?.memo, 'maxlength="500" rows="3"')}
+      ${p ? `<label class="chk"><input type="checkbox" name="done" ${p.done ? "checked" : ""}> 완료</label>` : fWriter()}`,
+    saveLabel: p ? "수정 저장" : "계획 추가",
+    async onSave(form){
+      const data = { title: val(form, "title"), ym: val(form, "ym"), branch: val(form, "branch"), memo: val(form, "memo"), ...(p ? { done: form.elements.done.checked } : { done:false }) };
+      if (!data.title) return formErr("계획을 적어 주세요.");
+      if (!/^\d{4}-\d{2}$/.test(data.ym)) return formErr("달을 골라 주세요.");
+      if (!branchOptions("events").includes(data.branch)) return formErr("이 범위에는 계획을 올릴 수 없어요.");
+      keepWriter(form);
+      if (p) await DB.update("plans", p.id, data); else await DB.add("plans", data);
+      state.planY = +data.ym.slice(0, 4);
+      toast(p ? "계획을 수정했어요." : "계획을 추가했어요.");
+    },
+    onDelete: p && canEdit(p) && (async () => { await DB.remove("plans", p.id); toast("계획을 지웠어요."); })
+  });
+  dlgCtx.deleteMsg = p && `'${p.title}' 계획을 지울까요?`;
 }
 
 /* ── To-do 화면 ── */
@@ -3173,6 +3248,11 @@ $("view").addEventListener("click", e => {
       renderView(); $("view").querySelector(`[data-fk="${act}"]`)?.focus(); break; }
     case "cal-today": { const n = new Date(); state.cal = { y:n.getFullYear(), m:n.getMonth(), sel:todayISO() }; renderView(); break; }
     case "event-new": eventForm(null, el.dataset.date); break;
+    case "cal-view": state.calView = el.dataset.v; store.set("portal.calView", state.calView); renderView(); break;
+    case "plan-y": state.planY = +el.dataset.d ? state.planY + +el.dataset.d : new Date().getFullYear(); renderView(); break;
+    case "plan-new": planForm(null, el.dataset.ym); break;
+    case "plan-edit": { const p = state.plans.find(x => x.id === id); if (p) (canEdit(p) ? planForm(p) : toast(p.memo || p.title)); break; }
+    case "plan-ev": { const d = parse(el.dataset.day); state.cal = { y:d.getFullYear(), m:d.getMonth(), sel:el.dataset.day }; state.calView = "month"; store.set("portal.calView", "month"); renderView(); break; }
     case "event-edit": eventForm(state.events.find(x => x.id === id)); break;
     case "notice-new": noticeForm(null); break;
     case "notice-edit": noticeForm(state.notices.find(x => x.id === id)); break;
@@ -3289,11 +3369,12 @@ function eventForm(ev, date){
       <div class="row2">${fSelect("반복", "repeat", [["none","반복 안 함"],["weekly","매주 같은 요일"]], ev?.repeat || "none")}
         ${fDate("반복 끝 <small>비우면 계속</small>", "until", ev?.until || "")}</div>
       ${fArea("메모", "memo", ev?.memo, 'maxlength="500" rows="3"')}
+      <label class="chk"><input type="checkbox" name="major" ${ev?.major ? "checked" : ""}> 주요 일정 (월간 계획표 맨 위에 ★로 표시)</label>
       ${ev ? "" : fWriter()}`,
     saveLabel: ev ? "수정 저장" : "일정 추가",
     async onSave(form){
       const data = { title: val(form,"title"), kind: val(form,"kind"), branch: val(form,"branch"), date: val(form,"date"),
-        end: val(form,"end"), repeat: val(form,"repeat"), until: val(form,"until"), memo: val(form,"memo") };
+        end: val(form,"end"), repeat: val(form,"repeat"), until: val(form,"until"), memo: val(form,"memo"), major: form.elements.major.checked };
       if (!data.title) return formErr("일정 이름을 넣어 주세요.");
       if (!data.date) return formErr("날짜를 골라 주세요.");
       if (data.end && data.end < data.date) return formErr("끝나는 날이 시작 날보다 빨라요.");
@@ -3812,6 +3893,8 @@ async function readLMSFile(file){
   return rowsFromSheet(aoa);
 }
 document.addEventListener("change", e => { if (e.target.matches?.("[data-mh-who]")) { state.mhWho = e.target.value; renderView(); } });
+document.addEventListener("change", async e => { const id = e.target.dataset?.planDone; if (!id) return;
+  try { await DB.update("plans", id, { done: e.target.checked }); } catch (err) { e.target.checked = !e.target.checked; toast("바꾸지 못했어요. " + (err.code || "")); } });
 $("lmsPick")?.addEventListener("change", async e => {
   const fs = [...e.target.files]; e.target.value = ""; if (!fs.length) return;
   const ok = [];
