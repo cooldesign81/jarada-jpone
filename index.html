@@ -937,7 +937,7 @@ const APP_GROUPS = [
     { name: "결제 매니저", glyph: "결", icon: "icons/apps/jarada-payment.png?v=3", note: "결제 확인, 신규 등록", url: "https://cooldesign81.github.io/jarada-payment/", status: "live" },
     { name: "보강 예약", glyph: "보", note: "학부모 보강 예약", url: "https://jarada-makeup-booking.hisin0822.chatgpt.site/", status: "live" },
     { name: "재료 요청", glyph: "재", icon: "icons/apps/material.png?v=4", note: "수업 재료 주문 요청", url: "https://cooldesign81.github.io/material/", status: "live" },
-    { name: "자비스 업로더", glyph: "J", note: "관찰일지 사진 올리기", url: "https://jarvis-webapp-8yim.onrender.com/", status: "live" },
+    { name: "자비스 업로더", glyph: "J", icon: "icons/apps/jarvis.png?v=1", note: "관찰일지 사진 올리기", url: "https://jarvis-webapp-8yim.onrender.com/", status: "live" },
     { name: "주차 쿠폰", glyph: "P", icon: "icons/apps/iparking.png?v=3", note: "평촌원 전용", url: "https://cooldesign81.github.io/iparking-web/admin/", status: "live", branches: ["pyeongchon"] },
     { name: "JP People", glyph: "人", icon: "icons/apps/jarada-people.png?v=3", note: "인사, 교사 성장", url: "https://cooldesign81.github.io/jarada-people/", status: "live" }
   ]},
@@ -1218,7 +1218,9 @@ const DB = (() => {
       if (W) { q = W.length ? F.query(q, ...W.map(w => F.where(...w))) : q;
         return F.onSnapshot(q, snap => cb(snap.docs.map(d => ({ id: d.id, ...d.data() }))), err => toast(`${COLL_LABEL[name]}을(를) 불러오지 못했어요. (${err.code})`)); }
       // 원 계정은 "모든 원 + 우리 원" 문서만 요청 (보안 규칙이 이 조건을 요구함)
-      if (!state.wide && name !== "members") q = F.query(q, F.where("branch", "in", ["all", ...(state.myBranches.length ? state.myBranches : ["none"])]));
+      // 운영지표·상담 현황은 원별 문서만 있어서 보안 규칙이 '모든 원'(all)을 허용하지 않음 → 내 원만 요청해야 거절되지 않음
+      const own = state.myBranches.length ? state.myBranches : ["none"];
+      if (!state.wide && name !== "members") q = F.query(q, F.where("branch", "in", ["kpi", "counsel"].includes(name) ? own : ["all", ...own]));
       return F.onSnapshot(q, snap => cb(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
         err => toast(`${COLL_LABEL[name]}을(를) 불러오지 못했어요. (${err.code})`));
     },
