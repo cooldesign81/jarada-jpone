@@ -590,10 +590,19 @@
   .ftable .c-type,.ftable .c-date,.ftable .c-br{white-space:nowrap}
   .ftable a{color:var(--s-info);font-weight:700}
   .ftable a:hover{text-decoration:underline;text-underline-offset:3px}
-  .fname{background:none;border:0;padding:0;font-weight:700;color:var(--ink);cursor:pointer;text-align:left;font-size:14px}
+  .fname{display:block;background:none;border:0;padding:0;font-weight:600;color:var(--text-sub);cursor:pointer;text-align:left;font-size:12px;margin-top:4px;word-break:break-all}
   .fname:hover{text-decoration:underline;text-underline-offset:3px}
   .fsub{display:block;font-size:12px;color:var(--text-sub);margin-top:2px}
-  .fdesc{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:13px;color:var(--text);margin-top:4px;line-height:1.5;max-width:560px;white-space:pre-line}
+  .fdesc{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;font-size:15px;font-weight:600;color:var(--ink);line-height:1.5;max-width:600px;white-space:pre-line;
+         background:none;border:0;padding:0;text-align:left;cursor:pointer;font-family:inherit}
+  button.fdesc:hover{text-decoration:underline;text-underline-offset:3px}
+  .fdet .fdesc{font-weight:500;font-size:14px;cursor:default}
+  .ftable .c-ed{white-space:nowrap;text-align:right;width:1%}
+  .mini{border:1px solid var(--line);background:#fff;border-radius:4px;font-size:12px;font-weight:600;padding:4px 8px;cursor:pointer;color:var(--text);font-family:inherit}
+  .mini + .mini{margin-left:4px}
+  .mini:hover{border-color:var(--text-sub)}
+  .mini.danger{color:#C62828}
+  .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
   .nofile{font-size:12px;color:var(--text-sub)}
   .fnote{font-size:12px;color:var(--text-sub);margin:16px 0 0}
   .uplist{list-style:none;margin:0;padding:0;display:grid;gap:8px;max-height:220px;overflow:auto}
@@ -622,7 +631,8 @@
   }
   @media (max-width:560px){
     .row2{grid-template-columns:1fr}
-    .ftable .c-type,.ftable .c-br{display:none}
+    .ftable .c-type,.ftable .c-br,.ftable .c-date{display:none}
+    .ftable .c-ed .mini{display:block;margin:0 0 4px}
     .fsearch input{width:130px}
     .ni-h{flex-wrap:wrap}
     .ni-h .tt{flex-basis:100%;order:3;white-space:normal}
@@ -805,10 +815,8 @@
   .folders li{display:flex;align-items:center;gap:4px}
   .folders li > button[data-act="folder"]{flex:1;min-width:0}
   .folders .fold-ed{flex:none;width:auto;border:1px solid var(--line);background:#fff;border-radius:4px;font-size:11px;
-                    font-weight:700;padding:3px 6px;cursor:pointer;opacity:0;color:var(--ink)}
-  .folders li:hover .fold-ed,.folders .fold-ed:focus-visible{opacity:1}
+                    font-weight:700;padding:3px 6px;cursor:pointer;color:var(--ink)}
   .ord{display:flex;gap:6px;align-items:center}
-  @media (hover:none){ .folders .fold-ed{opacity:1} }
   @media (max-width:1180px){ .kpis.kpis7{grid-template-columns:repeat(4,minmax(0,1fr))} .grid2.even{grid-template-columns:minmax(0,1fr)} }
   @media (max-width:560px){ .kpis.kpis7{grid-template-columns:repeat(2,minmax(0,1fr))} .heat .hc{height:24px;font-size:10px} }
   .boot{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;background:var(--brand-yellow);color:var(--ink);z-index:80}
@@ -1082,6 +1090,10 @@ const writerName = () => state.member?.name || store.get("portal.writer") || (st
 const visible = it => state.branch === "all" || it.branch === "all" || it.branch === state.branch;
 // wide = 3개 원을 모두 다루는 사람 (대표, 또는 직원 계정에서 '3개 원 전체'로 지정된 사람)
 const canEdit = it => state.wide || state.myBranches.includes(it.branch);
+// 자료실 폴더 추가·수정·삭제: 대표 + 관리자(원장·부원장·실장)
+const canFolder = () => state.isAdmin || !!state.member?.manager;
+// 자료실 파일 수정·삭제: 내 원 자료 + (관리자는) 공통 자료
+const canEditFile = f => canEdit(f) || (f.branch === "all" && canFolder());
 /* 직원 계정의 소속 원 목록. 예전 문서(branch 하나)도 읽을 수 있게 함 */
 const memBranches = m => !m ? [] : Array.isArray(m.branches) ? m.branches.filter(b => BRANCH_KEYS.includes(b))
   : m.branch === "all" ? [...BRANCH_KEYS] : BRANCH_KEYS.includes(m.branch) ? [m.branch] : [];
@@ -2972,17 +2984,18 @@ function filesPageHTML(){
   if (state.folder !== "all" && state.folder !== "_none" && !known.has(state.folder)) state.folder = "all";
   const inFolder = state.folder === "all" ? vis : state.folder === "_none" ? loose : vis.filter(f => f.folder === state.folder);
   const list = inFolder.filter(f => !q || f.name.toLowerCase().includes(q) || (f.desc || "").toLowerCase().includes(q)).sort((a,b) => (b.updatedAt || b.at || 0) - (a.updatedAt || a.at || 0));
+  const anyEd = list.some(canEditFile);
   const canUp = branchOptions("files").length > 0, folderName = state.folder === "all" ? "전체 자료" : state.folder === "_none" ? "분류 안 됨" : fl.find(x => x.id === state.folder)?.name;
   return `
   <div class="files">
     <aside class="card fold">
-      <div class="card-h"><h2>폴더</h2>${state.isAdmin ? `<button type="button" class="icon-btn" data-act="folder-new">폴더 추가</button>` : ""}</div>
+      <div class="card-h"><h2>폴더</h2>${canFolder() ? `<button type="button" class="icon-btn" data-act="folder-new">폴더 추가</button>` : ""}</div>
       <ul class="folders">
         <li><button type="button" data-act="folder" data-id="all" aria-pressed="${state.folder === "all"}"><span>전체 자료</span><b>${vis.length}</b></button></li>
-        ${fl.map(fd => `<li class="${state.isAdmin ? "can-edit" : ""}"><button type="button" data-act="folder" data-id="${esc(fd.id)}" aria-pressed="${state.folder === fd.id}">
+        ${fl.map(fd => `<li class="${canFolder() ? "can-edit" : ""}"><button type="button" data-act="folder" data-id="${esc(fd.id)}" aria-pressed="${state.folder === fd.id}">
           <span>${esc(fd.name)}</span><b>${vis.filter(f => f.folder === fd.id).length}</b></button>
-          ${state.isAdmin ? `<button type="button" class="fold-ed" data-act="folder-edit" data-id="${esc(fd.id)}" aria-label="${esc(fd.name)} 폴더 수정">수정</button>` : ""}</li>`).join("")}
-        ${!fl.length && state.isAdmin ? `<li><button type="button" class="btn btn-ghost btn-sm" data-act="folder-seed">기본 폴더 만들기</button></li>` : ""}
+          ${canFolder() ? `<button type="button" class="fold-ed" data-act="folder-edit" data-id="${esc(fd.id)}" aria-label="${esc(fd.name)} 폴더 수정">수정</button>` : ""}</li>`).join("")}
+        ${!fl.length && canFolder() ? `<li><button type="button" class="btn btn-ghost btn-sm" data-act="folder-seed">기본 폴더 만들기</button></li>` : ""}
         ${loose.length ? `<li><button type="button" data-act="folder" data-id="_none" aria-pressed="${state.folder === "_none"}"><span>분류 안 됨</span><b>${loose.length}</b></button></li>` : ""}
       </ul>
       ${canUp ? `<div class="drop" id="dropZone" data-act="pick">여기로 파일을 끌어다 놓거나 눌러서 올려요.<small>파일당 ${MAX_FILE_MB}MB까지</small></div>` : ""}
@@ -2995,17 +3008,18 @@ function filesPageHTML(){
         ${canUp ? `<button type="button" class="btn btn-primary btn-sm" data-act="pick">파일 올리기</button>` : ""}
       </div>
       ${list.length ? `<table class="ftable">
-        <thead><tr><th>파일명</th><th class="c-type">유형</th>${state.branch === "all" ? `<th class="c-br">원</th>` : ""}<th class="c-date">수정일</th><th class="c-get">받기</th></tr></thead>
+        <thead><tr><th>자료</th><th class="c-type">유형</th>${state.branch === "all" ? `<th class="c-br">원</th>` : ""}<th class="c-date">수정일</th><th class="c-get">받기</th>${anyEd ? `<th class="c-ed"><span class="sr">관리</span></th>` : ""}</tr></thead>
         <tbody>${list.map(f => {
           const last = f.versions?.[f.versions.length - 1] || {}, url = DB.fileUrl(last), vcount = f.versions?.length || 1;
           return `<tr>
-            <td><button type="button" class="fname" data-act="file-open" data-id="${esc(f.id)}">${esc(f.name)}</button>
-              ${f.desc ? `<span class="fdesc">${esc(f.desc)}</span>` : ""}
+            <td>${f.desc ? `<button type="button" class="fdesc" data-act="file-open" data-id="${esc(f.id)}">${esc(f.desc)}</button>` : ""}
+              <button type="button" class="fname" data-act="file-open" data-id="${esc(f.id)}">${esc(f.name)}</button>
               <span class="fsub">${sizeLabel(f.size || last.size || 0)}${vcount > 1 ? `, 버전 ${vcount}개` : ""}</span></td>
             <td class="c-type">${esc(fileType(f.name))}</td>
             ${state.branch === "all" ? `<td class="c-br">${esc(f.branch === "all" ? "공통" : SHORT[f.branch] || "")}</td>` : ""}
             <td class="c-date">${mdOfMs(f.updatedAt || f.at)}</td>
             <td class="c-get">${url ? `<a href="${esc(url)}" download="${esc(f.name)}" target="_blank" rel="noopener">받기</a>` : `<span class="nofile" title="미리보기 샘플이라 실제 파일이 없어요">샘플</span>`}</td>
+            ${anyEd ? `<td class="c-ed">${canEditFile(f) ? `<button type="button" class="mini" data-act="file-edit" data-id="${esc(f.id)}">수정</button><button type="button" class="mini danger" data-act="file-del" data-id="${esc(f.id)}">삭제</button>` : ""}</td>` : ""}
           </tr>`; }).join("")}</tbody></table>`
       : `<p class="empty">${q ? `'${esc(state.fileQ)}'와 맞는 파일이 없어요.` : "이 폴더에는 아직 파일이 없어요."}</p>`}
       <p class="fnote">파일은 원본 그대로 보관되고, 새 버전을 올려도 이전 버전이 남아요.</p>
@@ -3271,7 +3285,8 @@ $("view").addEventListener("click", e => {
     case "wh-routine-edit": routineForm(state.routines.find(x => x.id === id)); break;
     case "folder": state.folder = id; renderView(); break;
     case "pick": $("filePick").click(); break;
-    case "file-open": fileDetail(state.files.find(x => x.id === id)); break;
+    case "file-open": case "file-edit": fileDetail(state.files.find(x => x.id === id)); break;
+    case "file-del": fileDelete(state.files.find(x => x.id === id)); break;
     case "bm-new": bmForm(null, el.dataset.group); break;
     case "lms-pick": $("lmsPick").click(); break;
     case "rev-pick": $("revPick").click(); break;
@@ -3409,7 +3424,7 @@ function todoForm(t, presetTitle){
   dlgCtx.deleteMsg = t && `'${t.title}' 할 일을 삭제할까요?`;
 }
 
-/* ── 자료실 폴더 (대표만 추가·이름 변경·순서·삭제) ── */
+/* ── 자료실 폴더 (대표 + 관리자: 추가·이름 변경·순서·삭제) ── */
 const folderList = () => state.folders.slice().sort((a,b) => (a.order ?? 0) - (b.order ?? 0) || (a.at || 0) - (b.at || 0));
 async function seedFolders(){   // 폴더가 하나도 없을 때 대표가 버튼으로 기본 폴더를 만듦
   if (seedFolders.busy) return; seedFolders.busy = true;
@@ -3494,14 +3509,24 @@ function uploadForm(files, target){
   });
 }
 
+// 목록에서 바로 삭제 (확인 한 번 더)
+async function fileDelete(f){
+  if (!f || !canEditFile(f)) return;
+  const n = Math.max(0, (f.versions?.length || 1) - 1);
+  if (!await confirmBox(`'${f.name}'${n ? `과 이전 버전 ${n}개가` : "이"} 모두 지워져요. 되돌릴 수 없어요. 삭제할까요?`)) return;
+  try { await DB.dropFiles(f.versions || []); await DB.remove("files", f.id); toast("파일을 삭제했어요."); }
+  catch (err) { toast("삭제하지 못했어요. 권한을 확인해 주세요."); console.error(err); }
+}
 function fileDetail(f){
   if (!f) return;
-  const vs = (f.versions || []).slice().reverse(), editable = canEdit(f);
+  const vs = (f.versions || []).slice().reverse(), editable = canEditFile(f);
   openForm({
-    title: "파일 정보",
+    title: editable ? "자료 수정" : "파일 정보",
     fields: `<div class="fdet"><b>${esc(f.name)}</b>
         <span>${esc(fileType(f.name))}, ${sizeLabel(f.size || 0)}, ${esc(folderList().find(x => x.id === f.folder)?.name || "분류 안 됨")}, ${esc(scopeLabel(f.branch))}</span></div>
-      ${editable ? fArea("설명", "desc", f.desc || "", 'rows="3" maxlength="500" placeholder="어떤 자료인지, 언제·어떻게 쓰는지 적어 주세요."')
+      ${editable ? `${fArea("설명", "desc", f.desc || "", 'rows="3" maxlength="500" placeholder="어떤 자료인지, 언제·어떻게 쓰는지 적어 주세요."')}
+          ${fText("파일 이름", "fname", f.name, 'required maxlength="120"')}
+          ${fSelect("폴더", "folder", [...folderList().map(x => [x.id, x.name]), ...(folderList().some(x => x.id === f.folder) ? [] : [["", "분류 안 됨"]])], folderList().some(x => x.id === f.folder) ? f.folder : "")}`
         : `<p class="fdesc" style="-webkit-line-clamp:unset">${f.desc ? esc(f.desc) : "설명이 없어요."}</p>`}
       <h3 class="vh">버전 ${vs.length}개 <small>위가 최신</small></h3>
       <ul class="vlist">${vs.map((v,i) => { const url = DB.fileUrl(v);
@@ -3511,8 +3536,20 @@ function fileDetail(f){
     saveLabel: editable ? "저장" : "닫기",
     async onSave(form){
       if (!editable) return true;
-      const desc = val(form,"desc").trim();
-      if (desc !== (f.desc || "")) { await DB.update("files", f.id, { desc }); toast("설명을 저장했어요."); }
+      const desc = val(form,"desc").trim(), folder = val(form,"folder");
+      let name = val(form,"fname").trim();
+      if (!name) return formErr("파일 이름을 넣어 주세요.");
+      const ext = (f.name.match(/\.[^.]+$/) || [""])[0];      // 확장자를 지웠으면 원래 확장자를 다시 붙임
+      if (ext && !name.toLowerCase().endsWith(ext.toLowerCase())) name += ext;
+      const patch = {};
+      if (desc !== (f.desc || "")) patch.desc = desc;
+      if (name !== f.name) patch.name = name;
+      if (folder !== (f.folder || "") && (folder || folderList().some(x => x.id === f.folder))) patch.folder = folder;
+      if (Object.keys(patch).length){
+        await DB.update("files", f.id, patch);
+        const fnm = folderList().find(x => x.id === folder)?.name;
+        toast(patch.folder !== undefined ? `'${fnm || "분류 안 됨"}' 폴더로 옮기고 저장했어요.` : "저장했어요.");
+      }
       return true;
     },
     onDelete: editable && (async () => { await DB.dropFiles(f.versions || []); await DB.remove("files", f.id); toast("파일을 삭제했어요."); }),
