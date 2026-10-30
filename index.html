@@ -600,6 +600,9 @@
   .ftable .c-ed{white-space:nowrap;text-align:right;width:1%}
   .mini{border:1px solid var(--line);background:#fff;border-radius:4px;font-size:12px;font-weight:600;padding:4px 8px;cursor:pointer;color:var(--text);font-family:inherit}
   .mini + .mini{margin-left:4px}
+  .lv{display:inline-block;font-size:11px;font-weight:700;padding:1px 6px;border-radius:4px;margin-right:6px;vertical-align:1px}
+  .lv-mgr{background:#E8EAF6;color:#3240B8}
+  .lv-admin{background:var(--ink);color:var(--brand-yellow)}
   .mini:hover{border-color:var(--text-sub)}
   .mini.danger{color:#C62828}
   .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
@@ -1094,6 +1097,17 @@ const canEdit = it => state.wide || state.myBranches.includes(it.branch);
 const canFolder = () => state.isAdmin || !!state.member?.manager;
 // 자료실 파일 수정·삭제: 내 원 자료 + (관리자는) 공통 자료
 const canEditFile = f => canEdit(f) || (f.branch === "all" && canFolder());
+// 자료 공개 범위: all = 모두, mgr = 관리자 이상(대표 + 원장·부원장·실장), admin = 대표만
+const LEVELS = [["all", "모두"], ["mgr", "관리자 이상"], ["admin", "대표만"]];
+const levelOpts = () => LEVELS.filter(([k]) => k === "all" || (k === "mgr" && canFolder()) || (k === "admin" && state.isAdmin));
+const levelLabel = k => (LEVELS.find(x => x[0] === (k || "all")) || LEVELS[0])[1];
+// 공개 범위가 없는 예전 자료는 대표 화면이 '모두'로 채움 (선생님·관리자 화면은 공개 범위로 자료를 찾기 때문)
+async function fixFileLevels(){
+  if (fixFileLevels.busy) return; const miss = state.files.filter(f => !f.level); if (!miss.length) return;
+  fixFileLevels.busy = true;
+  try { for (const f of miss) await DB.update("files", f.id, { level:"all" }, true); } catch (err) { console.warn(err); }
+  finally { fixFileLevels.busy = false; }
+}
 /* 직원 계정의 소속 원 목록. 예전 문서(branch 하나)도 읽을 수 있게 함 */
 const memBranches = m => !m ? [] : Array.isArray(m.branches) ? m.branches.filter(b => BRANCH_KEYS.includes(b))
   : m.branch === "all" ? [...BRANCH_KEYS] : BRANCH_KEYS.includes(m.branch) ? [m.branch] : [];
@@ -1182,8 +1196,8 @@ function seed(){
         versions:[ { size:45120, at:ago(40), by:"대표" }, { size:48213, at:ago(8), by:"재료 담당", note:"점토·물감 품목 추가" } ] },
       { id:"f2", name:"수업 결석 안내문.hwp", folder:"forms", branch:"all", size:30210, at:ago(22), createdBy:ADMIN, writer:"대표", versions:[ { size:30210, at:ago(22), by:"대표" } ] },
       { id:"f3", name:"학부모 동의서 (보강·샘플).pdf", folder:"docs", branch:"all", size:182330, at:ago(29), createdBy:ADMIN, writer:"대표", versions:[ { size:182330, at:ago(29), by:"대표" } ] },
-      { id:"f4", name:"직원 근무 확인서.hwp", folder:"legal", branch:"all", size:25100, at:ago(44), createdBy:ADMIN, writer:"대표", versions:[ { size:25100, at:ago(44), by:"대표" } ] },
-      { id:"f5", name:"사업자등록증 사본.pdf", folder:"branch", branch:"daechi", size:310440, at:ago(57), createdBy:DC, writer:"대치원", versions:[ { size:310440, at:ago(57), by:"대치원" } ] },
+      { id:"f4", name:"직원 근무 확인서.hwp", folder:"legal", branch:"all", level:"mgr", size:25100, at:ago(44), createdBy:ADMIN, writer:"대표", versions:[ { size:25100, at:ago(44), by:"대표" } ] },
+      { id:"f5", name:"사업자등록증 사본.pdf", folder:"branch", branch:"daechi", level:"admin", size:310440, at:ago(57), createdBy:DC, writer:"대치원", versions:[ { size:310440, at:ago(57), by:"대치원" } ] },
       { id:"f6", name:"정산 증빙 제출 체크리스트.xlsx", folder:"forms", branch:"all", size:19870, at:ago(73), createdBy:ADMIN, writer:"대표", versions:[ { size:19870, at:ago(73), by:"대표" } ] },
       { id:"f7", name:"신규 교사 교육 1주차.pdf", desc:"입사 첫 주에 보는 교육 자료. 수업 흐름, 아들 코칭 기본, 학부모 응대 순서로 되어 있어요.", folder:"edu", branch:"all", size:2410330, at:ago(12), createdBy:ADMIN, writer:"대표", versions:[ { size:2410330, at:ago(12), by:"대표" } ] },
       { id:"f8", name:"할로윈 행사 사진.zip", folder:"photo", branch:"banpo", size:48230110, at:ago(1), createdBy:BP, writer:"반포원", versions:[ { size:48230110, at:ago(1), by:"반포원" } ] }
@@ -1242,8 +1256,10 @@ const DB = (() => {
 
   return {
     watch(name, cb, opts){
-      const W = opts?.where;
-      const pass = x => !W || W.every(([k, op, v]) => op === "in" ? v.includes(x[k]) : x[k] === v);
+      const W = opts?.where, A = opts?.and || [];
+      const fv = (x, k) => x[k] ?? (k === "level" ? "all" : undefined);   // 미리보기: 예전 자료(공개 범위 없음) = 모두
+      const ok = conds => x => conds.every(([k, op, v]) => op === "in" ? v.includes(fv(x, k)) : fv(x, k) === v);
+      const pass = x => (!W || ok(W)(x)) && ok(A)(x);
       if (DEMO){
         ensure(); const c = list => cb(list.filter(pass)); (subs[name] ||= []).push(c); c(mem[name].map(x => ({ ...x })));
         return () => { subs[name] = (subs[name] || []).filter(x => x !== c); };
@@ -1256,6 +1272,7 @@ const DB = (() => {
       // 운영지표·상담 현황은 원별 문서만 있어서 보안 규칙이 '모든 원'(all)을 허용하지 않음 → 내 원만 요청해야 거절되지 않음
       const own = state.myBranches.length ? state.myBranches : ["none"];
       if (!state.wide && name !== "members") q = F.query(q, F.where("branch", "in", ["kpi", "counsel"].includes(name) ? own : ["all", ...own]));
+      if (A.length) q = F.query(q, ...A.map(w => F.where(...w)));
       return F.onSnapshot(q, snap => cb(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
         err => toast(`${COLL_LABEL[name]}을(를) 불러오지 못했어요. (${err.code})`));
     },
@@ -1272,8 +1289,8 @@ const DB = (() => {
       const ref = await fb.F.addDoc(fb.F.collection(fb.db, COLL[name]), { ...doc, createdAt: fb.F.serverTimestamp() });
       return ref.id;
     },
-    async update(name, id, patch){
-      const p = { ...patch, updatedAt: Date.now(), updatedBy: state.user.email };
+    async update(name, id, patch, quiet){   // quiet: 수정일·수정자를 바꾸지 않음(자동 정리용)
+      const p = quiet ? { ...patch } : { ...patch, updatedAt: Date.now(), updatedBy: state.user.email };
       if (DEMO){ ensure(); const it = mem[name].find(x => x.id === id); if (it) Object.assign(it, p); save(); emit(name); return; }
       await fb.F.updateDoc(fb.F.doc(fb.db, COLL[name], id), p);
     },
@@ -1463,12 +1480,20 @@ async function enter(user){
 
   state.kpiPriv = {};
   state.loaded = {};
-  ["notices","events","plans","tasks","routines","missions","members","files","bookmarks","bmGroups","kpi","folders","birthdays","teachers","manuals","manCats","counsel", ...(state.isAdmin ? ["kpiPriv","revenue","nasStatus"] : [])].forEach(name => {
+  ["notices","events","plans","tasks","routines","missions","members","bookmarks","bmGroups","kpi","folders","birthdays","teachers","manuals","manCats","counsel", ...(state.isAdmin ? ["kpiPriv","revenue","nasStatus"] : [])].forEach(name => {
     unsubs.push(DB.watch(name, list => {
       state[name] = name === "kpi" || name === "kpiPriv" || name === "counsel" || name === "revenue" || name === "nasStatus" ? Object.fromEntries(list.map(x => [x.id, x])) : list;
       onData(name);
     }));
   });
+  // 자료실: 공개 범위(level)에 따라 요청 — 대표는 전부, 관리자는 '모두'+'관리자 이상', 그 밖에는 '모두'만 (보안 규칙과 같은 조건)
+  const fParts = {};
+  const fSet = (k, list) => { fParts[k] = list; state.files = Object.values(fParts).flat(); onData("files"); if (state.isAdmin) fixFileLevels(); };
+  if (state.isAdmin) unsubs.push(DB.watch("files", l => fSet("all", l)));
+  else {
+    unsubs.push(DB.watch("files", l => fSet("all", l), { and: [["level", "==", "all"]] }));
+    if (canFolder()) unsubs.push(DB.watch("files", l => fSet("mgr", l), { and: [["level", "==", "mgr"]] }));
+  }
   // 미션 평가: 대표는 전부, 관리자는 자기 원 전부(확정 전 포함), 교사는 자기 것 중 공개된 것만 (보안 규칙과 같은 조건으로 요청)
   state.evals = {}; const evParts = {};
   const evSet = (k, list) => { evParts[k] = list; state.evals = Object.fromEntries(Object.values(evParts).flat().map(x => [x.id, x])); onData("evals"); };
@@ -3013,7 +3038,7 @@ function filesPageHTML(){
           const last = f.versions?.[f.versions.length - 1] || {}, url = DB.fileUrl(last), vcount = f.versions?.length || 1;
           return `<tr>
             <td>${f.desc ? `<button type="button" class="fdesc" data-act="file-open" data-id="${esc(f.id)}">${esc(f.desc)}</button>` : ""}
-              <button type="button" class="fname" data-act="file-open" data-id="${esc(f.id)}">${esc(f.name)}</button>
+              <button type="button" class="fname" data-act="file-open" data-id="${esc(f.id)}">${f.level && f.level !== "all" ? `<span class="lv lv-${esc(f.level)}">${levelLabel(f.level)}</span>` : ""}${esc(f.name)}</button>
               <span class="fsub">${sizeLabel(f.size || last.size || 0)}${vcount > 1 ? `, 버전 ${vcount}개` : ""}</span></td>
             <td class="c-type">${esc(fileType(f.name))}</td>
             ${state.branch === "all" ? `<td class="c-br">${esc(f.branch === "all" ? "공통" : SHORT[f.branch] || "")}</td>` : ""}
@@ -3482,10 +3507,12 @@ function uploadForm(files, target){
            ${fArea("이번 버전에서 바뀐 점 (선택)", "note", "", 'rows="2" maxlength="200" placeholder="예: 3월 일정 반영, 오타 수정"')}`
         : `${fArea("설명", "desc", "", `rows="3" maxlength="500" required placeholder="어떤 자료인지, 언제·어떻게 쓰는지 적어 주세요.${files.length > 1 ? " (올리는 파일 모두에 같은 설명이 붙어요)" : ""}"`)}
            <div class="row2">${fSelect("폴더", "folder", folderList().map(f => [f.id, f.name]), folder0)}${fBranch("files", state.branch)}</div>
+           ${levelOpts().length > 1 ? fSelect("볼 수 있는 사람", "level", levelOpts(), "all") : ""}
            ${fWriter()}`}`,
     saveLabel: "올리기",
     async onSave(form){
       const folder = target ? target.folder : val(form,"folder"), branch = target ? target.branch : val(form,"branch");
+      const level = target ? (target.level || "all") : (form.elements.level ? val(form,"level") : "all");
       if (!target && !branchOptions("files").includes(branch)) return formErr("이 범위에는 파일을 올릴 수 없어요.");
       const desc = target ? "" : val(form,"desc").trim(), note = target ? val(form,"note").trim() : "";
       if (!target && !desc) return formErr("자료 설명을 적어 주세요.");
@@ -3498,10 +3525,10 @@ function uploadForm(files, target){
           await DB.update("files", target.id, { versions:[...(target.versions || []), ver], size:f.size });
         } else {
           // 같은 폴더·범위에 같은 이름이 있으면 새 버전으로 쌓기
-          const same = state.files.find(x => x.name === f.name && x.folder === folder && x.branch === branch);
+          const same = state.files.find(x => x.name === f.name && x.folder === folder && x.branch === branch && (x.level || "all") === level);
           const id = same ? same.id : DB.newId(), ver = await DB.putFile(id, f, prog);
           if (same) await DB.update("files", id, { versions:[...(same.versions || []), ver], size:f.size, desc });
-          else await DB.addWithId("files", id, { name:f.name, desc, folder, branch, size:f.size, versions:[ver] });
+          else await DB.addWithId("files", id, { name:f.name, desc, folder, branch, level, size:f.size, versions:[ver] });
         }
       }
       toast(target ? "새 버전을 올렸어요." : `파일 ${files.length}개를 올렸어요.`);
@@ -3523,10 +3550,11 @@ function fileDetail(f){
   openForm({
     title: editable ? "자료 수정" : "파일 정보",
     fields: `<div class="fdet"><b>${esc(f.name)}</b>
-        <span>${esc(fileType(f.name))}, ${sizeLabel(f.size || 0)}, ${esc(folderList().find(x => x.id === f.folder)?.name || "분류 안 됨")}, ${esc(scopeLabel(f.branch))}</span></div>
+        <span>${esc(fileType(f.name))}, ${sizeLabel(f.size || 0)}, ${esc(folderList().find(x => x.id === f.folder)?.name || "분류 안 됨")}, ${esc(scopeLabel(f.branch))}, 볼 수 있는 사람: ${levelLabel(f.level)}</span></div>
       ${editable ? `${fArea("설명", "desc", f.desc || "", 'rows="3" maxlength="500" placeholder="어떤 자료인지, 언제·어떻게 쓰는지 적어 주세요."')}
           ${fText("파일 이름", "fname", f.name, 'required maxlength="120"')}
-          ${fSelect("폴더", "folder", [...folderList().map(x => [x.id, x.name]), ...(folderList().some(x => x.id === f.folder) ? [] : [["", "분류 안 됨"]])], folderList().some(x => x.id === f.folder) ? f.folder : "")}`
+          ${fSelect("폴더", "folder", [...folderList().map(x => [x.id, x.name]), ...(folderList().some(x => x.id === f.folder) ? [] : [["", "분류 안 됨"]])], folderList().some(x => x.id === f.folder) ? f.folder : "")}
+          ${levelOpts().length > 1 ? fSelect("볼 수 있는 사람", "level", levelOpts(), f.level || "all") : ""}`
         : `<p class="fdesc" style="-webkit-line-clamp:unset">${f.desc ? esc(f.desc) : "설명이 없어요."}</p>`}
       <h3 class="vh">버전 ${vs.length}개 <small>위가 최신</small></h3>
       <ul class="vlist">${vs.map((v,i) => { const url = DB.fileUrl(v);
@@ -3544,6 +3572,7 @@ function fileDetail(f){
       const patch = {};
       if (desc !== (f.desc || "")) patch.desc = desc;
       if (name !== f.name) patch.name = name;
+      if (form.elements.level && val(form,"level") !== (f.level || "all")) patch.level = val(form,"level");
       if (folder !== (f.folder || "") && (folder || folderList().some(x => x.id === f.folder))) patch.folder = folder;
       if (Object.keys(patch).length){
         await DB.update("files", f.id, patch);

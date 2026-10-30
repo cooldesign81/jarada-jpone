@@ -78,13 +78,15 @@ service cloud.firestore {
       allow delete: if okDelete();
     }
     // 자료실 파일: 내 원 자료는 원 직원이, '공통' 자료는 대표 + 관리자가 수정·삭제
+    //  level(볼 수 있는 사람): all = 모두, mgr = 관리자 이상(대표 + 원장·부원장·실장), admin = 대표만
+    function fileLevelOk(l) { return l == 'all' || (l == 'mgr' && isFolderAdmin()) || (l == 'admin' && isAdmin()); }
     match /portalFiles/{id} {
-      allow read: if okRead();
-      allow create: if okCreate();
-      allow update: if okUpdate()
+      allow read: if okRead() && (isAdmin() || resource.data.level == 'all' || (resource.data.level == 'mgr' && isFolderAdmin()));
+      allow create: if okCreate() && fileLevelOk(request.resource.data.level);
+      allow update: if (isAdmin() || fileLevelOk(resource.data.level)) && fileLevelOk(request.resource.data.level) && (okUpdate()
         || (isFolderAdmin() && resource.data.branch == 'all' && request.resource.data.branch == 'all'
-            && request.resource.data.createdBy == resource.data.createdBy);
-      allow delete: if okDelete() || (isFolderAdmin() && resource.data.branch == 'all');
+            && request.resource.data.createdBy == resource.data.createdBy));
+      allow delete: if (isAdmin() || fileLevelOk(resource.data.level)) && (okDelete() || (isFolderAdmin() && resource.data.branch == 'all'));
     }
     match /portalBookmarks/{id} {
       allow read: if okRead();

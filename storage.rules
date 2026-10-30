@@ -15,8 +15,16 @@ service firebase.storage {
         && firestore.exists(/databases/(default)/documents/portalMembers/$(request.auth.token.email))
         && firestore.get(/databases/(default)/documents/portalMembers/$(request.auth.token.email)).data.active == true;
     }
+    // 자료실 파일의 '볼 수 있는 사람'(level)을 받기 링크에도 적용. 자료실 문서가 아닌 파일(업무·미션 첨부, 매뉴얼 PDF)은 그대로
+    function isAdminS() { return request.auth.token.email == 'jinhyuck@gmail.com' && request.auth.token.email_verified == true; }
+    function isMgrS() {
+      return isStaff() && firestore.get(/databases/(default)/documents/portalMembers/$(request.auth.token.email)).data.get('manager', false) == true;
+    }
     match /portal-files/{fileId}/{name} {
-      allow read: if isMember();
+      function fdoc() { return /databases/(default)/documents/portalFiles/$(fileId); }
+      allow read: if isMember() && (isAdminS() || !firestore.exists(fdoc())
+        || firestore.get(fdoc()).data.get('level', 'all') == 'all'
+        || (firestore.get(fdoc()).data.get('level', 'all') == 'mgr' && isMgrS()));
       allow create: if isMember() && request.resource.size < 100 * 1024 * 1024;
       allow delete: if isMember();
     }
