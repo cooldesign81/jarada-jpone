@@ -1090,7 +1090,7 @@ const writerName = () => state.member?.name || store.get("portal.writer") || (st
 const visible = it => state.branch === "all" || it.branch === "all" || it.branch === state.branch;
 // wide = 3개 원을 모두 다루는 사람 (대표, 또는 직원 계정에서 '3개 원 전체'로 지정된 사람)
 const canEdit = it => state.wide || state.myBranches.includes(it.branch);
-// 자료실 폴더 추가·수정·삭제: 대표 + 관리자(원장·부원장·실장)
+// 자료실 폴더 · 업무매뉴얼 분류 추가·수정·삭제: 대표 + 관리자(원장·부원장·실장)
 const canFolder = () => state.isAdmin || !!state.member?.manager;
 // 자료실 파일 수정·삭제: 내 원 자료 + (관리자는) 공통 자료
 const canEditFile = f => canEdit(f) || (f.branch === "all" && canFolder());
@@ -3036,7 +3036,7 @@ const manCatList = () => state.manCats.length ? state.manCats.slice().sort((a, b
   : MANUAL_CATS;
 const manCatLabel = k => (manCatList().find(c => c[0] === k) || [k, "분류 안 됨"])[1];
 async function seedManCats(loud){
-  if (seedManCats.busy || state.manCats.length || !state.isAdmin) return; seedManCats.busy = true;
+  if (seedManCats.busy || state.manCats.length || !canFolder()) return; seedManCats.busy = true;
   try { for (const [i, [id, name]] of MANUAL_CATS.entries()) await DB.set("manCats", id, { name, order:i + 1, branch:"all", at:Date.now(), createdBy:state.user.email, writer:writerName() }); }
   catch (err) { if (loud) throw err; }
   finally { seedManCats.busy = false; }
@@ -3128,7 +3128,7 @@ function manualPageHTML(){
     .sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || (b.updatedAt || b.at || 0) - (a.updatedAt || a.at || 0));
   const canWrite = branchOptions("manuals").length > 0;
   const open = state.openManual && vis.find(m => m.id === state.openManual);
-  const editable = state.isAdmin;
+  const editable = canFolder();   // 분류 관리: 대표 + 관리자
   const side = `<aside class="card fold">
       <div class="card-h"><h2>분류</h2>${editable ? `<button type="button" class="icon-btn" data-act="mancat-new">분류 추가</button>` : ""}</div>
       <ul class="folders">

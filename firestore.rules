@@ -153,11 +153,11 @@ service cloud.firestore {
         && request.resource.data.get('history', []).size() <= 5;
       allow delete: if okDelete();
     }
-    // 업무매뉴얼 분류: 모두 읽고, 대표만 추가·이름 변경·순서·삭제
+    // 업무매뉴얼 분류: 모두 읽고, 대표 + 관리자(원장·부원장·실장)가 추가·이름 변경·순서·삭제
     match /portalManCats/{id} {
       allow read: if isMember();
-      allow create, update: if isAdmin() && request.resource.data.name is string && request.resource.data.name.size() <= 20;
-      allow delete: if isAdmin();
+      allow create, update: if isFolderAdmin() && request.resource.data.name is string && request.resource.data.name.size() <= 20;
+      allow delete: if isFolderAdmin();
     }
     // 상담 현황: 대표 화면이 스케줄 매니저에서 최근 30일 교사별 상담 수만 세어 저장(내용·학생 이름 없음). 문서 ID = 원
     match /portalCounsel/{branch} {
