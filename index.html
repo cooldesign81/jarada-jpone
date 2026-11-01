@@ -600,6 +600,56 @@
   .ftable .c-ed{white-space:nowrap;text-align:right;width:1%}
   .mini{border:1px solid var(--line);background:#fff;border-radius:4px;font-size:12px;font-weight:600;padding:4px 8px;cursor:pointer;color:var(--text);font-family:inherit}
   .mini + .mini{margin-left:4px}
+  /* 공용 자료실 · 매뉴얼 (기획안) */
+  #cfmMsg{white-space:pre-line}
+  .tagb.warn{background:#FFF4DC;color:#9A6200}
+  .fold-h{font-size:12px;font-weight:700;color:var(--text-sub);margin:12px 0 4px;padding:8px 12px 0;border-top:1px solid var(--line)}
+  .folders li.hot b{color:#C62828}
+  .fold-note{font-size:12px;color:var(--text-sub);line-height:1.6;margin:12px 4px 16px}
+  .kchips{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 8px}
+  .kchips button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:5px 12px;font:inherit;font-size:13px;color:var(--text);cursor:pointer}
+  .kchips button[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:700}
+  .ftable.kb .c-cat{width:150px;font-size:12px;color:var(--text);white-space:normal}
+  .ftable.kb .c-cat small{display:block;color:var(--text-sub);margin-top:2px}
+  .ftitle{display:block;background:none;border:0;padding:0;text-align:left;font:inherit;font-size:15px;font-weight:700;color:var(--ink);cursor:pointer;line-height:1.45}
+  .ftitle:hover{text-decoration:underline;text-underline-offset:3px}
+  .ftitle .tagb,.mi-t .tagb{margin-right:6px;vertical-align:1px}
+  .fdesc2{display:block;font-size:13px;color:var(--text);margin-top:3px;line-height:1.5}
+  .star{border:0;background:none;font-size:18px;line-height:1;color:#CFCFCF;cursor:pointer;padding:2px 6px;vertical-align:middle}
+  .star.on{color:#E0A100}.star:hover{color:#E0A100}
+  .kb-banner{display:flex;gap:12px;align-items:center;justify-content:space-between;background:#FFFBEA;border:1px solid #F0DC8A;border-radius:var(--r-card);padding:12px 16px;margin-bottom:16px;font-size:13px;line-height:1.6}
+  .kb-banner .btn{flex:none}
+  .kb-hint{font-size:13px;color:var(--text-sub);margin:0 0 4px}
+  .kt{display:inline-block;font-size:11px;font-weight:700;padding:1px 6px;border-radius:4px;margin-right:6px}
+  .kt-m{background:var(--ink);color:var(--brand-yellow)}.kt-r{background:#E8F1FA;color:#2563A6}.kt-s{background:#EEF7EE;color:#1F7A4D}
+  .kb-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+  .kb-title{font-size:20px;font-weight:800;color:var(--ink);margin:0 0 4px}
+  .kb-desc{font-size:15px;color:var(--text);margin:0 0 6px;line-height:1.6}
+  .kb-note{background:#FDECEE;color:#9B1C2C;border-radius:6px;padding:8px 12px;font-size:13px;margin:0 0 10px}
+  .kb-src{font-size:12px;color:var(--text-sub);margin:0 0 8px}
+  .kb-img{display:block;max-width:100%;max-height:60vh;margin:8px 0;border:1px solid var(--line);border-radius:var(--r-card)}
+  .kb-frame{display:block;width:100%;height:60vh;border:1px solid var(--line);border-radius:var(--r-card);margin:8px 0}
+  .kb-acts{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
+  .kb-review{background:#F6F7FB;border:1px solid #DDE1F0;border-radius:var(--r-card);padding:12px 16px;margin:12px 0;font-size:13px;line-height:1.6}
+  .kb-q{margin:4px 0 8px;padding-left:18px}
+  .kb-case{display:grid;gap:4px;background:#fff;border:1px solid var(--line);border-radius:6px;padding:10px 12px;margin:8px 0}
+  .kb-checks{display:grid;gap:6px;margin:4px 0 8px}
+  .kb-ext{padding-left:24px}.kb-ext[hidden],[data-case][hidden]{display:none}
+  .man-info{display:flex;flex-wrap:wrap;gap:6px 24px;margin:0 0 18px;font-size:13px}
+  .man-info div{display:flex;gap:8px}.man-info dt{color:var(--text-sub);font-weight:600}.man-info dd{margin:0;color:var(--text)}
+  .man-rel{margin-top:24px;border-top:1px solid var(--line);padding-top:12px}
+  .man-rel ul{list-style:none;margin:0;padding:0;display:grid;gap:6px}.man-rel li small{display:block;color:var(--text-sub);font-size:12px}
+  .man-ack{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:24px;padding:14px 16px;border-radius:var(--r-card);background:#FFF8E1;border:1px solid #F0DC8A;font-size:14px}
+  .man-ack.done{background:#EEF7EE;border-color:#BFE0C6;color:#1F7A4D}
+  .rel-pick{display:grid;gap:4px;max-height:180px;overflow:auto;border:1px solid var(--line);border-radius:6px;padding:8px 10px;margin-top:6px;font-size:13px}
+  .rel-pick label[hidden]{display:none}.rel-pick small{color:var(--text-sub)}
+  .req-list{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+  .req-list li{border:1px solid var(--line);border-radius:var(--r-card);padding:10px 12px;font-size:14px}
+  .req-list li.done{opacity:.65}.req-list p{margin:6px 0;white-space:pre-line}
+  .rq-h{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.rq-m{font-size:12px;color:var(--text-sub);margin-right:auto}
+  .rq-reply{color:#1F7A4D;font-size:13px}.rq-do{display:flex;gap:6px}.rq-do .inp{flex:1}
+  .kb-home{margin-bottom:16px}
+  @media (max-width:560px){ .ftable.kb .c-cat{display:none} .kb-banner{flex-direction:column;align-items:stretch} .flist .card-h .sub,#dropZone{display:none} }
   .lv{display:inline-block;font-size:11px;font-weight:700;padding:1px 6px;border-radius:4px;margin-right:6px;vertical-align:1px}
   .lv-mgr{background:#E8EAF6;color:#3240B8}
   .lv-admin{background:var(--ink);color:var(--brand-yellow)}
@@ -954,8 +1004,8 @@ const BRANCH_KEYS = ["pyeongchon","banpo","daechi"];
 const SHORT = { pyeongchon:"평촌", banpo:"반포", daechi:"대치" };
 
 /* Firestore 컬렉션 이름 */
-const COLL = { notices:"portalNotices", events:"portalEvents", todos:"portalTodos", files:"portalFiles", bookmarks:"portalBookmarks", bmGroups:"portalBmGroups", kpi:"portalKpi", kpiPriv:"portalKpiPrivate", folders:"portalFolders", members:"portalMembers", birthdays:"portalBirthdays", teachers:"portalTeachers", manuals:"portalManuals", counsel:"portalCounsel", revenue:"portalRevenue", manCats:"portalManCats", tasks:"portalTasks", routines:"portalRoutines", missions:"portalMissions", evals:"portalEvals", nasJobs:"portalNasJobs", nasStatus:"portalNasStatus", plans:"portalPlans" };
-const COLL_LABEL = { notices:"공지", events:"일정", todos:"할 일", files:"자료", bookmarks:"북마크", bmGroups:"북마크 구분", kpi:"운영지표", kpiPriv:"운영지표(금액)", folders:"자료실 폴더", members:"직원 계정", birthdays:"생일", teachers:"선생님 입사월", manuals:"업무매뉴얼", counsel:"상담 현황", revenue:"과거 매출", manCats:"매뉴얼 분류", tasks:"워크허브 업무", routines:"루틴", missions:"미션", evals:"미션 평가", nasJobs:"NAS 작업", nasStatus:"NAS 커넥터 상태", plans:"월간 계획" };
+const COLL = { notices:"portalNotices", events:"portalEvents", todos:"portalTodos", files:"portalFiles", bookmarks:"portalBookmarks", bmGroups:"portalBmGroups", kpi:"portalKpi", kpiPriv:"portalKpiPrivate", folders:"portalFolders", members:"portalMembers", birthdays:"portalBirthdays", teachers:"portalTeachers", manuals:"portalManuals", counsel:"portalCounsel", revenue:"portalRevenue", manCats:"portalManCats", tasks:"portalTasks", routines:"portalRoutines", missions:"portalMissions", evals:"portalEvals", nasJobs:"portalNasJobs", nasStatus:"portalNasStatus", plans:"portalPlans", favs:"portalFavs", acks:"portalAcks", requests:"portalRequests" };
+const COLL_LABEL = { notices:"공지", events:"일정", todos:"할 일", files:"자료", bookmarks:"북마크", bmGroups:"북마크 구분", kpi:"운영지표", kpiPriv:"운영지표(금액)", folders:"자료실 폴더", members:"직원 계정", birthdays:"생일", teachers:"선생님 입사월", manuals:"업무매뉴얼", counsel:"상담 현황", revenue:"과거 매출", manCats:"매뉴얼 분류", tasks:"워크허브 업무", routines:"루틴", missions:"미션", evals:"미션 평가", nasJobs:"NAS 작업", nasStatus:"NAS 커넥터 상태", plans:"월간 계획", favs:"즐겨찾기", acks:"필독 확인", requests:"수정 요청" };
 /* 북마크 구분선 색 */
 const LINE_COLORS = [["#222222","검정"],["#DE8619","주황"],["#C98100","황토"],["#D1495B","빨강"],["#8B5CF6","보라"],["#2563A6","파랑"],["#1F7A4D","초록"],["#767676","회색"]];
 
@@ -994,15 +1044,13 @@ const CAL_KIND = {
   off:   { label:"휴원",        color:"#D1495B" }
 };
 
-/* 자료실 기본 폴더 (처음 한 번만 쓰임. 이후에는 자료실 화면에서 대표가 추가·이름 변경·삭제) */
-const DEFAULT_FOLDERS = [
-  { id:"forms",  name:"서식" },
-  { id:"docs",   name:"필요 서류" },
-  { id:"legal",  name:"계약 · 법무" },
-  { id:"edu",    name:"교육 자료" },
-  { id:"photo",  name:"행사 · 사진" },
-  { id:"branch", name:"원별 보관" }
-];
+/* 공용 자료실 분류 5개 (기획안). 처음 한 번 만들고, 이후에는 자료 담당자가 추가·이름 변경·삭제 */
+const FILE_CATS = [["k_edu","교육 연구·수업 아이디어"],["k_case","아동 관찰·코칭 사례"],["k_ops","상담·운영 사례"],["k_promo","홍보·행사 자료"],["k_form","서식·템플릿"]];
+const DEFAULT_FOLDERS = FILE_CATS.map(([id, name]) => ({ id, name }));
+// 자료 종류(좁혀보기용). 분류를 고르면 기본값이 들어가고 바꿀 수 있음
+const KINDS = ["사례","아이디어","연구","서식"];
+const KIND_BY_CAT = { k_edu:"아이디어", k_case:"사례", k_ops:"사례", k_promo:"아이디어", k_form:"서식" };
+const F_STATUS = { draft:["임시저장","tagb"], pending:["검토 대기","tagb warn"], revise:["보완 요청","tagb bad"], published:["게시","tagb ok"] };
 const MAX_FILE_MB = 100;
 
 /* ========= 운영지표 샘플 (실데이터 연결 전) ========= */
@@ -1083,7 +1131,7 @@ function fileType(name){
 /* ========= 상태 ========= */
 const state = {
   user:null, isAdmin:false, wide:false, myBranch:null, myBranches:[], branch:"all", tab:"home",
-  notices:[], events:[], todos:[], files:[], bookmarks:[], bmGroups:[], kpi:{}, kpiPriv:{}, revenue:{}, nasStatus:{}, folders:[], members:[], member:null, birthdays:[], ageP: +(store.get("portal.ageP") || 3), counsel:{}, manuals:[], manCats:[], tasks:[], routines:[], whView:"mine", whFilter:"open", whWho:"", missions:[], evals:{}, mhView:"list", mhOpen:null, mhWho:"", manCat:"all", manQ:"", openManual:null, tSort:{ k:"enrolled", dir:-1 }, tQ:"", tWarn:false, loaded:{}, teachers:[], kpiPeriod: +(store.get("portal.kpiPeriod") || 3),
+  notices:[], events:[], todos:[], files:[], bookmarks:[], bmGroups:[], kpi:{}, kpiPriv:{}, revenue:{}, nasStatus:{}, folders:[], members:[], member:null, birthdays:[], ageP: +(store.get("portal.ageP") || 3), counsel:{}, manuals:[], manCats:[], tasks:[], routines:[], whView:"mine", whFilter:"open", whWho:"", missions:[], evals:{}, mhView:"list", mhOpen:null, mhWho:"", manCat:"all", manQ:"", openManual:null, favs:[], acks:[], requests:[], fKind:"", tSort:{ k:"enrolled", dir:-1 }, tQ:"", tWarn:false, loaded:{}, teachers:[], kpiPeriod: +(store.get("portal.kpiPeriod") || 3),
   cal:{ y:new Date().getFullYear(), m:new Date().getMonth(), sel:todayISO() }, calView: store.get("portal.calView") || "month", planY: new Date().getFullYear(), plans:[],
   openNotice:null, todoFilter:"open", folder:"all", fileQ:""
 };
@@ -1093,20 +1141,25 @@ const writerName = () => state.member?.name || store.get("portal.writer") || (st
 const visible = it => state.branch === "all" || it.branch === "all" || it.branch === state.branch;
 // wide = 3개 원을 모두 다루는 사람 (대표, 또는 직원 계정에서 '3개 원 전체'로 지정된 사람)
 const canEdit = it => state.wide || state.myBranches.includes(it.branch);
-// 자료실 폴더 · 업무매뉴얼 분류 추가·수정·삭제: 대표 + 관리자(원장·부원장·실장)
+// '관리자 이상' 자료를 보는 사람: 대표 + 관리자(원장·부원장·실장)
 const canFolder = () => state.isAdmin || !!state.member?.manager;
-// 자료실 파일 수정·삭제: 내 원 자료 + (관리자는) 공통 자료
-const canEditFile = f => canEdit(f) || (f.branch === "all" && canFolder());
-// 자료 공개 범위: all = 모두, mgr = 관리자 이상(대표 + 원장·부원장·실장), admin = 대표만
+// 기획안 권한 — 자료 담당자: 자료실 검토·게시·분류 정리, 매뉴얼 작성(승인 요청). 따로 정하지 않으면 관리자가 자료 담당자
+//              매뉴얼 승인자: 공식 매뉴얼 승인·개정·폐지. 대표 + 직원 계정에서 체크한 사람
+const isCurator = () => state.isAdmin || (state.member ? (state.member.curator ?? !!state.member.manager) === true : false);
+const isApprover = () => state.isAdmin || state.member?.approver === true;
+// 자료 수정·삭제: 대표, 자료 담당자(내 원 · 공통), 올린 사람(게시 전까지)
+const canEditFile = f => state.isAdmin || (isCurator() && (canEdit(f) || f.branch === "all")) || (f.createdBy === myEmail() && fStatus(f) !== "published");
 const LEVELS = [["all", "모두"], ["mgr", "관리자 이상"], ["admin", "대표만"]];
 const levelOpts = () => LEVELS.filter(([k]) => k === "all" || (k === "mgr" && canFolder()) || (k === "admin" && state.isAdmin));
 const levelLabel = k => (LEVELS.find(x => x[0] === (k || "all")) || LEVELS[0])[1];
-// 공개 범위가 없는 예전 자료는 대표 화면이 '모두'로 채움 (선생님·관리자 화면은 공개 범위로 자료를 찾기 때문)
-async function fixFileLevels(){
-  if (fixFileLevels.busy) return; const miss = state.files.filter(f => !f.level); if (!miss.length) return;
-  fixFileLevels.busy = true;
-  try { for (const f of miss) await DB.update("files", f.id, { level:"all" }, true); } catch (err) { console.warn(err); }
-  finally { fixFileLevels.busy = false; }
+// 예전 자료·매뉴얼(공개 범위·상태 없음)은 대표 화면이 '모두 · 게시'로 채움 (다른 화면은 이 값으로 자료를 찾음). 수정일은 그대로
+async function fixKbMeta(){
+  if (fixKbMeta.busy) return;
+  const fs = state.files.filter(f => !f.level || !f.status), ms = state.manuals.filter(m => !m.status);
+  if (!fs.length && !ms.length) return; fixKbMeta.busy = true;
+  try { for (const f of fs) await DB.update("files", f.id, { level: f.level || "all", status: f.status || "published", title: f.title || (f.name || "").replace(/\.[^.]+$/, "") }, true);
+        for (const m of ms) await DB.update("manuals", m.id, { status: "published", version: m.version || 1, ackVer: m.ackVer || 1 }, true); }
+  catch (err) { console.warn(err); } finally { fixKbMeta.busy = false; }
 }
 /* 직원 계정의 소속 원 목록. 예전 문서(branch 하나)도 읽을 수 있게 함 */
 const memBranches = m => !m ? [] : Array.isArray(m.branches) ? m.branches.filter(b => BRANCH_KEYS.includes(b))
@@ -1192,15 +1245,15 @@ function seed(){
         assignees:[{ email:"jimin.teacher@gmail.com", name:"한지민" }], checklist:["재료 부족분 확인","재료 요청 앱 등록"], desc:"", at:ago(20), createdBy:ADMIN, writer:"대표" }
     ],
     files: [
-      { id:"f1", name:"재료 주문 양식 (2026 개정).xlsx", desc:"매달 25일까지 재료 담당에게 보내는 주문 양식이에요. 품목 시트에서 고르고 수량만 적으면 돼요.", folder:"forms", branch:"all", size:48213, at:ago(40), updatedAt:ago(8), createdBy:ADMIN, writer:"대표",
+      { id:"f1", name:"재료 주문 양식 (2026 개정).xlsx", desc:"매달 25일까지 재료 담당에게 보내는 주문 양식이에요. 품목 시트에서 고르고 수량만 적으면 돼요.", folder:"k_form", branch:"all", size:48213, at:ago(40), updatedAt:ago(8), createdBy:ADMIN, writer:"대표",
         versions:[ { size:45120, at:ago(40), by:"대표" }, { size:48213, at:ago(8), by:"재료 담당", note:"점토·물감 품목 추가" } ] },
-      { id:"f2", name:"수업 결석 안내문.hwp", folder:"forms", branch:"all", size:30210, at:ago(22), createdBy:ADMIN, writer:"대표", versions:[ { size:30210, at:ago(22), by:"대표" } ] },
-      { id:"f3", name:"학부모 동의서 (보강·샘플).pdf", folder:"docs", branch:"all", size:182330, at:ago(29), createdBy:ADMIN, writer:"대표", versions:[ { size:182330, at:ago(29), by:"대표" } ] },
-      { id:"f4", name:"직원 근무 확인서.hwp", folder:"legal", branch:"all", level:"mgr", size:25100, at:ago(44), createdBy:ADMIN, writer:"대표", versions:[ { size:25100, at:ago(44), by:"대표" } ] },
-      { id:"f5", name:"사업자등록증 사본.pdf", folder:"branch", branch:"daechi", level:"admin", size:310440, at:ago(57), createdBy:DC, writer:"대치원", versions:[ { size:310440, at:ago(57), by:"대치원" } ] },
-      { id:"f6", name:"정산 증빙 제출 체크리스트.xlsx", folder:"forms", branch:"all", size:19870, at:ago(73), createdBy:ADMIN, writer:"대표", versions:[ { size:19870, at:ago(73), by:"대표" } ] },
-      { id:"f7", name:"신규 교사 교육 1주차.pdf", desc:"입사 첫 주에 보는 교육 자료. 수업 흐름, 아들 코칭 기본, 학부모 응대 순서로 되어 있어요.", folder:"edu", branch:"all", size:2410330, at:ago(12), createdBy:ADMIN, writer:"대표", versions:[ { size:2410330, at:ago(12), by:"대표" } ] },
-      { id:"f8", name:"할로윈 행사 사진.zip", folder:"photo", branch:"banpo", size:48230110, at:ago(1), createdBy:BP, writer:"반포원", versions:[ { size:48230110, at:ago(1), by:"반포원" } ] }
+      { id:"f2", name:"수업 결석 안내문.hwp", folder:"k_form", branch:"all", size:30210, at:ago(22), createdBy:ADMIN, writer:"대표", versions:[ { size:30210, at:ago(22), by:"대표" } ] },
+      { id:"f3", name:"학부모 동의서 (보강·샘플).pdf", folder:"k_form", branch:"all", size:182330, at:ago(29), createdBy:ADMIN, writer:"대표", versions:[ { size:182330, at:ago(29), by:"대표" } ] },
+      { id:"f4", name:"직원 근무 확인서.hwp", folder:"k_ops", branch:"all", level:"mgr", size:25100, at:ago(44), createdBy:ADMIN, writer:"대표", versions:[ { size:25100, at:ago(44), by:"대표" } ] },
+      { id:"f5", name:"사업자등록증 사본.pdf", folder:"k_ops", branch:"daechi", level:"admin", size:310440, at:ago(57), createdBy:DC, writer:"대치원", versions:[ { size:310440, at:ago(57), by:"대치원" } ] },
+      { id:"f6", name:"정산 증빙 제출 체크리스트.xlsx", folder:"k_form", branch:"all", size:19870, at:ago(73), createdBy:ADMIN, writer:"대표", versions:[ { size:19870, at:ago(73), by:"대표" } ] },
+      { id:"f7", name:"신규 교사 교육 1주차.pdf", desc:"입사 첫 주에 보는 교육 자료. 수업 흐름, 아들 코칭 기본, 학부모 응대 순서로 되어 있어요.", folder:"k_edu", branch:"all", size:2410330, at:ago(12), createdBy:ADMIN, writer:"대표", versions:[ { size:2410330, at:ago(12), by:"대표" } ] },
+      { id:"f8", name:"할로윈 행사 사진.zip", folder:"k_promo", branch:"banpo", size:48230110, at:ago(1), createdBy:BP, writer:"반포원", versions:[ { size:48230110, at:ago(1), by:"반포원" } ] }
     ],
     kpi: BRANCH_KEYS.map(b => ({ id:b, ...splitSnapshot(buildSnapshot(demoRows(b), b, t)).pub, fileName:"샘플 원생 목록.xlsx", uploadedAt:ago(1), uploadedBy:ADMIN, uploader:"대표" })),
     revenue: Object.values(demoRevenue()),
@@ -1213,11 +1266,11 @@ function seed(){
       startYm: (i === 4 ? addDays(todayISO(), -5) : addDays(todayISO(), -(60 + i * 240))).slice(0, 7), active: !(b === "banpo" && i === 3), at:ago(5), createdBy:ADMIN, writer:"JP People" }))),
     counsel: [],
     manuals: [
-      { id:"m1", title:"첫 수업 날 교사 체크리스트", cat:"teacher", branch:"all", pinned:true, at:ago(20), updatedAt:ago(3), createdBy:ADMIN, writer:"대표", editor:"대표",
+      { id:"m1", title:"첫 수업 날 교사 체크리스트", cat:"m_class", effective:"2026-09-01", summary:"첫 수업 날 수업 전·중·후에 확인할 것", branch:"all", pinned:true, at:ago(20), updatedAt:ago(3), createdBy:ADMIN, writer:"대표", editor:"대표",
         body:"# 수업 전\n- 출석부와 사진 확인\n- 재료 미리 꺼내 두기 (재료 요청 앱에서 부족분 신청)\n\n# 수업 중\n1. 인사하고 이름 불러 주기\n2. **오늘의 목표**를 한 문장으로 말해 주기\n3. 마무리 10분 전 정리 시작\n\n# 수업 후\n- 관찰일지 사진 올리기: [자비스 업로더](https://jarvis-webapp-8yim.onrender.com/)\n- 특이사항은 스케줄 매니저 메모에 남기기" },
-      { id:"m2", title:"샘플 상담 흐름", cat:"counsel", branch:"all", at:ago(15), createdBy:ADMIN, writer:"대표",
+      { id:"m2", title:"샘플 상담 흐름", cat:"m_counsel", branch:"all", at:ago(15), createdBy:ADMIN, writer:"대표",
         body:"## 1. 첫 통화\n- 아이 나이, 관심사, 원하는 요일 묻기\n- 샘플 수업 날짜 잡기\n\n## 2. 샘플 당일\n- 수업 후 **5분 피드백** (작품 사진 보여 주기)\n\n## 3. 등록 안내\n- 교육비 안내판 기준으로 설명\n- 3일 안에 다시 연락" },
-      { id:"m3", title:"월말 마감 순서", cat:"manager", branch:"pyeongchon", at:ago(8), createdBy:PC, writer:"평촌원 실장",
+      { id:"m3", title:"월말 마감 순서", cat:"m_ops", branch:"pyeongchon", at:ago(8), createdBy:PC, writer:"평촌원 실장",
         body:"1. 결제 매니저에서 미납 확인\n2. 원생 명단 엑셀 내려받아 JP ONE 운영지표에 올리기\n3. 다음 달 시간표 확정" }
     ],
     members: DEMO_MEMBERS.map(m => ({ id:m.email, ...m, active:true, source:"people", at:ago(20), by:ADMIN })),
@@ -1257,7 +1310,7 @@ const DB = (() => {
   return {
     watch(name, cb, opts){
       const W = opts?.where, A = opts?.and || [];
-      const fv = (x, k) => x[k] ?? (k === "level" ? "all" : undefined);   // 미리보기: 예전 자료(공개 범위 없음) = 모두
+      const fv = (x, k) => x[k] ?? (k === "level" ? "all" : k === "status" ? "published" : undefined);   // 미리보기: 예전 자료 = 모두 · 게시
       const ok = conds => x => conds.every(([k, op, v]) => op === "in" ? v.includes(fv(x, k)) : fv(x, k) === v);
       const pass = x => (!W || ok(W)(x)) && ok(A)(x);
       if (DEMO){
@@ -1480,20 +1533,32 @@ async function enter(user){
 
   state.kpiPriv = {};
   state.loaded = {};
-  ["notices","events","plans","tasks","routines","missions","members","bookmarks","bmGroups","kpi","folders","birthdays","teachers","manuals","manCats","counsel", ...(state.isAdmin ? ["kpiPriv","revenue","nasStatus"] : [])].forEach(name => {
+  ["notices","events","plans","tasks","routines","missions","members","bookmarks","bmGroups","kpi","folders","birthdays","teachers","manCats","counsel", ...(state.isAdmin ? ["kpiPriv","revenue","nasStatus"] : [])].forEach(name => {
     unsubs.push(DB.watch(name, list => {
       state[name] = name === "kpi" || name === "kpiPriv" || name === "counsel" || name === "revenue" || name === "nasStatus" ? Object.fromEntries(list.map(x => [x.id, x])) : list;
       onData(name);
     }));
   });
-  // 자료실: 공개 범위(level)에 따라 요청 — 대표는 전부, 관리자는 '모두'+'관리자 이상', 그 밖에는 '모두'만 (보안 규칙과 같은 조건)
-  const fParts = {};
-  const fSet = (k, list) => { fParts[k] = list; state.files = Object.values(fParts).flat(); onData("files"); if (state.isAdmin) fixFileLevels(); };
+  // 자료실·매뉴얼: 보안 규칙과 같은 조건으로 나눠 요청하고 합침
+  //  자료: 게시된 것(공개 범위별) + 내가 올린 것 + (자료 담당자) 검토 대기
+  //  매뉴얼: 게시된 것만, 자료 담당자·승인자는 작성 중인 것까지 전부
+  const me = state.user.email, merge = parts => { const m = new Map(); Object.values(parts).flat().forEach(x => m.set(x.id, x)); return [...m.values()]; };
+  const fParts = {}, fSet = (k, list) => { fParts[k] = list; state.files = merge(fParts); onData("files"); if (state.isAdmin) fixKbMeta(); };
   if (state.isAdmin) unsubs.push(DB.watch("files", l => fSet("all", l)));
   else {
-    unsubs.push(DB.watch("files", l => fSet("all", l), { and: [["level", "==", "all"]] }));
-    if (canFolder()) unsubs.push(DB.watch("files", l => fSet("mgr", l), { and: [["level", "==", "mgr"]] }));
+    unsubs.push(DB.watch("files", l => fSet("pub", l), { and: [["status", "==", "published"], ["level", "==", "all"]] }));
+    if (canFolder()) unsubs.push(DB.watch("files", l => fSet("pubm", l), { and: [["status", "==", "published"], ["level", "==", "mgr"]] }));
+    unsubs.push(DB.watch("files", l => fSet("mine", l), { and: [["createdBy", "==", me], ["status", "in", ["draft", "pending", "revise"]]] }));
+    if (isCurator()) unsubs.push(DB.watch("files", l => fSet("rev", l), { and: [["status", "==", "pending"], ["level", "==", "all"]] }));
+    if (isCurator() && canFolder()) unsubs.push(DB.watch("files", l => fSet("revm", l), { and: [["status", "==", "pending"], ["level", "==", "mgr"]] }));
   }
+  const mParts = {}, mSet = (k, list) => { mParts[k] = list; state.manuals = merge(mParts); onData("manuals"); if (state.isAdmin) fixKbMeta(); };
+  if (isCurator() || isApprover()) unsubs.push(DB.watch("manuals", l => mSet("all", l)));
+  else unsubs.push(DB.watch("manuals", l => mSet("pub", l), { and: [["status", "==", "published"]] }));
+  const staffAll = isCurator() || isApprover();
+  unsubs.push(DB.watch("acks", l => { state.acks = l; onData("acks"); }, { where: staffAll ? [] : [["email", "==", me]] }));
+  unsubs.push(DB.watch("requests", l => { state.requests = l; onData("requests"); }, { where: staffAll ? [] : [["createdBy", "==", me]] }));
+  unsubs.push(DB.watch("favs", l => { state.favs = l[0]?.ids || []; onData("favs"); }, { where: [["owner", "==", me]] }));
   // 미션 평가: 대표는 전부, 관리자는 자기 원 전부(확정 전 포함), 교사는 자기 것 중 공개된 것만 (보안 규칙과 같은 조건으로 요청)
   state.evals = {}; const evParts = {};
   const evSet = (k, list) => { evParts[k] = list; state.evals = Object.fromEntries(Object.values(evParts).flat().map(x => [x.id, x])); onData("evals"); };
@@ -1507,11 +1572,12 @@ async function enter(user){
   if (state.isAdmin) { extConnect("pay", false); extConnect("people", false); setTimeout(() => counselSync(false), 1500); }
 }
 function onData(name){
+  state.loaded[name] = true;
   if (name === "members") { renderMemList(); if (state.tab !== "todo") return; }
   if (name === "manCats") state.loaded.manCats = true;
   if (name === "tasks" || name === "routines") { state.loaded[name] = true; clearTimeout(onData.gt); onData.gt = setTimeout(genRoutineTasks, 800); }
   if (name === "birthdays" || name === "teachers") { state.loaded[name] = true; if (bdPending && state.loaded.birthdays && state.loaded.teachers) { const x = bdPending; bdPending = null; syncPeople(x); } }
-  const uses = { home:["notices","events","tasks","kpi","birthdays"], notice:["notices","events","plans","birthdays","kpi","kpiPriv"], todo:["tasks","routines","members"], mission:["tasks","missions","evals","members","nasStatus"], files:["files","folders"], manual:["manuals","manCats"], bm:["bookmarks","bmGroups"], kpi:["kpi","kpiPriv","teachers","counsel","revenue"] }[state.tab] || [];
+  const uses = { notice:["notices","events","plans","birthdays","kpi","kpiPriv"], todo:["tasks","routines","members"], mission:["tasks","missions","evals","members","nasStatus"], files:["files","folders","manuals","favs","requests"], manual:["manuals","manCats","files","acks","favs","requests"], home:["notices","events","tasks","kpi","birthdays","manuals","acks","files","requests"], bm:["bookmarks","bmGroups"], kpi:["kpi","kpiPriv","teachers","counsel","revenue"] }[state.tab] || [];
   if (uses.includes(name)) renderView({ keepFocus: true });
 }
 
@@ -1925,6 +1991,7 @@ function homeHTML(){
     </section>
   </div>
 
+  ${kbHomeHTML()}
   <section class="card wide-cal">${calHTML("weeks")}</section>
 
   <div class="grid2">
@@ -3001,67 +3068,342 @@ function evalDialog(t){
   });
 }
 
-/* ── 자료실 화면 ── */
+/* ── 공용 자료실 (기획안 2026-11-01) ──
+   "반드시 이렇게 해야 한다"는 매뉴얼에, "이렇게 해볼 수 있다"는 자료실에.
+   흐름: 직원 등록(검토 요청 · 임시저장) → 자료 담당자 확인 → 게시. 담당자가 올리면 바로 게시
+   자료 하나 = 제목 · 분류 · 한 줄 설명 · 본문 또는 파일(버전으로 쌓임) */
+const fileTitle = f => f.title || f.name || "제목 없음";
+const fileKind = f => f.kind || KIND_BY_CAT[f.folder] || "";
+const fStatus = f => f.status || "published";
+const fileSearchText = f => [f.title, f.desc, f.body, f.name, f.kind, f.writer].join("\n").toLowerCase();
+const statusTag = s => s && s !== "published" ? `<span class="${F_STATUS[s]?.[1] || "tagb"}">${F_STATUS[s]?.[0] || s}</span>` : "";
+const levelTag = f => f.level && f.level !== "all" ? `<span class="lv lv-${esc(f.level)}">${levelLabel(f.level)}</span>` : "";
+const favSet = () => new Set(state.favs || []);
+const favBtn = (key, label = "") => { const on = favSet().has(key);
+  return `<button type="button" class="star ${on ? "on" : ""}" data-act="kb-fav" data-key="${esc(key)}" aria-pressed="${on}" aria-label="${on ? "즐겨찾기 빼기" : "즐겨찾기"}${label ? ": " + esc(label) : ""}" title="${on ? "즐겨찾기 빼기" : "즐겨찾기"}">★</button>`; };
+async function favToggle(key){
+  const s = favSet(); s.has(key) ? s.delete(key) : s.add(key);
+  state.favs = [...s]; renderView({ keepFocus: true });
+  try { await DB.set("favs", myEmail(), { owner: myEmail(), ids: state.favs, at: Date.now() }); }
+  catch (err) { toast("즐겨찾기를 저장하지 못했어요. (" + (err.code || "") + ")"); }
+}
+// 검색: 매뉴얼 / 참고자료 / 서식을 함께 (볼 수 있는 것 중 게시된 것만)
+function kbHits(q){
+  q = q.trim().toLowerCase(); if (!q) return [];
+  const files = state.files.filter(f => visible(f) && fStatus(f) === "published" && fileSearchText(f).includes(q))
+    .map(f => ({ t: (fileKind(f) === "서식" || f.folder === "k_form") ? "서식" : "참고자료", id: f.id, title: fileTitle(f), sub: f.desc || "", cat: folderList().find(x => x.id === f.folder)?.name || "분류 안 됨", at: f.updatedAt || f.at }));
+  const mans = state.manuals.filter(m => visible(m) && (m.status || "published") === "published" && manSearchText(m).toLowerCase().includes(q))
+    .map(m => ({ t: "매뉴얼", id: m.id, title: m.title, sub: m.summary || manPreview(m), cat: manCatLabel(m.cat), at: m.updatedAt || m.at }));
+  return [...mans, ...files];
+}
+function kbResultsHTML(q){
+  const hits = kbHits(q);
+  return `<p class="kb-hint">'${esc(q)}' 검색 결과 ${hits.length}건 · 매뉴얼과 자료실을 함께 찾아요.</p>
+    ${hits.length ? `<ul class="man-list">${hits.map(h => `<li><button type="button" class="man-item" data-act="kb-hit" data-t="${h.t === "매뉴얼" ? "m" : "f"}" data-id="${esc(h.id)}">
+      <span class="mi-t"><span class="kt kt-${h.t === "매뉴얼" ? "m" : h.t === "서식" ? "s" : "r"}">${h.t}</span><span class="tagk">${esc(h.cat)}</span><b>${esc(h.title)}</b></span>
+      <span class="mi-s">${esc(String(h.sub).slice(0, 100))}</span><span class="mi-m">${mdOfMs(h.at)} 업데이트</span></button></li>`).join("")}</ul>`
+      : `<p class="empty">찾는 자료가 없어요. 다른 낱말로 찾아보세요.</p>`}`;
+}
+const fileReqOpen = () => (state.requests || []).filter(r => r.kind === "file" && r.status === "open");
+const manReqOpen = () => (state.requests || []).filter(r => r.kind === "manual" && r.status === "open");
+
 function filesPageHTML(){
-  const vis = state.files.filter(visible);
-  const q = state.fileQ.trim().toLowerCase();
-  const fl = folderList(), known = new Set(fl.map(f => f.id)), loose = vis.filter(f => !known.has(f.folder));
-  if (state.folder !== "all" && state.folder !== "_none" && !known.has(state.folder)) state.folder = "all";
-  const inFolder = state.folder === "all" ? vis : state.folder === "_none" ? loose : vis.filter(f => f.folder === state.folder);
-  const list = inFolder.filter(f => !q || f.name.toLowerCase().includes(q) || (f.desc || "").toLowerCase().includes(q)).sort((a,b) => (b.updatedAt || b.at || 0) - (a.updatedAt || a.at || 0));
-  const anyEd = list.some(canEditFile);
-  const canUp = branchOptions("files").length > 0, folderName = state.folder === "all" ? "전체 자료" : state.folder === "_none" ? "분류 안 됨" : fl.find(x => x.id === state.folder)?.name;
+  const me = myEmail(), favs = favSet(), cur = isCurator();
+  const all = state.files.filter(visible), pub = all.filter(f => fStatus(f) === "published");
+  const fl = folderList(), known = new Set(fl.map(f => f.id));
+  const mine = all.filter(f => f.createdBy === me), reviewQ = isCurator() ? all.filter(f => fStatus(f) === "pending") : [];
+  const loose = pub.filter(f => !known.has(f.folder));
+  const special = { _fav: "즐겨찾기", _mine: "내가 올린 자료", _review: "검토 대기", _none: "분류 안 됨" };
+  if (!cur && state.folder === "_review") delete special._review;
+  if (state.folder !== "all" && !special[state.folder] && !known.has(state.folder)) state.folder = "all";
+  const base = state.folder === "_fav" ? pub.filter(f => favs.has("f:" + f.id)) : state.folder === "_mine" ? mine : state.folder === "_review" ? reviewQ
+    : state.folder === "_none" ? loose : state.folder === "all" ? pub : pub.filter(f => f.folder === state.folder);
+  const kindOn = !["_mine", "_review"].includes(state.folder);
+  const list = base.filter(f => !kindOn || !state.fKind || fileKind(f) === state.fKind).sort((a, b) => (b.updatedAt || b.at || 0) - (a.updatedAt || a.at || 0));
+  const q = state.fileQ.trim();
+  const heading = state.folder === "all" ? "전체 자료" : special[state.folder] || fl.find(x => x.id === state.folder)?.name;
+  const migrate = state.isAdmin && state.loaded.folders && FILE_CATS.some(([id]) => !state.folders.some(f => f.id === id));
+  const li = (id, label, n, extra = "") => `<li ${extra}><button type="button" data-act="folder" data-id="${esc(id)}" aria-pressed="${state.folder === id}"><span>${esc(label)}</span><b>${n}</b></button>`;
   return `
+  ${migrate ? `<div class="kb-banner"><span><b>기획안 분류로 바꿀 수 있어요.</b> 새 분류 5개(교육 연구·수업 아이디어, 아동 관찰·코칭 사례, 상담·운영 사례, 홍보·행사 자료, 서식·템플릿)를 만들고 지금 폴더는 지워요. 자료는 지워지지 않고 '분류 안 됨'으로 가요.</span>
+    <button type="button" class="btn btn-ghost btn-sm" data-act="kb-migrate-files">미리 보고 바꾸기</button></div>` : ""}
   <div class="files">
     <aside class="card fold">
-      <div class="card-h"><h2>폴더</h2>${canFolder() ? `<button type="button" class="icon-btn" data-act="folder-new">폴더 추가</button>` : ""}</div>
+      <div class="card-h"><h2>공용 자료실</h2>${cur ? `<button type="button" class="icon-btn" data-act="folder-new">분류 추가</button>` : ""}</div>
       <ul class="folders">
-        <li><button type="button" data-act="folder" data-id="all" aria-pressed="${state.folder === "all"}"><span>전체 자료</span><b>${vis.length}</b></button></li>
-        ${fl.map(fd => `<li class="${canFolder() ? "can-edit" : ""}"><button type="button" data-act="folder" data-id="${esc(fd.id)}" aria-pressed="${state.folder === fd.id}">
-          <span>${esc(fd.name)}</span><b>${vis.filter(f => f.folder === fd.id).length}</b></button>
-          ${canFolder() ? `<button type="button" class="fold-ed" data-act="folder-edit" data-id="${esc(fd.id)}" aria-label="${esc(fd.name)} 폴더 수정">수정</button>` : ""}</li>`).join("")}
-        ${!fl.length && canFolder() ? `<li><button type="button" class="btn btn-ghost btn-sm" data-act="folder-seed">기본 폴더 만들기</button></li>` : ""}
-        ${loose.length ? `<li><button type="button" data-act="folder" data-id="_none" aria-pressed="${state.folder === "_none"}"><span>분류 안 됨</span><b>${loose.length}</b></button></li>` : ""}
+        ${li("all", "전체 자료", pub.length)}</li>
+        ${fl.map(fd => `${li(fd.id, fd.name, pub.filter(f => f.folder === fd.id).length, `class="${cur ? "can-edit" : ""}"`)}
+          ${cur ? `<button type="button" class="fold-ed" data-act="folder-edit" data-id="${esc(fd.id)}" aria-label="${esc(fd.name)} 분류 수정">수정</button>` : ""}</li>`).join("")}
+        ${!fl.length && cur ? `<li><button type="button" class="btn btn-ghost btn-sm" data-act="folder-seed">기본 분류 만들기</button></li>` : ""}
+        ${loose.length ? li("_none", "분류 안 됨", loose.length) + "</li>" : ""}
       </ul>
-      ${canUp ? `<div class="drop" id="dropZone" data-act="pick">여기로 파일을 끌어다 놓거나 눌러서 올려요.<small>파일당 ${MAX_FILE_MB}MB까지</small></div>` : ""}
+      <h3 class="fold-h">내 공간</h3>
+      <ul class="folders">
+        ${li("_fav", "즐겨찾기", pub.filter(f => favs.has("f:" + f.id)).length)}</li>
+        ${li("_mine", "내가 올린 자료", mine.length)}</li>
+        ${cur ? li("_review", "검토 대기", reviewQ.length, reviewQ.length ? 'class="hot"' : "") + "</li>" : ""}
+        ${cur ? `<li><button type="button" data-act="kb-reqs" data-kind="file"><span>수정 요청</span><b>${fileReqOpen().length}</b></button></li>` : ""}
+      </ul>
+      <p class="fold-note">"이렇게 해볼 수 있다"는 자료실에, "반드시 이렇게 해야 한다"는 <button type="button" class="linkish" data-act="go" data-tab="manual">매뉴얼</button>에 둬요.</p>
+      <div class="drop" id="dropZone" data-act="pick">여기로 파일을 끌어다 놓거나 눌러서 올려요.<small>파일당 ${MAX_FILE_MB}MB까지</small></div>
     </aside>
     <section class="card flist">
       <div class="card-h">
-        <h2>${esc(folderName)}<span class="sub">최근 수정순</span></h2>
+        <h2>${esc(q ? "검색" : heading)}${q ? "" : `<span class="sub">${state.folder === "_review" ? "오래된 것부터 확인해 주세요" : "최근 업데이트순"}</span>`}</h2>
         <label class="fsearch"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-          <input type="search" id="fileQ" placeholder="이름·설명으로 찾기" value="${esc(state.fileQ)}" data-fk="fileQ" aria-label="파일 이름이나 설명으로 찾기"></label>
-        ${canUp ? `<button type="button" class="btn btn-primary btn-sm" data-act="pick">파일 올리기</button>` : ""}
+          <input type="search" id="fileQ" placeholder="매뉴얼·자료 함께 찾기" value="${esc(state.fileQ)}" data-fk="fileQ" aria-label="매뉴얼과 자료 찾기"></label>
+        <button type="button" class="btn btn-primary btn-sm" data-act="file-new">자료 올리기</button>
       </div>
-      ${list.length ? `<table class="ftable">
-        <thead><tr><th>자료</th><th class="c-type">유형</th>${state.branch === "all" ? `<th class="c-br">원</th>` : ""}<th class="c-date">수정일</th><th class="c-get">받기</th>${anyEd ? `<th class="c-ed"><span class="sr">관리</span></th>` : ""}</tr></thead>
-        <tbody>${list.map(f => {
-          const last = f.versions?.[f.versions.length - 1] || {}, url = DB.fileUrl(last), vcount = f.versions?.length || 1;
+      ${q ? kbResultsHTML(q) : `
+      ${kindOn ? `<div class="kchips" role="group" aria-label="자료 종류로 좁히기">${["", ...KINDS].map(k => `<button type="button" data-act="kb-kind" data-k="${k}" aria-pressed="${(state.fKind || "") === k}">${k || "전체"}</button>`).join("")}</div>` : ""}
+      ${list.length ? `<table class="ftable kb">
+        <thead><tr><th class="c-cat">분류</th><th>제목 · 설명</th><th class="c-date">업데이트</th><th class="c-ed"><span class="sr">관리</span></th></tr></thead>
+        <tbody>${(state.folder === "_review" ? list.reverse() : list).map(f => { const last = f.versions?.[f.versions.length - 1];
           return `<tr>
-            <td>${f.desc ? `<button type="button" class="fdesc" data-act="file-open" data-id="${esc(f.id)}">${esc(f.desc)}</button>` : ""}
-              <button type="button" class="fname" data-act="file-open" data-id="${esc(f.id)}">${f.level && f.level !== "all" ? `<span class="lv lv-${esc(f.level)}">${levelLabel(f.level)}</span>` : ""}${esc(f.name)}</button>
-              <span class="fsub">${sizeLabel(f.size || last.size || 0)}${vcount > 1 ? `, 버전 ${vcount}개` : ""}</span></td>
-            <td class="c-type">${esc(fileType(f.name))}</td>
-            ${state.branch === "all" ? `<td class="c-br">${esc(f.branch === "all" ? "공통" : SHORT[f.branch] || "")}</td>` : ""}
+            <td class="c-cat">${esc(fl.find(x => x.id === f.folder)?.name || "분류 안 됨")}${fileKind(f) ? `<small>${esc(fileKind(f))}</small>` : ""}</td>
+            <td><button type="button" class="ftitle" data-act="file-open" data-id="${esc(f.id)}">${statusTag(fStatus(f))}${levelTag(f)}${esc(fileTitle(f))}</button>
+              ${f.desc ? `<span class="fdesc2">${esc(f.desc)}</span>` : ""}
+              <span class="fsub">${last ? `${esc(f.name || "")} · ${sizeLabel(f.size || last.size || 0)}${f.versions.length > 1 ? `, 버전 ${f.versions.length}개` : ""} · ` : f.body ? "글 · " : ""}${esc(f.writer || "")}${state.branch === "all" && f.branch !== "all" ? ` · ${esc(SHORT[f.branch] || "")}` : ""}</span></td>
             <td class="c-date">${mdOfMs(f.updatedAt || f.at)}</td>
-            <td class="c-get">${url ? `<a href="${esc(url)}" download="${esc(f.name)}" target="_blank" rel="noopener">받기</a>` : `<span class="nofile" title="미리보기 샘플이라 실제 파일이 없어요">샘플</span>`}</td>
-            ${anyEd ? `<td class="c-ed">${canEditFile(f) ? `<button type="button" class="mini" data-act="file-edit" data-id="${esc(f.id)}">수정</button><button type="button" class="mini danger" data-act="file-del" data-id="${esc(f.id)}">삭제</button>` : ""}</td>` : ""}
+            <td class="c-ed">${fStatus(f) === "published" ? favBtn("f:" + f.id, fileTitle(f)) : ""}${canEditFile(f) ? `<button type="button" class="mini" data-act="file-edit" data-id="${esc(f.id)}">수정</button><button type="button" class="mini danger" data-act="file-del" data-id="${esc(f.id)}">삭제</button>` : ""}</td>
           </tr>`; }).join("")}</tbody></table>`
-      : `<p class="empty">${q ? `'${esc(state.fileQ)}'와 맞는 파일이 없어요.` : "이 폴더에는 아직 파일이 없어요."}</p>`}
-      <p class="fnote">파일은 원본 그대로 보관되고, 새 버전을 올려도 이전 버전이 남아요.</p>
+      : `<p class="empty">${state.folder === "_review" ? "검토할 자료가 없어요." : state.folder === "_fav" ? "★를 눌러 자주 찾는 자료를 모아 두세요." : state.folder === "_mine" ? "아직 올린 자료가 없어요." : "이 분류에는 아직 자료가 없어요."}</p>`}
+      <p class="fnote">직원이 올린 자료는 자료 담당자가 확인한 뒤 게시돼요. 게시는 공식 업무 기준으로 정했다는 뜻이 아니에요.</p>`}
     </section>
   </div>`;
+}
+
+/* 자료 보기: 제목·한 줄 설명 · 내용·미리보기 · 첨부·받기 · 작성자·등록일 · 즐겨찾기·수정 요청. 담당자는 여기서 게시/보완 요청 */
+function fileView(f){
+  if (!f) return;
+  const editable = canEditFile(f), last = f.versions?.[f.versions.length - 1], url = last ? DB.fileUrl(last) : null;
+  const ext = (f.name || "").split(".").pop().toLowerCase(), st = fStatus(f), cur = isCurator(), isCase = f.folder === "k_case" || fileKind(f) === "사례";
+  const preview = !last ? "" : !url ? `<p class="hint">미리보기 샘플이라 실제 파일이 없어요.</p>`
+    : ["png", "jpg", "jpeg", "gif", "webp"].includes(ext) ? `<img class="kb-img" src="${esc(url)}" alt="${esc(fileTitle(f))} 미리보기">`
+    : ext === "pdf" ? `<iframe class="kb-frame" src="${esc(url)}" title="${esc(fileTitle(f))} 미리보기"></iframe>` : "";
+  const vs = (f.versions || []).slice().reverse();
+  openForm({
+    title: "자료 보기",
+    fields: `<div class="kb-tags"><span class="tagk">${esc(folderList().find(x => x.id === f.folder)?.name || "분류 안 됨")}</span>${fileKind(f) ? `<span class="tagb">${esc(fileKind(f))}</span>` : ""}${statusTag(st)}${levelTag(f)}<span class="tagb">${esc(scopeLabel(f.branch))}</span></div>
+      <h2 class="kb-title">${esc(fileTitle(f))}</h2>
+      ${f.desc ? `<p class="kb-desc">${esc(f.desc)}</p>` : ""}
+      <p class="man-meta">${esc(f.writer || "")} · ${new Date(f.at || Date.now()).toLocaleDateString("ko-KR")} 등록${f.updatedAt ? ` · ${new Date(f.updatedAt).toLocaleDateString("ko-KR")} 업데이트` : ""}${f.publishedBy ? ` · ${esc(f.publishedBy)} 게시` : ""}</p>
+      ${st === "revise" && f.reviewNote ? `<p class="kb-note"><b>보완 요청</b> ${esc(f.reviewNote)}</p>` : ""}
+      ${f.checks?.ext ? `<p class="kb-src">출처: ${esc(f.checks.source || "-")}</p>` : ""}
+      ${f.body ? `<div class="man-body small">${mdLite(f.body)}</div>` : ""}
+      ${last ? `<div class="man-fileacts"><span>${esc(f.name || "")} · ${sizeLabel(f.size || last.size || 0)}</span>${url ? `<a class="icon-btn" href="${esc(url)}" download="${esc(f.name || "")}" target="_blank" rel="noopener">받기</a>` : ""}
+        ${editable ? `<button type="button" class="icon-btn" id="newVerBtn">새 버전 올리기</button>` : ""}</div>${preview}` : ""}
+      ${vs.length > 1 ? `<details class="man-h"><summary>버전 ${vs.length}개</summary><ul class="vlist">${vs.map((v, i) => { const u = DB.fileUrl(v);
+        return `<li><span>${i === 0 ? "<b>최신</b> " : ""}${new Date(v.at).toLocaleDateString("ko-KR")} ${esc(v.by || "")}, ${sizeLabel(v.size || 0)}${v.note ? `<span class="vnote">${esc(v.note)}</span>` : ""}</span>
+          ${u ? `<a href="${esc(u)}" download="${esc(f.name || "")}" target="_blank" rel="noopener">받기</a>` : `<span class="nofile">샘플</span>`}</li>`; }).join("")}</ul></details>` : ""}
+      ${st === "published" ? `<div class="kb-acts">${favBtn("f:" + f.id)}<button type="button" class="icon-btn" data-kb="req">수정 요청</button></div>` : ""}
+      ${cur && st === "pending" ? `<div class="kb-review"><h3 class="vh">자료 담당자 확인</h3>
+        <ul class="kb-q"><li>다른 직원에게 도움이 되나요?</li><li>이미 있는 자료와 겹치지 않나요?</li><li>개인정보·공유 권한에 문제가 없나요?</li></ul>
+        ${isCase ? `<div class="kb-case"><b>아동 사례 확인</b> (모두 확인해야 게시돼요)
+          ${["이름·연락처·학교 등 식별정보를 지웠어요", "얼굴·이름표·작품 서명을 확인했어요", "주변 정보만으로 아이를 알아볼 수 없어요", "사진·영상의 공유 범위를 확인했어요"].map(t => `<label class="chk"><input type="checkbox" name="caseOk"> ${t}</label>`).join("")}
+          <p class="hint small">이름 일부를 가리거나 얼굴만 모자이크했다고 검토가 끝난 게 아니에요.</p></div>` : ""}
+        ${f.checks?.ext ? `<p class="hint small">외부 자료예요. 출처와 공유 가능 여부를 확인해 주세요.</p>` : ""}
+        ${fArea("보완 요청 메모 <small>보완 요청할 때만</small>", "reviewNote", "", 'rows="2" maxlength="300" placeholder="예: 아이 이름이 사진 속 이름표에 보여요."')}
+        <div class="kb-acts"><button type="button" class="btn btn-primary btn-sm" data-kb="publish">게시하기</button><button type="button" class="btn btn-ghost btn-sm" data-kb="revise">보완 요청</button></div></div>` : ""}`,
+    saveLabel: editable ? "수정하기" : "닫기",
+    async onSave(){ if (editable) setTimeout(() => fileForm(f), 0); return true; },
+    onDelete: editable && (() => fileDrop(f)),
+    deleteLabel: "자료 삭제"
+  });
+  $("dlg").classList.add("wide");
+  dlgCtx.deleteMsg = `'${fileTitle(f)}'${vs.length ? ` 자료와 파일 ${vs.length}개가` : "이"} 모두 지워져요. 삭제할까요?`;
+  const body = $("dlgBody");
+  body.addEventListener("click", async e => {
+    const a = e.target.closest("[data-kb]")?.dataset.kb; if (!a) return;
+    try {
+      if (a === "req") { $("dlg").close(); reqForm("file", f.id, fileTitle(f)); }
+      if (a === "publish") {
+        if (isCase && [...body.querySelectorAll("input[name=caseOk]")].some(x => !x.checked)) return formErr("아동 사례 확인 네 가지를 모두 체크해 주세요.");
+        await DB.update("files", f.id, { status: "published", reviewNote: "", publishedAt: Date.now(), publishedBy: writerName() });
+        $("dlg").close(); toast("게시했어요. 모두가 볼 수 있어요.");
+      }
+      if (a === "revise") {
+        const note = val($("dlgForm"), "reviewNote"); if (!note) return formErr("무엇을 보완하면 될지 메모를 적어 주세요.");
+        await DB.update("files", f.id, { status: "revise", reviewNote: note }); $("dlg").close(); toast("올린 사람에게 보완 요청을 남겼어요.");
+      }
+    } catch (err) { formErr("처리하지 못했어요. (" + (err.code || err.message || "") + ")"); }
+  });
+  $("newVerBtn")?.addEventListener("click", () => {
+    const pick = document.createElement("input"); pick.type = "file";
+    pick.onchange = () => { if (pick.files[0]) { $("dlg").close(); newVersionForm(f, pick.files[0]); } };
+    pick.click();
+  });
+}
+
+/* 자료 올리기 · 수정: 필수는 제목 · 분류 · 간단한 설명 · 본문 또는 파일 4가지. 작성자·날짜는 자동 */
+function fileForm(f, files = []){
+  const big = files.filter(x => x.size > MAX_FILE_MB * 1048576);
+  if (big.length) { toast(`${big.map(x => x.name).join(", ")}: ${MAX_FILE_MB}MB가 넘어서 올릴 수 없어요.`); files = files.filter(x => !big.includes(x)); }
+  const multi = !f && files.length > 1, cur = isCurator();
+  const fl = folderList(), cats = fl.length ? fl.map(x => [x.id, x.name]) : [["", "분류 안 됨"]];
+  const cat0 = f ? (fl.some(x => x.id === f.folder) ? f.folder : "") : (fl.some(x => x.id === state.folder) ? state.folder : cats[0][0]);
+  const brOpts = [...new Set(["all", ...branchOptions("files")])];
+  const br0 = f?.branch || "all", st = f ? fStatus(f) : "";
+  const modes = cur ? [["published", "바로 게시"], ["draft", "임시저장"]] : [["pending", "검토 요청"], ["draft", "임시저장"]];
+  const mode0 = f ? (cur ? (st === "draft" ? "draft" : "published") : (st === "draft" ? "draft" : "pending")) : modes[0][0];
+  const ch = f?.checks || {};
+  let picked = files;
+  openForm({
+    title: f ? "자료 수정" : multi ? `자료 올리기 (파일 ${files.length}개)` : "자료 올리기",
+    fields: `${multi ? `<ul class="uplist">${files.map((x, i) => `<li><span class="un">${esc(x.name)}</span><span class="us">${sizeLabel(x.size)}</span><span class="bar"><i id="up-${i}"></i></span></li>`).join("")}</ul>
+        <p class="hint">파일마다 자료가 하나씩 생기고, 제목은 파일 이름으로 들어가요. 아래 내용은 모두에 같이 붙어요.</p>`
+        : fText("제목", "title", f ? fileTitle(f) : (files[0]?.name.replace(/\.[^.]+$/, "") || ""), 'required maxlength="80" placeholder="예: 협동 그리기 3회차 수업안"')}
+      <div class="row2">${fSelect("분류", "folder", cats, cat0)}${fSelect("자료 종류", "kind", KINDS.map(k => [k, k]), f ? fileKind(f) || KIND_BY_CAT[cat0] || KINDS[0] : KIND_BY_CAT[cat0] || KINDS[0])}</div>
+      ${fText("간단한 설명 <small>목록에 보이는 한 줄</small>", "desc", f?.desc || "", 'required maxlength="120" placeholder="어떤 자료인지, 언제 쓰면 좋은지 한 줄로"')}
+      ${multi ? "" : fArea("본문 <small>파일이 있으면 비워도 돼요</small>", "body", f?.body || "", 'rows="6" maxlength="20000" placeholder="수업 흐름, 사례 정리, 아이디어 등을 적어 주세요."')}
+      ${multi ? "" : `<div class="fld"><span>파일 ${f?.versions?.length ? `<small>지금: ${esc(f.name || "")} — 바꾸면 새 버전으로 쌓여요</small>` : "<small>본문이 있으면 없어도 돼요</small>"}</span>
+        <input type="file" class="inp" name="upfile">${files[0] ? `<small class="hint">고른 파일: ${esc(files[0].name)} (${sizeLabel(files[0].size)})</small>` : ""}<div class="up-prog" hidden><i></i></div></div>`}
+      <div class="kb-checks">
+        <label class="chk" data-case ${cat0 === "k_case" || (f && fileKind(f) === "사례") ? "" : "hidden"}><input type="checkbox" name="child" ${ch.child ? "checked" : ""}> <b>아동 사례</b> — 이름·연락처·학교·얼굴·이름표·작품 서명 등 아이를 알아볼 수 있는 정보를 지웠어요</label>
+        <label class="chk"><input type="checkbox" name="ext" ${ch.ext ? "checked" : ""}> 외부 자료예요 (책·인터넷·다른 기관 자료)</label>
+        <div class="kb-ext" ${ch.ext ? "" : "hidden"}>${fText("출처", "source", ch.source || "", 'maxlength="200" placeholder="예: ○○출판사 「미술 교육」 2024, 또는 링크"')}
+          <label class="chk"><input type="checkbox" name="share" ${ch.share ? "checked" : ""}> 직원끼리 공유해도 되는 자료인지 확인했어요</label></div>
+      </div>
+      <div class="row2">${fSelect("공유 범위", "branch", brOpts.map(b => [b, scopeLabel(b)]), brOpts.includes(br0) ? br0 : "all")}${levelOpts().length > 1 ? fSelect("볼 수 있는 사람", "level", levelOpts(), f?.level || "all") : ""}</div>
+      <div class="fld"><span>저장</span><div class="man-type" role="radiogroup">${modes.map(([k, l]) => `<label><input type="radio" name="mode" value="${k}" ${mode0 === k ? "checked" : ""}>${l}</label>`).join("")}</div>
+        <small class="hint">${cur ? "자료 담당자가 올린 자료는 바로 게시돼요." : "자료 담당자가 확인한 뒤 게시돼요. 분류가 애매하면 임시저장하고 나중에 고쳐도 돼요."}</small></div>
+      ${f ? "" : fWriter()}`,
+    saveLabel: f ? "저장" : "올리기",
+    async onSave(form){
+      const d = { folder: val(form, "folder"), kind: val(form, "kind"), desc: val(form, "desc"), branch: val(form, "branch"),
+        level: form.elements.level ? val(form, "level") : (f?.level || "all"), status: form.querySelector("[name=mode]:checked")?.value || modes[0][0] };
+      const title = multi ? "" : val(form, "title"), body = multi ? "" : form.elements.body.value.trim();
+      const isCase = d.folder === "k_case" || d.kind === "사례";
+      d.checks = { child: isCase && form.elements.child.checked, ext: form.elements.ext.checked, source: form.elements.ext.checked ? val(form, "source") : "", share: form.elements.ext.checked && form.elements.share.checked };
+      if (!multi && !title) return formErr("제목을 넣어 주세요.");
+      if (!d.desc) return formErr("간단한 설명을 한 줄 적어 주세요.");
+      if (!multi && !body && !picked[0] && !f?.versions?.length) return formErr("본문을 쓰거나 파일을 골라 주세요.");
+      if (d.status !== "draft"){
+        if (isCase && !d.checks.child) return formErr("아동 사례는 식별정보를 지웠는지 확인해 주세요.");
+        if (d.checks.ext && (!d.checks.source || !d.checks.share)) return formErr("외부 자료는 출처를 적고 공유해도 되는지 확인해 주세요.");
+      }
+      if (picked[0]?.size > MAX_FILE_MB * 1048576) return formErr(`${MAX_FILE_MB}MB가 넘는 파일은 올릴 수 없어요.`);
+      if (d.status === "published") { if (f?.status !== "published") { d.publishedAt = Date.now(); d.publishedBy = writerName(); } d.reviewNote = ""; }
+      if (d.status === "pending") d.reviewNote = "";
+      if (!f) keepWriter(form);
+      if (multi){
+        for (let i = 0; i < picked.length; i++){
+          const x = picked[i], id = DB.newId(), bar = $(`up-${i}`), ver = await DB.putFile(id, x, p => { if (bar) bar.style.width = p + "%"; });
+          await DB.addWithId("files", id, { ...d, title: x.name.replace(/\.[^.]+$/, "").slice(0, 80), body: "", name: x.name, size: x.size, versions: [ver] });
+        }
+      } else {
+        const id = f?.id || DB.newId(), x = picked[0];
+        Object.assign(d, { title, body });
+        if (x){ const bar = $("dlgBody").querySelector(".up-prog"); bar.hidden = false;
+          const ver = await DB.putFile(id, x, p => bar.firstElementChild.style.width = p + "%");
+          Object.assign(d, { name: x.name, size: x.size, versions: [...(f?.versions || []), ver] }); }
+        if (f) await DB.update("files", id, d);
+        else await DB.addWithId("files", id, { name: "", size: 0, versions: [], ...d });
+      }
+      toast(d.status === "published" ? "게시했어요." : d.status === "draft" ? "임시저장했어요. '내가 올린 자료'에서 이어서 고칠 수 있어요." : "검토를 요청했어요. 자료 담당자가 확인하면 게시돼요.");
+    },
+    onDelete: f && canEditFile(f) && (() => fileDrop(f)), deleteLabel: "자료 삭제"
+  });
+  $("dlg").classList.add("wide");
+  if (f) dlgCtx.deleteMsg = `'${fileTitle(f)}' 자료를 지울까요? 되돌릴 수 없어요.`;
+  const body = $("dlgBody");
+  body.addEventListener("change", e => {
+    const el = e.target, form = $("dlgForm");
+    if (el.name === "upfile") { picked = el.files[0] ? [el.files[0]] : []; if (picked[0] && !val(form, "title")) form.elements.title.value = picked[0].name.replace(/\.[^.]+$/, "").slice(0, 80); }
+    if (el.name === "folder" && KIND_BY_CAT[el.value]) form.elements.kind.value = KIND_BY_CAT[el.value];
+    if (el.name === "folder" || el.name === "kind") body.querySelector("[data-case]").hidden = !(form.elements.folder.value === "k_case" || form.elements.kind.value === "사례");
+    if (el.name === "ext") body.querySelector(".kb-ext").hidden = !el.checked;
+  });
+}
+function newVersionForm(f, file){
+  if (file.size > MAX_FILE_MB * 1048576) return toast(`${MAX_FILE_MB}MB가 넘어서 올릴 수 없어요.`);
+  openForm({
+    title: "새 버전 올리기",
+    fields: `<ul class="uplist"><li><span class="un">${esc(file.name)}</span><span class="us">${sizeLabel(file.size)}</span><span class="bar"><i id="up-0"></i></span></li></ul>
+      <p class="hint">'${esc(fileTitle(f))}'의 새 버전으로 올라가요. 이전 버전은 그대로 남아요.</p>
+      ${fArea("이번 버전에서 바뀐 점 (선택)", "note", "", 'rows="2" maxlength="200" placeholder="예: 3월 일정 반영, 오타 수정"')}`,
+    saveLabel: "올리기",
+    async onSave(form){
+      const ver = await DB.putFile(f.id, file, p => { const b = $("up-0"); if (b) b.style.width = p + "%"; });
+      const note = val(form, "note"); if (note) ver.note = note;
+      await DB.update("files", f.id, { versions: [...(f.versions || []), ver], size: file.size, name: file.name });
+      toast("새 버전을 올렸어요.");
+    }
+  });
+}
+async function fileDrop(f){ await DB.dropFiles(f.versions || []); await DB.remove("files", f.id); toast("자료를 삭제했어요."); }
+// 목록에서 바로 삭제 (확인 한 번 더)
+async function fileDelete(f){
+  if (!f || !canEditFile(f)) return;
+  if (!await confirmBox(`'${fileTitle(f)}'${f.versions?.length ? ` 자료와 파일 ${f.versions.length}개가` : "이"} 모두 지워져요. 되돌릴 수 없어요. 삭제할까요?`)) return;
+  try { await fileDrop(f); } catch (err) { toast("삭제하지 못했어요. 권한을 확인해 주세요."); console.error(err); }
+}
+
+/* 수정 요청: 누구나 남기고, 자료는 자료 담당자 · 매뉴얼은 승인자와 자료 담당자가 처리 */
+function reqForm(kind, targetId, targetTitle){
+  openForm({
+    title: "수정 요청",
+    fields: `<p class="hint"><b>${esc(targetTitle)}</b>에서 고치면 좋을 점을 적어 주세요. ${kind === "manual" ? "매뉴얼 승인자" : "자료 담당자"}가 확인해요.</p>
+      ${fArea("요청 내용", "text", "", 'required rows="4" maxlength="1000" placeholder="예: 3번 순서가 지금과 달라요. 요즘은 결제 매니저에서 먼저 확인해요."')}`,
+    saveLabel: "요청 보내기",
+    async onSave(form){
+      const text = val(form, "text"); if (!text) return formErr("요청 내용을 적어 주세요.");
+      await DB.add("requests", { kind, targetId, targetTitle, text, status: "open", branch: "all" });
+      toast("수정 요청을 보냈어요.");
+    }
+  });
+}
+function reqList(kind){
+  const list = (state.requests || []).filter(r => r.kind === kind).sort((a, b) => (a.status === "open" ? 0 : 1) - (b.status === "open" ? 0 : 1) || (b.at || 0) - (a.at || 0));
+  const can = kind === "manual" ? (isApprover() || isCurator()) : isCurator();
+  openForm({
+    title: kind === "manual" ? "매뉴얼 수정 요청" : "자료 수정 요청",
+    fields: list.length ? `<ul class="req-list">${list.map(r => `<li class="${r.status}">
+        <div class="rq-h"><button type="button" class="linkish" data-rq-open="${esc(r.targetId)}">${esc(r.targetTitle || "")}</button><span class="rq-m">${esc(r.writer || "")} · ${mdOfMs(r.at)}</span>
+          ${r.status === "open" ? `<span class="tagb warn">처리 전</span>` : `<span class="tagb ok">처리함</span>`}</div>
+        <p>${esc(r.text)}</p>${r.reply ? `<p class="rq-reply">답: ${esc(r.reply)}</p>` : ""}
+        ${can && r.status === "open" ? `<div class="rq-do"><input class="inp" data-rq-reply="${esc(r.id)}" maxlength="300" placeholder="답 (선택)"><button type="button" class="btn btn-sub btn-sm" data-rq-done="${esc(r.id)}">처리 완료</button></div>` : ""}</li>`).join("")}</ul>`
+      : `<p class="empty">수정 요청이 없어요.</p>`,
+    saveLabel: "닫기", async onSave(){ return true; }
+  });
+  $("dlg").classList.add("wide");
+  $("dlgBody").addEventListener("click", async e => {
+    const done = e.target.closest("[data-rq-done]")?.dataset.rqDone, open = e.target.closest("[data-rq-open]")?.dataset.rqOpen;
+    if (open){ $("dlg").close();
+      if (kind === "manual") { state.openManual = open; goTab("manual"); } else fileView(state.files.find(x => x.id === open)); }
+    if (done){
+      const reply = $("dlgBody").querySelector(`[data-rq-reply="${CSS.escape(done)}"]`)?.value.trim() || "";
+      try { await DB.update("requests", done, { status: "done", reply, doneBy: writerName() }); $("dlg").close(); toast("처리 완료로 바꿨어요."); reqList(kind); }
+      catch (err) { formErr("바꾸지 못했어요. (" + (err.code || "") + ")"); }
+    }
+  });
+}
+// 기획안 분류로 바꾸기 (대표 · 미리보기 → 확인 → 적용). 자료·매뉴얼은 지우지 않고 '분류 안 됨'으로 감
+async function kbMigrate(kind){
+  const isF = kind === "files", coll = isF ? "folders" : "manCats", NEW = isF ? FILE_CATS : MANUAL_CATS;
+  const cur = state[coll], old = cur.filter(x => !NEW.some(([id]) => id === x.id));
+  const items = isF ? state.files : state.manuals, key = isF ? "folder" : "cat";
+  const moved = items.filter(x => old.some(o => o.id === x[key])).length;
+  const msg = `${isF ? "자료실" : "매뉴얼"} 분류를 바꿀까요?\n\n새로 만들 분류: ${NEW.map(c => c[1]).join(", ")}\n지울 분류: ${old.map(o => o.name).join(", ") || "없음"}\n'분류 안 됨'으로 갈 ${isF ? "자료" : "매뉴얼"}: ${moved}개 (지워지지 않아요)`;
+  if (!await confirmBox(msg, "바꾸기")) return;
+  try {
+    for (const [i, [id, name]] of NEW.entries()) if (!cur.some(x => x.id === id)) await DB.set(coll, id, { name, order: i + 1, branch: "all", at: Date.now(), createdBy: state.user.email, writer: writerName() });
+    for (const o of old) await DB.remove(coll, o.id);
+    if (isF) state.folder = "all"; else state.manCat = "all";
+    toast("새 분류로 바꿨어요. 담당자가 '분류 안 됨' 자료를 하나씩 옮겨 주세요.");
+  } catch (err) { toast("바꾸지 못했어요. (" + (err.code || "") + ") Firestore 규칙을 게시했는지 확인해 주세요."); }
 }
 
 /* ========= 업무매뉴얼 =========
    교사 · 실장 · 상담 매뉴얼을 글로 써 두고 찾아 읽는 곳. 고치면 이전 내용 5개까지 남겨 둠(되돌리기 가능)
    글 쓰는 법(간단 표시): # 큰 제목, ## 작은 제목, - 목록, 1. 번호 목록, **굵게**, [글자](주소) 링크 */
-const MANUAL_CATS = [["teacher","교사"],["manager","실장"],["counsel","상담"],["common","공통"]];
+const MANUAL_CATS = [["m_class","수업·아동 코칭"],["m_counsel","상담·원생 관리"],["m_ops","학원 운영·안전"],["m_staff","교사·조직 관리"],["m_brand","브랜드·시스템"]];
 // 분류는 대표가 정함(portalManCats). 아직 없으면 기본 4개를 씀 — 대표가 매뉴얼 화면을 열면 같은 ID로 만들어 둠
 const manCatList = () => state.manCats.length ? state.manCats.slice().sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || (a.at || 0) - (b.at || 0)).map(c => [c.id, c.name])
   : MANUAL_CATS;
 const manCatLabel = k => (manCatList().find(c => c[0] === k) || [k, "분류 안 됨"])[1];
 async function seedManCats(loud){
-  if (seedManCats.busy || state.manCats.length || !canFolder()) return; seedManCats.busy = true;
+  if (seedManCats.busy || state.manCats.length || !isCurator()) return; seedManCats.busy = true;
   try { for (const [i, [id, name]] of MANUAL_CATS.entries()) await DB.set("manCats", id, { name, order:i + 1, branch:"all", at:Date.now(), createdBy:state.user.email, writer:writerName() }); }
   catch (err) { if (loud) throw err; }
   finally { seedManCats.busy = false; }
@@ -3144,102 +3486,241 @@ function mdLite(src){
   return out.join("");
 }
 function manualPageHTML(){
-  const vis = state.manuals.filter(visible);
-  const q = state.manQ.trim().toLowerCase();
+  const me = myEmail(), favs = favSet(), cur = isCurator(), apr = isApprover();
+  const all = state.manuals.filter(visible), pub = all.filter(m => (m.status || "published") === "published");
+  const q = state.manQ.trim();
   if (state.isAdmin && state.loaded.manCats && !state.manCats.length) seedManCats();
-  const known = new Set(manCatList().map(c => c[0])), loose = vis.filter(m => !known.has(m.cat));
-  const inCat = state.manCat === "all" ? vis : state.manCat === "_none" ? loose : vis.filter(m => m.cat === state.manCat);
-  const list = inCat.filter(m => !q || manSearchText(m).toLowerCase().includes(q))
-    .sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || (b.updatedAt || b.at || 0) - (a.updatedAt || a.at || 0));
-  const canWrite = branchOptions("manuals").length > 0;
-  const open = state.openManual && vis.find(m => m.id === state.openManual);
-  const editable = canFolder();   // 분류 관리: 대표 + 관리자
+  const known = new Set(manCatList().map(c => c[0])), loose = pub.filter(m => !known.has(m.cat));
+  const toAck = pub.filter(needAck), approveQ = apr ? all.filter(m => m.status === "pending" || m.pending) : [];
+  const work = (cur || apr) ? all.filter(m => m.status === "draft" || (m.status === "pending" && !apr)) : [];
+  const special = { _fav: "즐겨찾기", _ack: "확인할 매뉴얼", _approve: "승인 대기", _work: "작성 중", _none: "분류 안 됨" };
+  if (!apr) delete special._approve; if (!cur && !apr) delete special._work;
+  if (state.manCat !== "all" && !special[state.manCat] && !known.has(state.manCat)) state.manCat = "all";
+  const inCat = state.manCat === "all" ? pub : state.manCat === "_fav" ? pub.filter(m => favs.has("m:" + m.id)) : state.manCat === "_ack" ? toAck
+    : state.manCat === "_approve" ? approveQ : state.manCat === "_work" ? work : state.manCat === "_none" ? loose : pub.filter(m => m.cat === state.manCat);
+  const list = inCat.slice().sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || (b.updatedAt || b.at || 0) - (a.updatedAt || a.at || 0));
+  const open = state.openManual && all.find(m => m.id === state.openManual);
+  const migrate = state.isAdmin && state.loaded.manCats && state.manCats.length && MANUAL_CATS.some(([id]) => !state.manCats.some(c => c.id === id));
+  const li = (id, label, n, cls = "") => `<li class="${cls}"><button type="button" data-act="man-cat" data-id="${esc(id)}" aria-pressed="${state.manCat === id}"><span>${esc(label)}</span><b>${n}</b></button>`;
   const side = `<aside class="card fold">
-      <div class="card-h"><h2>분류</h2>${editable ? `<button type="button" class="icon-btn" data-act="mancat-new">분류 추가</button>` : ""}</div>
+      <div class="card-h"><h2>매뉴얼</h2>${cur ? `<button type="button" class="icon-btn" data-act="mancat-new">분류 추가</button>` : ""}</div>
       <ul class="folders">
-        <li><button type="button" data-act="man-cat" data-id="all" aria-pressed="${state.manCat === "all"}"><span>전체</span><b>${vis.length}</b></button></li>
-        ${manCatList().map(([k, l]) => `<li class="${editable ? "can-edit" : ""}"><button type="button" data-act="man-cat" data-id="${esc(k)}" aria-pressed="${state.manCat === k}"><span>${esc(l)}</span><b>${vis.filter(m => m.cat === k).length}</b></button>
-          ${editable ? `<button type="button" class="fold-ed" data-act="mancat-edit" data-id="${esc(k)}" aria-label="${esc(l)} 분류 수정">수정</button>` : ""}</li>`).join("")}
-        ${loose.length ? `<li><button type="button" data-act="man-cat" data-id="_none" aria-pressed="${state.manCat === "_none"}"><span>분류 안 됨</span><b>${loose.length}</b></button></li>` : ""}</ul>
+        ${li("all", "전체", pub.length)}</li>
+        ${manCatList().map(([k, l]) => `${li(k, l, pub.filter(m => m.cat === k).length, cur ? "can-edit" : "")}
+          ${cur ? `<button type="button" class="fold-ed" data-act="mancat-edit" data-id="${esc(k)}" aria-label="${esc(l)} 분류 수정">수정</button>` : ""}</li>`).join("")}
+        ${loose.length ? li("_none", "분류 안 됨", loose.length) + "</li>" : ""}</ul>
+      <h3 class="fold-h">내 공간</h3>
+      <ul class="folders">
+        ${li("_ack", "확인할 매뉴얼", toAck.length, toAck.length ? "hot" : "")}</li>
+        ${li("_fav", "즐겨찾기", pub.filter(m => favs.has("m:" + m.id)).length)}</li>
+        ${apr ? li("_approve", "승인 대기", approveQ.length, approveQ.length ? "hot" : "") + "</li>" : ""}
+        ${cur || apr ? li("_work", "작성 중", work.length) + "</li>" : ""}
+        ${cur || apr ? `<li><button type="button" data-act="kb-reqs" data-kind="manual"><span>수정 요청</span><b>${manReqOpen().length}</b></button></li>` : ""}
+      </ul>
+      <p class="fold-note">매뉴얼은 승인된 공식 기준이에요. 고칠 점이 있으면 매뉴얼을 열고 '수정 요청'을 보내 주세요.</p>
     </aside>`;
-  const reader = open ? `<section class="card man-read">
-      <div class="man-top"><button type="button" class="linkish" data-act="man-close">← 목록</button>
-        <span class="sp"></span>${canEdit(open) ? `<button type="button" class="icon-btn" data-act="man-edit" data-id="${esc(open.id)}">수정</button>` : ""}</div>
-      <div class="man-tags"><span class="tagk">${esc(manCatLabel(open.cat))}</span><span class="tagb">${esc(scopeLabel(open.branch))}</span>${open.pinned ? `<span class="tagk pin">필독</span>` : ""}</div>
-      <h1 class="man-title">${esc(open.title)}</h1>
-      <p class="man-meta">${esc(open.editor || open.writer || "")} · ${new Date(open.updatedAt || open.at).toLocaleDateString("ko-KR")} ${open.updatedAt ? "수정" : "작성"}${(open.history || []).length ? ` · <button type="button" class="linkish" data-act="man-hist" data-id="${esc(open.id)}">이전 내용 ${open.history.length}개</button>` : ""}</p>
-      ${manViewHTML(open)}</section>`
-    : `<section class="card flist">
-      <div class="card-h"><h2>${esc(state.manCat === "all" ? "전체 매뉴얼" : state.manCat === "_none" ? "분류 안 된 매뉴얼" : manCatLabel(state.manCat) + " 매뉴얼")}<span class="sub">필독 먼저, 최근 수정순</span></h2>
+  const reader = open ? manReaderHTML(open) : `<section class="card flist">
+      <div class="card-h"><h2>${esc(q ? "검색" : state.manCat === "all" ? "전체 매뉴얼" : special[state.manCat] || manCatLabel(state.manCat))}${q ? "" : `<span class="sub">필독 먼저, 최근 개정순</span>`}</h2>
         <label class="fsearch"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-          <input type="search" id="manQ" placeholder="제목·내용으로 찾기" value="${esc(state.manQ)}" data-fk="manQ" aria-label="매뉴얼 찾기"></label></div>
-      ${list.length ? `<ul class="man-list">${list.map(m => { const first = manPreview(m), tl = { pdf:"PDF", html:"HTML" }[manType(m)];
+          <input type="search" id="manQ" placeholder="매뉴얼·자료 함께 찾기" value="${esc(state.manQ)}" data-fk="manQ" aria-label="매뉴얼과 자료 찾기"></label></div>
+      ${q ? kbResultsHTML(q) : list.length ? `<ul class="man-list">${list.map(m => { const tl = { pdf: "PDF", html: "HTML" }[manType(m)];
           return `<li><button type="button" class="man-item" data-act="man-open" data-id="${esc(m.id)}">
-            <span class="mi-t">${m.pinned ? `<span class="tagk pin">필독</span>` : ""}<span class="tagk">${esc(manCatLabel(m.cat))}</span>${tl ? `<span class="tagb">${tl}</span>` : ""}<b>${esc(m.title)}</b></span>
-            <span class="mi-s">${esc(first.slice(0, 90))}</span>
-            <span class="mi-m">${state.branch === "all" ? esc(scopeLabel(m.branch)) + " · " : ""}${mdOfMs(m.updatedAt || m.at)} ${esc(m.editor || m.writer || "")}</span></button></li>`; }).join("")}</ul>`
-        : `<p class="empty">${q ? `'${esc(state.manQ)}'와 맞는 매뉴얼이 없어요.` : "아직 매뉴얼이 없어요."}</p>`}</section>`;
-  return `<div class="head"><h1>업무매뉴얼</h1><div class="acts">${canWrite ? `<button type="button" class="btn btn-primary btn-sm" data-act="man-new">매뉴얼 쓰기</button>` : ""}</div></div>
+            <span class="mi-t">${statusTag(m.status)}${m.pending ? `<span class="tagb warn">개정안</span>` : ""}${m.pinned ? `<span class="tagk pin">필독</span>` : ""}${needAck(m) ? `<span class="tagb bad">확인 전</span>` : ""}<span class="tagk">${esc(manCatLabel(m.cat))}</span>${tl ? `<span class="tagb">${tl}</span>` : ""}<b>${esc(m.title)}</b></span>
+            <span class="mi-s">${esc((m.summary || manPreview(m)).slice(0, 90))}</span>
+            <span class="mi-m">${state.branch === "all" ? esc(scopeLabel(m.branch)) + " · " : ""}${mdOfMs(m.updatedAt || m.at)} 업데이트${m.effective ? ` · ${esc(m.effective)} 시행` : ""}</span></button></li>`; }).join("")}</ul>`
+        : `<p class="empty">${state.manCat === "_ack" ? "확인할 매뉴얼이 없어요." : state.manCat === "_approve" ? "승인할 매뉴얼이 없어요." : state.manCat === "_fav" ? "★를 눌러 자주 보는 매뉴얼을 모아 두세요." : "아직 매뉴얼이 없어요."}</p>`}</section>`;
+  return `${migrate ? `<div class="kb-banner"><span><b>기획안 분류로 바꿀 수 있어요.</b> 새 분류 5개(수업·아동 코칭, 상담·원생 관리, 학원 운영·안전, 교사·조직 관리, 브랜드·시스템)를 만들고 지금 분류는 지워요. 매뉴얼은 지워지지 않고 '분류 안 됨'으로 가요.</span>
+      <button type="button" class="btn btn-ghost btn-sm" data-act="kb-migrate-mans">미리 보고 바꾸기</button></div>` : ""}
+    <div class="head"><h1>업무매뉴얼</h1><div class="acts">${cur || apr ? `<button type="button" class="btn btn-primary btn-sm" data-act="man-new">매뉴얼 쓰기</button>` : ""}</div></div>
     <div class="files">${side}${reader}</div>`;
 }
-function manualForm(m){
-  const t0 = m ? manType(m) : "text", cats = manCatList();
-  let pdf = null, htmlSrc = m?.html || "";
+// 필독 확인: 매뉴얼의 확인 기준 버전(ackVer)보다 내가 확인한 버전이 낮으면 '확인 전'
+const ackKey = (mid, em) => `${mid}__${String(em).replace(/[^a-z0-9]/gi, "_")}`;
+const myAck = m => (state.acks || []).find(a => a.manualId === m.id && a.email === myEmail());
+const needAck = m => !!m.pinned && (m.status || "published") === "published" && visible(m) && (myAck(m)?.version || 0) < (m.ackVer || 1);
+function manReaderHTML(m){
+  const cur = isCurator(), apr = isApprover(), st = m.status || "published", ack = myAck(m);
+  const rel = (m.related || []).map(id => state.files.find(f => f.id === id)).filter(f => f && visible(f) && fStatus(f) === "published");
+  const acks = (state.acks || []).filter(a => a.manualId === m.id && a.version >= (m.ackVer || 1));
+  const p = m.pending;
+  return `<section class="card man-read">
+      <div class="man-top"><button type="button" class="linkish" data-act="man-close">← 목록</button><span class="sp"></span>
+        ${st === "published" ? `${favBtn("m:" + m.id, m.title)}<button type="button" class="icon-btn" data-act="kb-req" data-kind="manual" data-id="${esc(m.id)}">수정 요청</button>` : ""}
+        ${cur || apr ? `<button type="button" class="icon-btn" data-act="man-edit" data-id="${esc(m.id)}">${st === "published" && !apr ? "개정안 쓰기" : "수정"}</button>` : ""}</div>
+      ${apr && st === "pending" ? `<div class="kb-review"><b>승인 요청된 새 매뉴얼이에요.</b> ${esc(m.editor || m.writer || "")}, ${mdOfMs(m.updatedAt || m.at)}
+        <div class="kb-acts"><button type="button" class="btn btn-primary btn-sm" data-act="man-approve" data-id="${esc(m.id)}">승인하고 게시</button><button type="button" class="btn btn-ghost btn-sm" data-act="man-reject" data-id="${esc(m.id)}">돌려보내기</button></div></div>` : ""}
+      ${p && (apr || cur) ? `<div class="kb-review"><b>개정안이 올라와 있어요.</b> ${esc(p.by || "")}, ${mdOfMs(p.at)}${p.changeNote ? ` — ${esc(p.changeNote)}` : ""}
+        <div class="kb-acts"><button type="button" class="btn btn-ghost btn-sm" data-act="man-rev" data-id="${esc(m.id)}">개정안 보기</button>
+        ${apr ? `<button type="button" class="btn btn-primary btn-sm" data-act="man-approve" data-id="${esc(m.id)}">승인하고 게시</button><button type="button" class="btn btn-ghost btn-sm" data-act="man-reject" data-id="${esc(m.id)}">반려</button>` : ""}</div></div>` : ""}
+      ${st === "draft" && m.reviewNote ? `<p class="kb-note"><b>돌려받은 이유</b> ${esc(m.reviewNote)}</p>` : ""}
+      <div class="man-tags"><span class="tagk">${esc(manCatLabel(m.cat))}</span><span class="tagb">${esc(scopeLabel(m.branch))}</span>${statusTag(st)}${m.pinned ? `<span class="tagk pin">필독</span>` : ""}<span class="tagb">v${m.version || 1}</span></div>
+      <h1 class="man-title">${esc(m.title)}</h1>
+      ${m.summary ? `<p class="kb-desc">${esc(m.summary)}</p>` : ""}
+      <dl class="man-info"><div><dt>시행일</dt><dd>${esc(m.effective || "-")}</dd></div><div><dt>담당자</dt><dd>${esc(m.owner || m.editor || m.writer || "-")}</dd></div>
+        <div><dt>최근 개정</dt><dd>${new Date(m.updatedAt || m.at).toLocaleDateString("ko-KR")}${m.changeNote ? ` · ${esc(m.changeNote)}` : ""}${(m.history || []).length ? ` · <button type="button" class="linkish" data-act="man-hist" data-id="${esc(m.id)}">이전 버전 ${m.history.length}개</button>` : ""}</dd></div></dl>
+      ${manViewHTML(m)}
+      ${rel.length ? `<div class="man-rel"><h3 class="vh">관련 서식·자료</h3><ul>${rel.map(f => `<li><button type="button" class="linkish" data-act="file-open" data-id="${esc(f.id)}">${esc(fileTitle(f))}</button><small>${esc(f.desc || "")}</small></li>`).join("")}</ul></div>` : ""}
+      ${m.pinned && st === "published" ? `<div class="man-ack ${ack && ack.version >= (m.ackVer || 1) ? "done" : ""}">
+        ${ack && ack.version >= (m.ackVer || 1) ? `<span>✓ ${new Date(ack.at).toLocaleDateString("ko-KR")}에 확인했어요.</span>`
+          : `<span><b>필독 매뉴얼이에요.</b> 읽고 나서 눌러 주세요.</span><button type="button" class="btn btn-primary btn-sm" data-act="man-ack" data-id="${esc(m.id)}">확인했습니다</button>`}
+        ${cur || apr ? `<button type="button" class="linkish" data-act="man-acks" data-id="${esc(m.id)}">확인 현황 ${acks.length}명</button>` : ""}</div>` : ""}
+    </section>`;
+}
+async function manAck(m){
+  try { await DB.set("acks", ackKey(m.id, myEmail()), { manualId: m.id, version: m.version || 1, email: myEmail(), name: writerName(), branch: m.branch, at: Date.now() });
+    toast("확인했어요."); }
+  catch (err) { toast("저장하지 못했어요. (" + (err.code || "") + ")"); }
+}
+function manAcksDialog(m){
+  const v = m.ackVer || 1, acks = (state.acks || []).filter(a => a.manualId === m.id && a.version >= v);
+  const done = new Set(acks.map(a => a.email));
+  const target = state.members.filter(x => x.active !== false && (m.branch === "all" || memBranches(x).includes(m.branch)));
+  const yet = target.filter(x => !done.has(x.id));
   openForm({
-    title: m ? "매뉴얼 수정" : "매뉴얼 쓰기",
-    fields: `${fText("제목", "title", m?.title, 'required maxlength="100" placeholder="예: 첫 수업 날 교사 체크리스트"')}
-      <div class="row2">${fSelect("분류", "cat", cats.length ? cats : [["", "분류 없음"]], m?.cat && cats.some(c => c[0] === m.cat) ? m.cat : (state.manCat !== "all" && state.manCat !== "_none" ? state.manCat : cats[0]?.[0] || ""))}${fBranch("manuals", m?.branch)}</div>
+    title: "필독 확인 현황",
+    fields: `<p class="hint"><b>${esc(m.title)}</b> v${v} 기준이에요.</p>
+      <h3 class="vh">확인함 ${acks.length}명</h3><p>${acks.map(a => `${esc(a.name || a.email)} <small>${mdOfMs(a.at)}</small>`).join(", ") || "아직 없어요."}</p>
+      <h3 class="vh">아직 확인 안 함 ${yet.length}명</h3><p>${yet.map(x => esc(x.name || x.id)).join(", ") || "모두 확인했어요."}</p>
+      <p class="hint small">직원 계정(구글 로그인) 기준이에요. 원 공용 계정은 세지 않아요.</p>`,
+    saveLabel: "닫기", async onSave(){ return true; }
+  });
+}
+// 매뉴얼 내용 한 벌(현재·개정안·이력이 같은 모양)
+const MAN_FIELDS = ["title", "summary", "cat", "branch", "type", "body", "html", "file", "effective", "owner", "changeNote", "related", "pinned"];
+const manSnap = m => ({ version: m.version || 1, title: m.title, body: manType(m) === "text" ? m.body || "" : "", type: manType(m), effective: m.effective || "", changeNote: m.changeNote || "",
+  at: m.updatedAt || m.at || Date.now(), by: m.editor || m.writer || "" });
+async function manApprove(m){
+  try {
+    if (m.pending){
+      const p = m.pending, data = {};
+      MAN_FIELDS.forEach(k => { if (p[k] !== undefined) data[k] = p[k]; });
+      const v = (m.version || 1) + 1;
+      Object.assign(data, { version: v, pending: null, status: "published", editor: p.by || writerName(), approvedBy: writerName(), approvedAt: Date.now(),
+        history: [manSnap(m), ...(m.history || [])].slice(0, 5), ackVer: p.reack ? v : (m.ackVer || 1) });
+      await DB.update("manuals", m.id, data);
+      if (p.file && m.file && p.file !== m.file && p.file.path !== m.file.path) DB.dropFiles([m.file]);
+      toast(p.reack ? "개정안을 게시했어요. 필독 대상자에게 다시 확인을 받아요." : "개정안을 게시했어요.");
+    } else {
+      await DB.update("manuals", m.id, { status: "published", approvedBy: writerName(), approvedAt: Date.now(), reviewNote: "" });
+      toast("승인하고 게시했어요.");
+    }
+  } catch (err) { toast("승인하지 못했어요. (" + (err.code || "") + ")"); }
+}
+function manRejectForm(m){
+  openForm({
+    title: m.pending ? "개정안 반려" : "돌려보내기",
+    fields: `<p class="hint">${m.pending ? "개정안을 지우고 지금 게시된 내용을 그대로 둬요." : "임시저장 상태로 돌려보내요. 작성자가 고쳐서 다시 승인 요청할 수 있어요."}</p>
+      ${fArea("이유", "note", "", 'rows="3" maxlength="300" placeholder="예: 시행일과 근거 규정을 적어 주세요."')}`,
+    saveLabel: m.pending ? "반려" : "돌려보내기",
+    async onSave(form){
+      const note = val(form, "note");
+      if (m.pending) { await DB.update("manuals", m.id, { pending: null });
+        if (m.pending.file && m.pending.file !== m.file) DB.dropFiles([m.pending.file]);
+        if (note) await DB.add("requests", { kind: "manual", targetId: m.id, targetTitle: m.title, text: `개정안 반려: ${note}`, status: "done", branch: "all" }); }
+      else await DB.update("manuals", m.id, { status: "draft", reviewNote: note });
+      toast(m.pending ? "개정안을 반려했어요." : "돌려보냈어요.");
+    }
+  });
+}
+function manRevDialog(m){
+  const p = m.pending; if (!p) return;
+  openForm({
+    title: "개정안 보기",
+    fields: `<p class="hint">${esc(p.by || "")}, ${new Date(p.at).toLocaleString("ko-KR")}${p.reack ? " · 다시 확인 받기" : ""}</p>
+      <dl class="man-info"><div><dt>개정 내용</dt><dd>${esc(p.changeNote || "-")}</dd></div><div><dt>시행일</dt><dd>${esc(p.effective || "-")}</dd></div></dl>
+      <h2 class="kb-title">${esc(p.title)}</h2>${manViewHTML({ ...m, ...p, id: m.id })}`,
+    saveLabel: "닫기", async onSave(){ return true; }
+  });
+  $("dlg").classList.add("wide");
+}
+/* 매뉴얼 쓰기 · 개정: 승인자는 바로 게시, 자료 담당자는 승인 요청(게시된 매뉴얼은 개정안으로 올라감) */
+function manualForm(m){
+  const apr = isApprover(), src = m?.pending && (apr || isCurator()) ? { ...m, ...m.pending } : m;
+  const t0 = src ? manType(src) : "text", cats = manCatList();
+  const published = (m?.status || (m ? "published" : "")) === "published";
+  let pdf = null;
+  const modes = apr ? [["publish", published ? "바로 게시" : "승인하고 게시"], ["save", published ? "개정안으로 저장" : "임시저장"]]
+    : [["request", "승인 요청"], ...(published ? [] : [["save", "임시저장"]])];
+  const relFiles = state.files.filter(f => fStatus(f) === "published").sort((a, b) => fileTitle(a).localeCompare(fileTitle(b)));
+  const relSel = new Set(src?.related || []);
+  openForm({
+    title: m ? (published && !apr ? "개정안 쓰기" : "매뉴얼 수정") : "매뉴얼 쓰기",
+    fields: `${published && !apr ? `<p class="hint">게시된 매뉴얼은 바로 바뀌지 않아요. 개정안으로 올라가고 매뉴얼 승인자가 승인하면 바뀌어요.</p>` : ""}
+      ${fText("제목", "title", src?.title, 'required maxlength="100" placeholder="예: 첫 수업 날 교사 체크리스트"')}
+      ${fText("한 줄 설명 <small>목록에 보여요</small>", "summary", src?.summary || "", 'maxlength="120" placeholder="언제, 누가 보는 매뉴얼인지"')}
+      <div class="row2">${fSelect("분류", "cat", cats.length ? cats : [["", "분류 없음"]], src?.cat && cats.some(c => c[0] === src.cat) ? src.cat : (cats.some(c => c[0] === state.manCat) ? state.manCat : cats[0]?.[0] || ""))}${fBranch("manuals", src?.branch)}</div>
+      <div class="row2">${fText("시행일", "effective", src?.effective || "", 'type="date"')}${fText("담당자", "owner", src?.owner || writerName(), 'maxlength="30"')}</div>
       <div class="fld"><span>내용 종류</span><div class="man-type" role="radiogroup">
         ${[["text", "글로 쓰기"], ["html", "HTML 문서"], ["pdf", "PDF 파일"]].map(([k, l]) => `<label><input type="radio" name="mtype" value="${k}" ${t0 === k ? "checked" : ""}>${l}</label>`).join("")}</div></div>
       <div class="man-pane" data-pane="text" ${t0 === "text" ? "" : "hidden"}>
-        ${fArea("내용", "body", t0 === "text" ? m?.body : "", 'rows="16" maxlength="50000"')}
+        ${fArea("기준 · 업무 순서", "body", t0 === "text" ? src?.body : "", 'rows="14" maxlength="50000"')}
         <p class="hint small">쓰는 법: <code># 큰 제목</code> <code>## 작은 제목</code> <code>- 목록</code> <code>1. 번호 목록</code> <code>**굵게**</code> <code>[글자](https://주소)</code></p></div>
       <div class="man-pane" data-pane="html" ${t0 === "html" ? "" : "hidden"}>
         <div class="fld"><span>HTML 파일 <small>고르면 아래 칸에 들어가요</small></span><input type="file" class="inp" name="htmlFile" accept=".html,.htm,text/html"></div>
-        ${fArea("HTML 코드 <small>파일 대신 직접 붙여넣어도 돼요</small>", "html", htmlSrc, 'rows="12" spellcheck="false"')}
+        ${fArea("HTML 코드 <small>파일 대신 직접 붙여넣어도 돼요</small>", "html", src?.html || "", 'rows="12" spellcheck="false"')}
         <p class="hint small">그림이 들어간 HTML은 그림이 인터넷 주소(https://)이거나 파일 안에 들어 있어야 보여요. 900KB까지.</p></div>
       <div class="man-pane" data-pane="pdf" ${t0 === "pdf" ? "" : "hidden"}>
-        <div class="fld"><span>PDF 파일 ${m?.file ? `<small>지금: ${esc(m.file.name || "")} — 바꿀 때만 고르세요</small>` : ""}</span><input type="file" class="inp" name="pdfFile" accept=".pdf,application/pdf"></div>
-        ${fText("설명 <small>목록에 보이는 한 줄, 없어도 돼요</small>", "pdfDesc", t0 === "pdf" ? m?.body : "", 'maxlength="200"')}
+        <div class="fld"><span>PDF 파일 ${src?.file ? `<small>지금: ${esc(src.file.name || "")} — 바꿀 때만 고르세요</small>` : ""}</span><input type="file" class="inp" name="pdfFile" accept=".pdf,application/pdf"></div>
         <div class="up-prog" hidden><i></i></div></div>
-      <label class="chk"><input type="checkbox" name="pinned" ${m?.pinned ? "checked" : ""}> 필독 (목록 맨 위에 표시)</label>
+      <div class="fld"><span>관련 서식·자료 <small>자료실 자료를 연결해요(같은 파일을 두 번 올리지 않게)</small></span>
+        <input type="search" class="inp" id="relQ" placeholder="자료 제목으로 찾기">
+        <div class="rel-pick">${relFiles.length ? relFiles.map(f => `<label data-t="${esc(fileTitle(f).toLowerCase())}"><input type="checkbox" name="rel" value="${esc(f.id)}" ${relSel.has(f.id) ? "checked" : ""}> ${esc(fileTitle(f))} <small>${esc(folderList().find(x => x.id === f.folder)?.name || "")}</small></label>`).join("") : `<span class="hint small">게시된 자료가 아직 없어요.</span>`}</div></div>
+      ${m ? fText("개정 내용 <small>무엇이 바뀌었는지</small>", "changeNote", m.pending?.changeNote || "", 'maxlength="200" placeholder="예: 결제 확인 순서를 결제 매니저 기준으로 바꿈"') : ""}
+      <label class="chk"><input type="checkbox" name="pinned" ${src?.pinned ? "checked" : ""}> 필독 — 대상자에게 '확인했습니다'를 받아요</label>
+      ${m && published ? `<label class="chk"><input type="checkbox" name="reack" ${m.pending?.reack ? "checked" : ""}> 중요한 변경이라 필독 대상자에게 다시 확인 받기</label>` : ""}
+      <div class="fld"><span>저장</span><div class="man-type" role="radiogroup">${modes.map(([k, l], i) => `<label><input type="radio" name="mode" value="${k}" ${i === 0 ? "checked" : ""}>${l}</label>`).join("")}</div></div>
       ${m ? "" : fWriter()}`,
-    saveLabel: m ? "수정 저장" : "올리기",
+    saveLabel: m ? "저장" : "올리기",
     async onSave(form){
-      const type = form.querySelector("[name=mtype]:checked")?.value || "text";
-      const data = { title: val(form,"title"), cat: val(form,"cat"), branch: val(form,"branch"), pinned: form.elements.pinned.checked, type };
-      if (!data.title) return formErr("제목을 넣어 주세요.");
-      if (!branchOptions("manuals").includes(data.branch)) return formErr("이 범위에는 매뉴얼을 올릴 수 없어요.");
-      if (type === "text") { data.body = form.elements.body.value; data.html = ""; }
-      if (type === "html") { data.html = form.elements.html.value; data.body = "";
-        if (!data.html.trim()) return formErr("HTML 파일을 고르거나 코드를 붙여넣어 주세요.");
-        if (data.html.length > 900000) return formErr("HTML이 너무 커요(900KB까지). 그림이 많으면 PDF로 올려 주세요."); }
-      if (type === "pdf") { data.body = val(form, "pdfDesc"); data.html = "";
-        if (!pdf && !m?.file) return formErr("PDF 파일을 골라 주세요.");
+      const type = form.querySelector("[name=mtype]:checked")?.value || "text", mode = form.querySelector("[name=mode]:checked")?.value;
+      const d = { title: val(form, "title"), summary: val(form, "summary"), cat: val(form, "cat"), branch: val(form, "branch"), effective: val(form, "effective"), owner: val(form, "owner"),
+        pinned: form.elements.pinned.checked, type, related: [...form.querySelectorAll("input[name=rel]:checked")].map(x => x.value), changeNote: m ? val(form, "changeNote") : "처음 게시" };
+      if (!d.title) return formErr("제목을 넣어 주세요.");
+      if (!branchOptions("manuals").includes(d.branch)) return formErr("이 범위에는 매뉴얼을 올릴 수 없어요.");
+      if (m && published && !d.changeNote) return formErr("무엇이 바뀌었는지 '개정 내용'을 적어 주세요.");
+      if (mode !== "save" && !d.effective) return formErr("시행일을 넣어 주세요.");
+      if (type === "text") { d.body = form.elements.body.value; d.html = ""; }
+      if (type === "html") { d.html = form.elements.html.value; d.body = "";
+        if (!d.html.trim()) return formErr("HTML 파일을 고르거나 코드를 붙여넣어 주세요.");
+        if (d.html.length > 900000) return formErr("HTML이 너무 커요(900KB까지). 그림이 많으면 PDF로 올려 주세요."); }
+      if (type === "pdf") { d.body = ""; d.html = "";
+        if (!pdf && !src?.file) return formErr("PDF 파일을 골라 주세요.");
         if (pdf && pdf.size > 100 * 1024 * 1024) return formErr("PDF는 100MB까지 올릴 수 있어요."); }
-      keepWriter(form); data.editor = writerName();
+      if (!m) keepWriter(form);
       const id = m?.id || DB.newId();
-      if (type === "pdf" && pdf){
-        const bar = $("dlgBody").querySelector(".up-prog"); bar.hidden = false;
-        data.file = { ...(await DB.putFile("man_" + id, pdf, p => bar.firstElementChild.style.width = p + "%")), name: pdf.name };
+      if (type === "pdf" && pdf){ const bar = $("dlgBody").querySelector(".up-prog"); bar.hidden = false;
+        d.file = { ...(await DB.putFile("man_" + id, pdf, p => bar.firstElementChild.style.width = p + "%")), name: pdf.name }; }
+      else d.file = type === "pdf" ? src?.file || null : null;
+      if (!m){
+        const status = mode === "publish" ? "published" : mode === "request" ? "pending" : "draft";
+        await DB.addWithId("manuals", id, { ...d, status, version: 1, ackVer: 1, editor: writerName(), ...(status === "published" ? { approvedBy: writerName(), approvedAt: Date.now() } : {}) });
+        state.openManual = id; state.manCat = status === "published" ? "all" : "_work";
+        toast(status === "published" ? "매뉴얼을 게시했어요." : status === "pending" ? "승인을 요청했어요. 매뉴얼 승인자가 확인하면 게시돼요." : "임시저장했어요.");
+      } else if (published){
+        const reack = !!form.elements.reack?.checked;
+        if (apr && mode === "publish"){
+          const v = (m.version || 1) + 1, oldFile = m.file && d.file !== m.file ? m.file : null;
+          await DB.update("manuals", m.id, { ...d, version: v, pending: null, status: "published", editor: writerName(), approvedBy: writerName(), approvedAt: Date.now(),
+            history: [manSnap(m), ...(m.history || [])].slice(0, 5), ackVer: reack ? v : (m.ackVer || 1) });
+          if (oldFile) DB.dropFiles([oldFile]);
+          toast(reack ? "개정해서 게시했어요. 필독 대상자에게 다시 확인을 받아요." : "개정해서 게시했어요.");
+        } else {
+          await DB.update("manuals", m.id, { pending: { ...d, reack, by: writerName(), byEmail: myEmail(), at: Date.now() } }, true);   // 게시된 내용은 그대로라 수정일을 바꾸지 않음
+          toast(apr ? "개정안으로 저장했어요." : "개정안을 올렸어요. 매뉴얼 승인자가 승인하면 바뀌어요.");
+        }
+      } else {
+        const status = mode === "publish" ? "published" : mode === "request" ? "pending" : "draft";
+        await DB.update("manuals", m.id, { ...d, status, editor: writerName(), reviewNote: "", ...(status === "published" ? { approvedBy: writerName(), approvedAt: Date.now() } : {}) });
+        toast(status === "published" ? "게시했어요." : status === "pending" ? "승인을 요청했어요." : "저장했어요.");
       }
-      const oldFile = m?.file && (type !== "pdf" || data.file) ? m.file : null;
-      if (type !== "pdf") data.file = null;
-      if (m){
-        // 글 매뉴얼만 고치기 전 내용을 5개까지 보관
-        if (manType(m) === "text" && type === "text" && (data.body !== (m.body || "") || data.title !== m.title))
-          data.history = [{ title: m.title, body: m.body || "", at: m.updatedAt || m.at || Date.now(), by: m.editor || m.writer || "" }, ...(m.history || [])].slice(0, 5);
-        await DB.update("manuals", m.id, data);
-      } else { await DB.addWithId("manuals", id, data); state.openManual = id; }
-      if (oldFile) DB.dropFiles([oldFile]);
-      state.manCat = "all"; renderView();
-      toast(m ? "매뉴얼을 수정했어요." : "매뉴얼을 올렸어요.");
+      renderView();
     },
-    onDelete: m && (async () => { await DB.remove("manuals", m.id); if (m.file) DB.dropFiles([m.file]); state.openManual = null; toast("매뉴얼을 삭제했어요."); })
+    onDelete: m && (apr || (isCurator() && !published)) && (async () => { await DB.remove("manuals", m.id); if (m.file) DB.dropFiles([m.file]); state.openManual = null; toast("매뉴얼을 삭제했어요."); })
   });
   $("dlg").classList.add("wide");
   const body = $("dlgBody");
   body.querySelectorAll("textarea[name=body], textarea[name=html]").forEach(x => x.classList.add("mono"));
+  body.addEventListener("input", e => { if (e.target.id === "relQ") { const q = e.target.value.trim().toLowerCase(); body.querySelectorAll(".rel-pick label").forEach(l => l.hidden = !!q && !l.dataset.t.includes(q)); } });
   body.addEventListener("change", async e => {
     const el = e.target;
     if (el.name === "mtype") body.querySelectorAll(".man-pane").forEach(p => p.hidden = p.dataset.pane !== el.value);
@@ -3250,25 +3731,40 @@ function manualForm(m){
     }
     if (el.name === "pdfFile" && pdf) { const f = $("dlgForm"); if (!val(f, "title")) f.elements.title.value = pdf.name.replace(/\.pdf$/i, "").slice(0, 100); }
   });
-  dlgCtx.deleteMsg = m && `'${m.title}' 매뉴얼을 삭제할까요?${m.file ? " PDF 파일도 같이 지워지고" : " 이전 내용까지 모두 지워지고"} 되돌릴 수 없어요.`;
+  dlgCtx.deleteMsg = m && `'${m.title}' 매뉴얼을 삭제할까요?${m.file ? " PDF 파일도 같이 지워지고" : " 이전 버전까지 모두 지워지고"} 되돌릴 수 없어요.`;
 }
 function manualHistory(m){
   const h = m.history || [];
   openForm({
-    title: "이전 내용",
-    fields: `<p class="hint">고치기 전 내용이에요. 최근 것부터 5개까지 남아요. '이 내용으로 되돌리기'를 누르면 지금 내용도 이전 내용으로 남겨요.</p>
-      ${h.map((x, i) => `<details class="man-h"><summary><b>${new Date(x.at).toLocaleString("ko-KR", { month:"numeric", day:"numeric", hour:"2-digit", minute:"2-digit" })}</b> ${esc(x.by || "")} · ${esc(x.title)}</summary>
-        <div class="man-body small">${mdLite(x.body)}</div>${canEdit(m) ? `<button type="button" class="btn btn-ghost btn-sm" data-restore="${i}">이 내용으로 되돌리기</button>` : ""}</details>`).join("")}`,
+    title: "개정 이력",
+    fields: `<p class="hint">지금 쓰는 버전은 v${m.version || 1}이에요. 이전 버전은 최근 것부터 5개까지 남아요.</p>
+      ${h.map((x, i) => `<details class="man-h"><summary><b>${x.version ? "v" + x.version : "이전"}</b> ${new Date(x.at).toLocaleDateString("ko-KR")} ${esc(x.by || "")} · ${esc(x.title)}${x.changeNote ? ` — ${esc(x.changeNote)}` : ""}</summary>
+        ${x.effective ? `<p class="hint small">시행일 ${esc(x.effective)}</p>` : ""}
+        <div class="man-body small">${x.body ? mdLite(x.body) : `<p class="hint">${x.type === "pdf" ? "PDF" : x.type === "html" ? "HTML" : ""} 매뉴얼이라 글 내용은 남지 않았어요.</p>`}</div>
+        ${isApprover() && x.body ? `<button type="button" class="btn btn-ghost btn-sm" data-restore="${i}">이 내용으로 되돌리기</button>` : ""}</details>`).join("") || `<p class="empty">이전 버전이 없어요.</p>`}`,
     saveLabel: "닫기", async onSave(){ return true; }
   });
   $("dlg").classList.add("wide");
   $("dlgBody").addEventListener("click", async e => {
     const i = e.target.closest("[data-restore]")?.dataset.restore; if (i == null) return;
-    const x = h[+i];
-    const hist = [{ title: m.title, body: m.body || "", at: m.updatedAt || m.at || Date.now(), by: m.editor || m.writer || "" }, ...h.filter((_, j) => j !== +i)].slice(0, 5);
-    try { await DB.update("manuals", m.id, { title: x.title, body: x.body, history: hist, editor: writerName() }); $("dlg").close(); toast("이전 내용으로 되돌렸어요."); }
+    const x = h[+i], v = (m.version || 1) + 1;
+    try { await DB.update("manuals", m.id, { title: x.title, body: x.body, type: "text", html: "", version: v, changeNote: `v${x.version || "이전"} 내용으로 되돌림`,
+        history: [manSnap(m), ...h.filter((_, j) => j !== +i)].slice(0, 5), editor: writerName() }); $("dlg").close(); toast("이전 내용으로 되돌렸어요."); }
     catch (err) { formErr("되돌리지 못했어요. " + (err.code || "")); }
   });
+}
+// 홈 '꼭 확인해주세요' — 확인 안 한 필독 매뉴얼 + 담당자·승인자가 처리할 것
+function kbHomeHTML(){
+  const toAck = state.manuals.filter(needAck), cur = isCurator(), apr = isApprover();
+  const rv = cur ? state.files.filter(f => visible(f) && fStatus(f) === "pending").length : 0;
+  const ap = apr ? state.manuals.filter(m => visible(m) && (m.status === "pending" || m.pending)).length : 0;
+  const rq = (cur ? fileReqOpen().length : 0) + (cur || apr ? manReqOpen().length : 0);
+  if (!toAck.length && !rv && !ap && !rq) return "";
+  return `<section class="card kb-home"><div class="card-h"><h2>꼭 확인해주세요</h2></div>
+    ${toAck.length ? `<ul class="nmini">${toAck.slice(0, 5).map(m => `<li><button type="button" class="nlink" data-act="kb-hit" data-t="m" data-id="${esc(m.id)}"><span class="date">필독</span><span class="title">${esc(m.title)}</span>${m.version > 1 ? `<span class="newb">개정 v${m.version}</span>` : ""}</button></li>`).join("")}</ul>` : ""}
+    <p class="wh-alert">${rv ? `<button type="button" class="linkish" data-act="kb-go" data-tab="files" data-id="_review">자료 검토 대기 ${rv}건</button>` : ""}
+      ${ap ? `<button type="button" class="linkish" data-act="kb-go" data-tab="manual" data-id="_approve">매뉴얼 승인 대기 ${ap}건</button>` : ""}
+      ${rq ? `<button type="button" class="linkish" data-act="kb-reqs" data-kind="${cur && fileReqOpen().length ? "file" : "manual"}">수정 요청 ${rq}건</button>` : ""}</p></section>`;
 }
 
 /* ========= 화면 동작 (클릭은 모두 여기 한 곳에서 처리) ========= */
@@ -3310,7 +3806,22 @@ $("view").addEventListener("click", e => {
     case "wh-routine-edit": routineForm(state.routines.find(x => x.id === id)); break;
     case "folder": state.folder = id; renderView(); break;
     case "pick": $("filePick").click(); break;
-    case "file-open": case "file-edit": fileDetail(state.files.find(x => x.id === id)); break;
+    case "file-open": fileView(state.files.find(x => x.id === id)); break;
+    case "file-edit": { const f = state.files.find(x => x.id === id); if (f) fileForm(f); break; }
+    case "file-new": fileForm(null); break;
+    case "kb-kind": state.fKind = el.dataset.k; renderView(); break;
+    case "kb-fav": favToggle(el.dataset.key); break;
+    case "kb-req": { const m = state.manuals.find(x => x.id === id); if (m) reqForm("manual", m.id, m.title); break; }
+    case "kb-reqs": reqList(el.dataset.kind); break;
+    case "kb-hit": if (el.dataset.t === "m") { state.openManual = id; state.manQ = ""; goTab("manual"); scrollTo(0, 0); } else fileView(state.files.find(x => x.id === id)); break;
+    case "kb-go": if (el.dataset.tab === "files") state.folder = id; else { state.manCat = id; state.openManual = null; } goTab(el.dataset.tab); break;
+    case "kb-migrate-files": kbMigrate("files"); break;
+    case "kb-migrate-mans": kbMigrate("manuals"); break;
+    case "man-ack": { const m = state.manuals.find(x => x.id === id); if (m) manAck(m); break; }
+    case "man-acks": { const m = state.manuals.find(x => x.id === id); if (m) manAcksDialog(m); break; }
+    case "man-approve": { const m = state.manuals.find(x => x.id === id); if (m) manApprove(m); break; }
+    case "man-reject": { const m = state.manuals.find(x => x.id === id); if (m) manRejectForm(m); break; }
+    case "man-rev": { const m = state.manuals.find(x => x.id === id); if (m) manRevDialog(m); break; }
     case "file-del": fileDelete(state.files.find(x => x.id === id)); break;
     case "bm-new": bmForm(null, el.dataset.group); break;
     case "lms-pick": $("lmsPick").click(); break;
@@ -3364,13 +3875,13 @@ $("view").addEventListener("input", e => {
   renderView(); const q = $("fileQ"); if (q) { q.focus(); q.setSelectionRange(pos, pos); }
 });
 /* 끌어다 놓기 */
-$("view").addEventListener("dragover", e => { const z = e.target.closest("#dropZone, .flist"); if (!z || !branchOptions("files").length) return; e.preventDefault(); $("dropZone")?.classList.add("over"); });
+$("view").addEventListener("dragover", e => { const z = e.target.closest("#dropZone, .flist"); if (!z || state.tab !== "files") return; e.preventDefault(); $("dropZone")?.classList.add("over"); });
 $("view").addEventListener("dragleave", e => { if (e.target.closest("#dropZone")) $("dropZone").classList.remove("over"); });
 $("view").addEventListener("drop", e => {
   if (!e.target.closest("#dropZone, .flist")) return; e.preventDefault(); $("dropZone")?.classList.remove("over");
-  if (e.dataTransfer.files.length) uploadForm([...e.dataTransfer.files]);
+  if (e.dataTransfer.files.length) fileForm(null, [...e.dataTransfer.files]);
 });
-$("filePick").addEventListener("change", e => { const fs = [...e.target.files]; e.target.value = ""; if (fs.length) uploadForm(fs); });
+$("filePick").addEventListener("change", e => { const fs = [...e.target.files]; e.target.value = ""; if (fs.length) fileForm(null, fs); });
 
 /* ========= 입력 폼 ========= */
 function noticeForm(n){
@@ -3493,106 +4004,6 @@ function folderForm(fd){
   }));
 }
 
-/* ── 자료실: 올리기 · 상세(버전) ── */
-function uploadForm(files, target){
-  const big = files.filter(f => f.size > MAX_FILE_MB * 1048576);
-  if (big.length) { toast(`${big.map(f => f.name).join(", ")}: ${MAX_FILE_MB}MB가 넘어서 올릴 수 없어요.`); files = files.filter(f => !big.includes(f)); }
-  if (!files.length) return;
-  const fl0 = folderList(), folder0 = target?.folder || (fl0.some(f => f.id === state.folder) ? state.folder : fl0[0]?.id || "");
-  openForm({
-    title: target ? "새 버전 올리기" : `파일 올리기 (${files.length}개)`,
-    fields: `<ul class="uplist">${files.map((f,i) => `<li><span class="un">${esc(f.name)}</span><span class="us">${sizeLabel(f.size)}</span>
-        <span class="bar"><i id="up-${i}"></i></span></li>`).join("")}</ul>
-      ${target ? `<p class="hint">'${esc(target.name)}'의 새 버전으로 올라가요. 이전 버전은 그대로 남아요.</p>
-           ${fArea("이번 버전에서 바뀐 점 (선택)", "note", "", 'rows="2" maxlength="200" placeholder="예: 3월 일정 반영, 오타 수정"')}`
-        : `${fArea("설명", "desc", "", `rows="3" maxlength="500" required placeholder="어떤 자료인지, 언제·어떻게 쓰는지 적어 주세요.${files.length > 1 ? " (올리는 파일 모두에 같은 설명이 붙어요)" : ""}"`)}
-           <div class="row2">${fSelect("폴더", "folder", folderList().map(f => [f.id, f.name]), folder0)}${fBranch("files", state.branch)}</div>
-           ${levelOpts().length > 1 ? fSelect("볼 수 있는 사람", "level", levelOpts(), "all") : ""}
-           ${fWriter()}`}`,
-    saveLabel: "올리기",
-    async onSave(form){
-      const folder = target ? target.folder : val(form,"folder"), branch = target ? target.branch : val(form,"branch");
-      const level = target ? (target.level || "all") : (form.elements.level ? val(form,"level") : "all");
-      if (!target && !branchOptions("files").includes(branch)) return formErr("이 범위에는 파일을 올릴 수 없어요.");
-      const desc = target ? "" : val(form,"desc").trim(), note = target ? val(form,"note").trim() : "";
-      if (!target && !desc) return formErr("자료 설명을 적어 주세요.");
-      if (!target) keepWriter(form);
-      for (let i = 0; i < files.length; i++){
-        const f = files[i], bar = $(`up-${i}`), prog = p => { if (bar) bar.style.width = p + "%"; };
-        if (target){
-          const ver = await DB.putFile(target.id, f, prog);
-          if (note) ver.note = note;
-          await DB.update("files", target.id, { versions:[...(target.versions || []), ver], size:f.size });
-        } else {
-          // 같은 폴더·범위에 같은 이름이 있으면 새 버전으로 쌓기
-          const same = state.files.find(x => x.name === f.name && x.folder === folder && x.branch === branch && (x.level || "all") === level);
-          const id = same ? same.id : DB.newId(), ver = await DB.putFile(id, f, prog);
-          if (same) await DB.update("files", id, { versions:[...(same.versions || []), ver], size:f.size, desc });
-          else await DB.addWithId("files", id, { name:f.name, desc, folder, branch, level, size:f.size, versions:[ver] });
-        }
-      }
-      toast(target ? "새 버전을 올렸어요." : `파일 ${files.length}개를 올렸어요.`);
-    }
-  });
-}
-
-// 목록에서 바로 삭제 (확인 한 번 더)
-async function fileDelete(f){
-  if (!f || !canEditFile(f)) return;
-  const n = Math.max(0, (f.versions?.length || 1) - 1);
-  if (!await confirmBox(`'${f.name}'${n ? `과 이전 버전 ${n}개가` : "이"} 모두 지워져요. 되돌릴 수 없어요. 삭제할까요?`)) return;
-  try { await DB.dropFiles(f.versions || []); await DB.remove("files", f.id); toast("파일을 삭제했어요."); }
-  catch (err) { toast("삭제하지 못했어요. 권한을 확인해 주세요."); console.error(err); }
-}
-function fileDetail(f){
-  if (!f) return;
-  const vs = (f.versions || []).slice().reverse(), editable = canEditFile(f);
-  openForm({
-    title: editable ? "자료 수정" : "파일 정보",
-    fields: `<div class="fdet"><b>${esc(f.name)}</b>
-        <span>${esc(fileType(f.name))}, ${sizeLabel(f.size || 0)}, ${esc(folderList().find(x => x.id === f.folder)?.name || "분류 안 됨")}, ${esc(scopeLabel(f.branch))}, 볼 수 있는 사람: ${levelLabel(f.level)}</span></div>
-      ${editable ? `${fArea("설명", "desc", f.desc || "", 'rows="3" maxlength="500" placeholder="어떤 자료인지, 언제·어떻게 쓰는지 적어 주세요."')}
-          ${fText("파일 이름", "fname", f.name, 'required maxlength="120"')}
-          ${fSelect("폴더", "folder", [...folderList().map(x => [x.id, x.name]), ...(folderList().some(x => x.id === f.folder) ? [] : [["", "분류 안 됨"]])], folderList().some(x => x.id === f.folder) ? f.folder : "")}
-          ${levelOpts().length > 1 ? fSelect("볼 수 있는 사람", "level", levelOpts(), f.level || "all") : ""}`
-        : `<p class="fdesc" style="-webkit-line-clamp:unset">${f.desc ? esc(f.desc) : "설명이 없어요."}</p>`}
-      <h3 class="vh">버전 ${vs.length}개 <small>위가 최신</small></h3>
-      <ul class="vlist">${vs.map((v,i) => { const url = DB.fileUrl(v);
-        return `<li><span>${i === 0 ? "<b>최신</b> " : ""}${new Date(v.at).toLocaleDateString("ko-KR")} ${esc(v.by || "")}, ${sizeLabel(v.size || 0)}${v.note ? `<span class="vnote">${esc(v.note)}</span>` : ""}</span>
-          ${url ? `<a href="${esc(url)}" download="${esc(f.name)}" target="_blank" rel="noopener">받기</a>` : `<span class="nofile">샘플</span>`}</li>`; }).join("")}</ul>
-      ${editable ? `<button type="button" class="btn btn-ghost btn-sm" id="newVerBtn">새 버전 올리기</button>` : ""}`,
-    saveLabel: editable ? "저장" : "닫기",
-    async onSave(form){
-      if (!editable) return true;
-      const desc = val(form,"desc").trim(), folder = val(form,"folder");
-      let name = val(form,"fname").trim();
-      if (!name) return formErr("파일 이름을 넣어 주세요.");
-      const ext = (f.name.match(/\.[^.]+$/) || [""])[0];      // 확장자를 지웠으면 원래 확장자를 다시 붙임
-      if (ext && !name.toLowerCase().endsWith(ext.toLowerCase())) name += ext;
-      const patch = {};
-      if (desc !== (f.desc || "")) patch.desc = desc;
-      if (name !== f.name) patch.name = name;
-      if (form.elements.level && val(form,"level") !== (f.level || "all")) patch.level = val(form,"level");
-      if (folder !== (f.folder || "") && (folder || folderList().some(x => x.id === f.folder))) patch.folder = folder;
-      if (Object.keys(patch).length){
-        await DB.update("files", f.id, patch);
-        const fnm = folderList().find(x => x.id === folder)?.name;
-        toast(patch.folder !== undefined ? `'${fnm || "분류 안 됨"}' 폴더로 옮기고 저장했어요.` : "저장했어요.");
-      }
-      return true;
-    },
-    onDelete: editable && (async () => { await DB.dropFiles(f.versions || []); await DB.remove("files", f.id); toast("파일을 삭제했어요."); }),
-    deleteLabel: "파일 삭제"
-  });
-  dlgCtx.deleteMsg = `'${f.name}'과 이전 버전 ${Math.max(0, vs.length - 1)}개가 모두 지워져요. 삭제할까요?`;
-  $("newVerBtn")?.addEventListener("click", () => {
-    const pick = document.createElement("input"); pick.type = "file";
-    pick.onchange = () => { if (pick.files[0]) { $("dlg").close(); uploadForm([pick.files[0]], f); } };
-    pick.click();
-  });
-}
-
-
 /* =====================================================================
    직원 계정 (대표 전용)
    여기 등록된 구글 계정만 JP ONE에 로그인할 수 있음. 문서 ID = 구글 이메일(소문자)
@@ -3614,7 +4025,8 @@ function membersDialog(){
     fields: `<p class="hint">여기 있는 구글 계정만 JP ONE에 로그인할 수 있어요. 선생님은 <b>본인 구글 계정</b>으로 로그인해서 소속 원의 공지·일정·자료를 보고 써요.
         원 공용 계정(네이버 메일)도 지금처럼 쓸 수 있어요.
         소속 원은 여러 개 고를 수 있어요(겸임). 세 원을 모두 고르면 모든 원을 보고 쓸 수 있어요.
-        <b>관리자</b>(원장·부원장·실장)는 워크허브에서 소속 원 업무를 배정하고 결과를 확인해요. 매출·미납액과 이 직원 계정 화면은 대표만 봐요.</p>
+        <b>관리자</b>(원장·부원장·실장)는 워크허브에서 소속 원 업무를 배정하고 결과를 확인해요.
+        <b>자료 담당</b>은 자료실 자료를 검토·게시하고 매뉴얼을 써서 승인 요청해요(따로 정하지 않으면 관리자). <b>매뉴얼 승인</b>은 공식 매뉴얼을 승인·개정해요(대표는 항상). 매출·미납액과 이 직원 계정 화면은 대표만 봐요.</p>
       <div><button type="button" class="btn btn-ghost btn-sm" id="memImport">JP People에서 불러오기</button></div>
       <div class="mem-wrap" id="memList"></div>
       <h3 class="vh">직접 추가</h3>
@@ -3661,6 +4073,8 @@ function membersDialog(){
       }
       if (t.dataset.memActive) await memUpdate(t.dataset.memActive, { active: t.checked });
       if (t.dataset.memMgr) await memUpdate(t.dataset.memMgr, { manager: t.checked });
+      if (t.dataset.memCur) await memUpdate(t.dataset.memCur, { curator: t.checked });
+      if (t.dataset.memApr) await memUpdate(t.dataset.memApr, { approver: t.checked });
     } catch (err) { formErr("바꾸지 못했어요. " + (err.code || "")); }
   });
 }
@@ -3668,12 +4082,14 @@ function renderMemList(){
   const box = $("memList"); if (!box) return;
   const first = m => { const bs = memBranches(m); return isAllThree(bs) ? -1 : BRANCH_KEYS.indexOf(bs[0]); };
   const list = [...state.members].sort((a,b) => first(a) - first(b) || (a.name || "").localeCompare(b.name || ""));
-  box.innerHTML = list.length ? `<table class="mtable"><thead><tr><th>이름</th><th>구글 이메일</th><th>원</th><th>관리자</th><th>로그인</th><th></th></tr></thead><tbody>
+  box.innerHTML = list.length ? `<table class="mtable"><thead><tr><th>이름</th><th>구글 이메일</th><th>원</th><th>관리자</th><th title="자료실 검토·게시, 매뉴얼 작성">자료 담당</th><th title="공식 매뉴얼 승인·개정">매뉴얼 승인</th><th>로그인</th><th></th></tr></thead><tbody>
     ${list.map(m => `<tr class="${m.active === false ? "off" : ""}">
       <td>${esc(m.name || "")}${m.source === "people" ? "<small>JP People</small>" : ""}</td>
       <td class="em">${esc(m.id)}</td>
       <td>${memChecks(`data-mem-br="${esc(m.id)}"`, memBranches(m), m.name)}${isAllThree(memBranches(m)) ? "<small>3개 원 전체</small>" : ""}</td>
       <td><input type="checkbox" data-mem-mgr="${esc(m.id)}" ${m.manager ? "checked" : ""} aria-label="${esc(m.name)} 워크허브 관리자" title="워크허브에서 자기 원 업무를 배정하고 확인해요"></td>
+      <td><input type="checkbox" data-mem-cur="${esc(m.id)}" ${(m.curator ?? !!m.manager) ? "checked" : ""} aria-label="${esc(m.name)} 자료 담당자" title="자료실 자료를 검토·게시하고 매뉴얼을 써서 승인 요청해요"></td>
+      <td><input type="checkbox" data-mem-apr="${esc(m.id)}" ${m.approver ? "checked" : ""} aria-label="${esc(m.name)} 매뉴얼 승인자" title="공식 매뉴얼을 승인·개정해요"></td>
       <td><input type="checkbox" data-mem-active="${esc(m.id)}" ${m.active !== false ? "checked" : ""} aria-label="${esc(m.name)} 로그인 허용"></td>
       <td><button type="button" class="icon-btn" data-mem-del="${esc(m.id)}">삭제</button></td></tr>`).join("")}</tbody></table>`
     : `<p class="empty">아직 등록된 직원 계정이 없어요. JP People에서 불러오거나 아래에서 직접 추가해 주세요.</p>`;

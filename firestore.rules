@@ -31,6 +31,10 @@ service cloud.firestore {
     function isMember()     { return isAdmin() || sharedBranch() != 'none' || isStaff(); }
     // 워크허브 관리자 = 대표, 또는 직원 계정에서 '관리자'로 지정된 사람(원장·부원장·실장)의 소속 원
     function isManagerOf(b) { return isAdmin() || (isStaff() && get(memberPath()).data.get('manager', false) == true && staffHas(b)); }
+    // 기획안 권한: 자료 담당자(따로 정하지 않으면 관리자) · 매뉴얼 승인자(대표 + 체크한 사람)
+    function memData()      { return get(memberPath()).data; }
+    function isCurator()    { return isAdmin() || (isStaff() && memData().get('curator', memData().get('manager', false)) == true); }
+    function isApprover()   { return isAdmin() || (isStaff() && memData().get('approver', false) == true); }
     function isFolderAdmin() { return isAdmin() || (isStaff() && get(memberPath()).data.get('manager', false) == true); }
     function validBranch(b) { return b in ['all', 'pyeongchon', 'banpo', 'daechi']; }
     function canSee(b)      { return isAdmin() || isWideStaff() || b == 'all' || isMyBranch(b); }
@@ -77,16 +81,29 @@ service cloud.firestore {
       allow update: if okUpdate() && request.resource.data.branch != 'all';
       allow delete: if okDelete();
     }
-    // 자료실 파일: 내 원 자료는 원 직원이, '공통' 자료는 대표 + 관리자가 수정·삭제
+    // 공용 자료실: 직원 등록(임시저장·검토 요청) → 자료 담당자 확인 → 게시. 담당자가 올리면 바로 게시
     //  level(볼 수 있는 사람): all = 모두, mgr = 관리자 이상(대표 + 원장·부원장·실장), admin = 대표만
+    //  status: draft 임시저장 · pending 검토 대기 · revise 보완 요청 · published 게시
     function fileLevelOk(l) { return l == 'all' || (l == 'mgr' && isFolderAdmin()) || (l == 'admin' && isAdmin()); }
+    function lvSee(l)       { return l == 'all' || (l == 'mgr' && isFolderAdmin()); }
+    function fileBr(b)      { return canWrite(b) || b == 'all'; }
     match /portalFiles/{id} {
-      allow read: if okRead() && (isAdmin() || resource.data.level == 'all' || (resource.data.level == 'mgr' && isFolderAdmin()));
-      allow create: if okCreate() && fileLevelOk(request.resource.data.level);
-      allow update: if (isAdmin() || fileLevelOk(resource.data.level)) && fileLevelOk(request.resource.data.level) && (okUpdate()
-        || (isFolderAdmin() && resource.data.branch == 'all' && request.resource.data.branch == 'all'
-            && request.resource.data.createdBy == resource.data.createdBy));
-      allow delete: if (isAdmin() || fileLevelOk(resource.data.level)) && (okDelete() || (isFolderAdmin() && resource.data.branch == 'all'));
+      allow read: if okRead() && (isAdmin() || (resource.data.createdBy == email() && resource.data.status in ['draft', 'pending', 'revise'])
+        || (resource.data.status == 'published' && lvSee(resource.data.level))
+        || (resource.data.status == 'pending' && isCurator() && lvSee(resource.data.level)));
+      allow create: if isMember() && validBranch(request.resource.data.branch) && fileBr(request.resource.data.branch)
+        && request.resource.data.createdBy == email() && fileLevelOk(request.resource.data.level)
+        && (request.resource.data.status in ['draft', 'pending'] || (request.resource.data.status == 'published' && isCurator()));
+      allow update: if isAdmin()
+        || (isCurator() && lvSee(resource.data.level) && fileLevelOk(request.resource.data.level)
+            && fileBr(resource.data.branch) && validBranch(request.resource.data.branch) && fileBr(request.resource.data.branch)
+            && request.resource.data.createdBy == resource.data.createdBy)
+        || (resource.data.createdBy == email() && resource.data.status in ['draft', 'pending', 'revise']
+            && request.resource.data.status in ['draft', 'pending'] && request.resource.data.createdBy == email()
+            && fileLevelOk(request.resource.data.level) && validBranch(request.resource.data.branch) && fileBr(request.resource.data.branch));
+      allow delete: if isAdmin()
+        || (isCurator() && lvSee(resource.data.level) && fileBr(resource.data.branch))
+        || (resource.data.createdBy == email() && resource.data.status != 'published');
     }
     match /portalBookmarks/{id} {
       allow read: if okRead();
@@ -94,11 +111,11 @@ service cloud.firestore {
       allow update: if okUpdate() && request.resource.data.url.matches('^https?://.*');
       allow delete: if okDelete();
     }
-    // 자료실 폴더: 모두 읽고, 대표 + 관리자(원장·부원장·실장)가 추가·수정·삭제
+    // 자료실 분류: 모두 읽고, 자료 담당자가 추가·수정·삭제
     match /portalFolders/{id} {
       allow read: if isMember();
-      allow create, update: if isFolderAdmin() && request.resource.data.name is string && request.resource.data.name.size() <= 20;
-      allow delete: if isFolderAdmin();
+      allow create, update: if isCurator() && request.resource.data.name is string && request.resource.data.name.size() <= 30;
+      allow delete: if isCurator();
     }
     // 운영지표 계산 결과: 문서 ID = 원 (pyeongchon / banpo / daechi)
     match /portalKpi/{branch} {
@@ -141,25 +158,51 @@ service cloud.firestore {
         && request.resource.data.name is string && request.resource.data.name.size() <= 30;
       allow delete: if isAdmin();
     }
-    // 업무매뉴얼: 공지와 같은 범위 규칙. 이전 내용(history)은 5개까지
-    match /portalManuals/{id} {
-      allow read: if okRead();
-      // 내용 종류: type = text(글, body) · html(html 문자열, 900KB까지) · pdf(file = Storage 파일 정보)
-      allow create: if okCreate() && request.resource.data.title is string && request.resource.data.title.size() <= 100
-        && request.resource.data.body is string && request.resource.data.body.size() <= 50000
-        && request.resource.data.get('type', 'text') in ['text', 'html', 'pdf']
-        && request.resource.data.get('html', '').size() <= 900000;
-      allow update: if okUpdate() && request.resource.data.title.size() <= 100 && request.resource.data.body.size() <= 50000
-        && request.resource.data.get('type', 'text') in ['text', 'html', 'pdf']
-        && request.resource.data.get('html', '').size() <= 900000
-        && request.resource.data.get('history', []).size() <= 5;
-      allow delete: if okDelete();
+    // 업무매뉴얼(공식 기준): 자료 담당자가 쓰고 승인 요청 → 매뉴얼 승인자가 승인·게시. 게시된 뒤 담당자는 개정안(pending)만 올림
+    //  모두 게시된 것만 읽고, 자료 담당자·승인자는 작성 중인 것까지 읽음. 이전 버전(history)은 5개까지
+    function manOk(d) {
+      return d.title is string && d.title.size() <= 100 && d.get('body', '') is string && d.get('body', '').size() <= 50000
+        && d.get('type', 'text') in ['text', 'html', 'pdf'] && d.get('html', '').size() <= 900000
+        && d.get('history', []).size() <= 5 && d.get('status', 'published') in ['draft', 'pending', 'published'];
     }
-    // 업무매뉴얼 분류: 모두 읽고, 대표 + 관리자(원장·부원장·실장)가 추가·이름 변경·순서·삭제
+    match /portalManuals/{id} {
+      allow read: if okRead() && (resource.data.status == 'published' || isCurator() || isApprover() || resource.data.createdBy == email());
+      allow create: if okCreate() && manOk(request.resource.data)
+        && (isApprover() || (isCurator() && request.resource.data.status in ['draft', 'pending']));
+      allow update: if okUpdate() && manOk(request.resource.data) && (isApprover()
+        || (isCurator() && resource.data.status != 'published' && request.resource.data.status in ['draft', 'pending'])
+        || (isCurator() && resource.data.status == 'published'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pending', 'updatedAt', 'updatedBy'])));
+      allow delete: if okDelete() && (isApprover() || (isCurator() && resource.data.status != 'published'));
+    }
+    // 업무매뉴얼 분류: 모두 읽고, 자료 담당자가 추가·이름 변경·순서·삭제
     match /portalManCats/{id} {
       allow read: if isMember();
-      allow create, update: if isFolderAdmin() && request.resource.data.name is string && request.resource.data.name.size() <= 20;
-      allow delete: if isFolderAdmin();
+      allow create, update: if isCurator() && request.resource.data.name is string && request.resource.data.name.size() <= 30;
+      allow delete: if isCurator();
+    }
+    // 필독 확인: 본인이 '확인했습니다'를 남기고, 자료 담당자·승인자는 확인 현황을 봄
+    match /portalAcks/{id} {
+      allow read: if isMember() && (resource.data.email == email() || isCurator() || isApprover());
+      allow create, update: if isMember() && request.resource.data.email == email() && request.resource.data.manualId is string
+        && request.resource.data.version is int;
+      allow delete: if isAdmin();
+    }
+    // 수정 요청: 누구나 보내고 자기 것을 봄. 자료 담당자·승인자가 모두 보고 처리
+    match /portalRequests/{id} {
+      allow read: if isMember() && (resource.data.createdBy == email() || isCurator() || isApprover());
+      allow create: if isMember() && request.resource.data.createdBy == email() && request.resource.data.kind in ['file', 'manual']
+        && request.resource.data.text is string && request.resource.data.text.size() <= 1000
+        && (request.resource.data.status == 'open' || isCurator() || isApprover());
+      allow update: if isCurator() || isApprover();
+      allow delete: if isAdmin();
+    }
+    // 즐겨찾기: 문서 ID = 본인 이메일, 본인만
+    match /portalFavs/{mail} {
+      allow read: if isMember() && resource.data.owner == email();
+      allow create, update: if isMember() && mail == email() && request.resource.data.owner == email()
+        && request.resource.data.ids is list && request.resource.data.ids.size() <= 500;
+      allow delete: if isMember() && mail == email();
     }
     // 상담 현황: 대표 화면이 스케줄 매니저에서 최근 30일 교사별 상담 수만 세어 저장(내용·학생 이름 없음). 문서 ID = 원
     match /portalCounsel/{branch} {
