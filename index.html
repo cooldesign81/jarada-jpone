@@ -4035,7 +4035,7 @@ function membersDialog(){
         <b>관리자</b>(원장·부원장·실장)는 워크허브에서 소속 원 업무를 배정하고 결과를 확인해요.
         <b>자료 담당</b>은 자료실 자료를 검토·게시하고 매뉴얼을 써서 승인 요청해요(따로 정하지 않으면 관리자). <b>매뉴얼 승인</b>은 공식 매뉴얼을 승인·개정해요(대표는 항상). 매출·미납액과 이 직원 계정 화면은 대표만 봐요.</p>
       <div class="kb-acts"><button type="button" class="btn btn-ghost btn-sm" id="memImport">JP People에서 불러오기</button>
-        <button type="button" class="btn btn-ghost btn-sm" id="memSync">앱에 명단 보내기</button><small class="hint">스케줄·결제·재료·주차 앱의 '들어올 수 있는 사람'을 이 명단으로 맞춰요</small></div>
+        <button type="button" class="btn btn-ghost btn-sm" id="memSync">앱에 명단 보내기</button><small class="hint">스케줄·결제·재료 앱의 '들어올 수 있는 사람'을 이 명단으로 맞춰요</small></div>
       <div class="mem-wrap" id="memList"></div>
       <h3 class="vh">직접 추가</h3>
       <div class="mem-add">${fText("이름", "mName", "", 'maxlength="20"')}${fText("구글 이메일", "mEmail", "", 'type="email" placeholder="example@gmail.com"')}
@@ -4113,8 +4113,7 @@ const SYNC_TARGETS = [
   { key:"schedB", ext:"banpo",      label:"스케줄 매니저 · 반포", kind:"staff", branch:"banpo",      who:"반포 소속 전원 (관리자는 앱 관리자)" },
   { key:"schedD", ext:"daechi",     label:"스케줄 매니저 · 대치", kind:"staff", branch:"daechi",     who:"대치 소속 전원 (관리자는 앱 관리자)" },
   { key:"pay",    ext:"pay",        label:"결제 매니저",          kind:"payAccess",                 who:"관리자(원장·부원장·실장), 소속 원만" },
-  { key:"mat",    ext:"mat",        label:"재료 요청",            kind:"jpAccess",                  who:"직원 계정 전원" },
-  { key:"park",   ext:"park",       label:"주차 쿠폰 관리",       kind:"jpAccess", branch:"pyeongchon", mgrOnly:true, who:"평촌 관리자" }
+  { key:"mat",    ext:"mat",        label:"재료 요청",            kind:"jpAccess",                  who:"직원 계정 전원" }
 ];
 const SUPER_EMAILS = ["jinhyuck@gmail.com"];
 const SYNC_COLL = { staff:"staff", payAccess:"payAccess", jpAccess:"jpAccess" };
