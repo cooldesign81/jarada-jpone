@@ -703,7 +703,7 @@
   .kpi-meta.left{text-align:left;margin:-8px 0 16px}
   .linkish{background:none;border:0;padding:0;margin-left:6px;font-size:12px;font-weight:700;color:var(--ink);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
   .warn-note{font-size:13px;color:var(--s-warn);background:var(--s-warn-bg);border-radius:var(--r-btn);padding:8px 12px;margin:0 0 12px}
-  .kpis.kpis7{grid-template-columns:repeat(8,minmax(0,1fr));margin-bottom:16px}
+  .kpis.kpis7{grid-template-columns:repeat(5,minmax(0,1fr));margin-bottom:16px}
   .kpi.multi .n.na{color:#BDBDBD}
   /* 운영지표 지표 칸: 항목 이름을 검정 띠 + 노랑 글자로 */
   .kpis7 .kpi{border-top:0;padding-top:0;overflow:hidden}
@@ -1905,7 +1905,7 @@ function soonHTML(id){
 }
 
 /* ── 지표 카드 ── */
-const fmt = (m, v) => m.key === "leftRate" ? v.toFixed(1) : String(v);
+const fmt = (m, v) => v == null ? "-" : m.key === "leftRate" ? v.toFixed(1) : String(v);   // 예전 명단(값 없음)은 -
 function delta(m, cur, prev){
   if (prev == null || cur == null) return `<span>이번 명단 기준</span>`;
   const diff = Math.round((cur - prev) * 10) / 10, du = m.pp ? "%p" : m.unit;
@@ -4451,6 +4451,8 @@ function buildSnapshot(rows, branch, base){
     return { inq: L.length, sample: L.filter(r => r.status !== "대기").length, reg: reg.length,
              regular: reg.filter(r => isActive(r) && (!r.start || r.start <= base)).length }; };
   const fCur = funnelOf(curYm), fPrev = funnelOf(pYm);
+  // 등록 취소생: 상태가 등록취소이고 등록일이 그 달인 원생
+  const canceledIn = ym => rows.filter(r => r.status === "등록취소" && r.reg && ymOf(r.reg) === ym).length;
   // 기간별 퍼널: 기준일까지 최근 30·90·180·365일 안에 등록일이 있는 원생 (운영지표 '샘플에서 등록까지'에서 기간 고르기)
   const funnelSince = from => { const L = rows.filter(r => r.reg && r.reg > from && r.reg <= base), reg = L.filter(isReg);
     return { inq: L.length, sample: L.filter(r => r.status !== "대기").length, reg: reg.length,
@@ -4502,11 +4504,12 @@ function buildSnapshot(rows, branch, base){
     ages: rows.filter(isPure).reduce((o, r) => { const k = ageKey(r.age); if (k) o[k] = (o[k] || 0) + 1; return o; }, {}),
     agesUnknown: rows.filter(r => isPure(r) && !ageKey(r.age)).length,
     cur:  { enrolled:enrolled[11], newc:newc[11], left:left[11], leftRate:rate(left[11], enrolled[10]),
-            rest:rows.filter(r => /휴원/.test(r.status) || (isActive(r) && /휴원/.test(r.group))).length, inq:inqCur, sampleRate:rate(fCur.reg, inqCur), funnel:fCur,
+            rest:rows.filter(r => /휴원/.test(r.status) || (isActive(r) && /휴원/.test(r.group))).length, inq:inqCur,
+            waiting:rows.filter(r => r.status === "대기").length, canceled:canceledIn(curYm), sampleRate:rate(fCur.reg, inqCur), funnel:fCur,
             expiring:active.filter(r => r.end && r.end >= base && r.end <= until14).length,
             unpaid:unpaid.length, unpaidAll:unpaidAll.length, unpaidBasis, unpaidAmt:unpaid.reduce((s, r) => s + (r.unpaid > 1 ? r.unpaid : 0), 0) },
     prev: { enrolled:enrolled[10], newc:newc[10], left:left[10], leftRate:rate(left[10], enrolledAt(monthEnd(ppYm))),
-            rest:null, inq:inqPrev, sampleRate:rate(fPrev.reg, inqPrev), funnel:fPrev, expiring:null, unpaid:null },
+            rest:null, inq:inqPrev, waiting:null, canceled:canceledIn(pYm), sampleRate:rate(fPrev.reg, inqPrev), funnel:fPrev, expiring:null, unpaid:null },
     teachers: Object.values(tmap).filter(t => t.enrolled || t.new3 || t.left3).sort((a,b) => b.enrolled - a.enrolled),
     heat,
     lists: {
@@ -4883,6 +4886,8 @@ const KPI_TILES = [
   { key:"rest", label:"휴원생", unit:"명", good:"down" },
   { key:"inq", label:"샘플 문의", unit:"건", good:"up" },
   { key:"sampleRate", label:"샘플 등록율", unit:"%", good:"up", pp:true },
+  { key:"waiting", label:"대기생", unit:"명", good:"down" },
+  { key:"canceled", label:"등록 취소생", unit:"명", good:"down" },
   { key:"unpaid", label:"미납 3주 이상", unit:"명", good:"down" }
 ];
 const visBranches = () => state.branch === "all" ? BRANCH_KEYS : [state.branch];
@@ -5353,6 +5358,8 @@ function kpiHelp(){
     <li><b>휴원생</b>: 상태나 관리그룹에 '휴원'이 들어간 원생.</li>
     <li><b>샘플 문의</b>: 등록일이 그 달인 모든 원생(샘플수업·대기·등록취소·등록 포함).</li>
     <li><b>샘플 등록율</b>: 샘플 문의 중 등록한 원생 비율.</li>
+    <li><b>대기생</b>: 지금 상태가 '대기'인 원생(올린 명단 기준).</li>
+    <li><b>등록 취소생</b>: 상태가 '등록취소'이고 등록일이 그 달인 원생.</li>
     <li><b>샘플 퍼널</b>: 문의 → 샘플 진행('대기' 제외) → 샘플 후 등록(등록한 원생) → 정규 등록(그중 지금 수업을 다니는 원생).</li>
     <li><b>미납 3주 이상</b>: 결제 매니저와 같은 기준 — 상태가 재원(휴원 제외)인데 수강 종료일이 기준일보다 21일 넘게 지난 원생(다음 텀 결제가 안 됨). 엑셀에 미납 금액 열이 채워져 있으면 그 원생만 셈.</li>
     <li><b>교사 · 요일 · 시간</b>: 반 이름, 예) 5번 (김민수) (수-4 18:30) 에서 읽어요.</li></ul>` });
