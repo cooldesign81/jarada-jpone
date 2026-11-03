@@ -1021,7 +1021,7 @@ const APP_GROUPS = [
     { name: "보강 예약", glyph: "보", note: "학부모 보강 예약", url: "https://jarada-makeup-booking.hisin0822.chatgpt.site/", status: "live" },
     { name: "재료 요청", glyph: "재", icon: "icons/apps/material.png?v=4", note: "수업 재료 주문 요청", url: "https://cooldesign81.github.io/material/", status: "live" },
     { name: "자비스 업로더", glyph: "J", icon: "icons/apps/jarvis.png?v=1", note: "관찰일지 사진 올리기", url: "https://jarvis-webapp-8yim.onrender.com/", status: "live" },
-    { name: "주차 쿠폰", glyph: "P", icon: "icons/apps/iparking.png?v=3", note: "평촌원 전용", url: "https://cooldesign81.github.io/iparking-web/admin/", status: "live", branches: ["pyeongchon"] },
+    { name: "주차 쿠폰", glyph: "P", icon: "icons/apps/iparking.png?v=3", note: "평촌 관리자 전용", url: "https://cooldesign81.github.io/iparking-web/admin/", status: "live", branches: ["pyeongchon"], mgrOnly: true },
     { name: "JP People", glyph: "人", icon: "icons/apps/jarada-people.png?v=3", note: "인사, 교사 성장", url: "https://cooldesign81.github.io/jarada-people/", status: "live" }
   ]},
   { title: "대표 전용", adminOnly: true, apps: [
@@ -1595,7 +1595,9 @@ function syncBranch(){
 const appVisible = br => !br || state.branch === "all" || br.includes(state.branch);
 function renderApps(){
   $("appGroups").innerHTML = APP_GROUPS.filter(g => !g.adminOnly || state.isAdmin).map(g => {
-    const apps = g.apps.filter(a => appVisible(a.branches));
+    // mgrOnly: 대표와 그 원의 관리자(원장·부원장·실장)에게만 보임 (예: 주차 쿠폰 관리 — 평촌 관리자만)
+    const apps = g.apps.filter(a => appVisible(a.branches) && (!a.mgrOnly || state.isAdmin
+      || (!!state.member?.manager && (a.branches || BRANCH_KEYS).some(b => state.myBranches.includes(b)))));
     if (!apps.length) return "";
     return `<div><h3>${esc(g.title)}</h3><ul class="apps">${apps.map(a => {
       const live = a.status === "live" && safeUrl(a.url);
