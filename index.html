@@ -718,7 +718,8 @@
   .legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--text);margin-top:8px}
   .legend + .legend{margin-top:4px}
   .cs-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 28px}
-  .cs-row{display:grid;grid-template-columns:110px minmax(0,1fr) 54px;align-items:center;gap:8px;font-size:13px}
+  .cs-v em{display:block;font-style:normal;font-size:10px;font-weight:600;color:var(--text-sub);white-space:nowrap}
+  .cs-row{display:grid;grid-template-columns:110px minmax(0,1fr) 72px;align-items:center;gap:8px;font-size:13px}
   .cs-t{display:flex;align-items:baseline;gap:6px;min-width:0}.cs-t b{color:var(--ink)}.cs-t small{font-size:11px;color:var(--text-sub)}
   .cs-bar{height:12px;background:#F2F2F2;border-radius:6px;overflow:hidden}.cs-bar i{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,#F5D27A,#C99A06)}
   .cs-v{text-align:right;font-weight:800;color:var(--ink);font-variant-numeric:tabular-nums}.cs-v small{font-size:11px;color:var(--text-sub);margin-left:1px}
@@ -1137,7 +1138,7 @@ function fileType(name){
 /* ========= 상태 ========= */
 const state = {
   user:null, isAdmin:false, wide:false, myBranch:null, myBranches:[], branch:"all", tab:"home",
-  notices:[], events:[], todos:[], files:[], bookmarks:[], bmGroups:[], kpi:{}, kpiPriv:{}, revenue:{}, nasStatus:{}, folders:[], members:[], member:null, birthdays:[], ageP: +(store.get("portal.ageP") || 3), funP: store.get("portal.funP") || "m", counsel:{}, manuals:[], manCats:[], tasks:[], routines:[], whView:"mine", whFilter:"open", whWho:"", missions:[], evals:{}, mhView:"list", mhOpen:null, mhWho:"", manCat:"all", manQ:"", openManual:null, favs:[], acks:[], requests:[], fKind:"", tSort:{ k:"enrolled", dir:-1 }, tQ:"", tWarn:false, loaded:{}, teachers:[], kpiPeriod: +(store.get("portal.kpiPeriod") || 3),
+  notices:[], events:[], todos:[], files:[], bookmarks:[], bmGroups:[], kpi:{}, kpiPriv:{}, revenue:{}, nasStatus:{}, folders:[], members:[], member:null, birthdays:[], ageP: +(store.get("portal.ageP") || 3), funP: store.get("portal.funP") || "m", csMode: store.get("portal.csMode") || "cnt", counsel:{}, manuals:[], manCats:[], tasks:[], routines:[], whView:"mine", whFilter:"open", whWho:"", missions:[], evals:{}, mhView:"list", mhOpen:null, mhWho:"", manCat:"all", manQ:"", openManual:null, favs:[], acks:[], requests:[], fKind:"", tSort:{ k:"enrolled", dir:-1 }, tQ:"", tWarn:false, loaded:{}, teachers:[], kpiPeriod: +(store.get("portal.kpiPeriod") || 3),
   cal:{ y:new Date().getFullYear(), m:new Date().getMonth(), sel:todayISO() }, calView: store.get("portal.calView") || "month", planY: new Date().getFullYear(), plans:[],
   openNotice:null, todoFilter:"open", folder:"all", fileQ:""
 };
@@ -3844,6 +3845,7 @@ $("view").addEventListener("click", e => {
     case "t-reset": state.tQ = ""; state.tWarn = false; state.tSort = { k:"enrolled", dir:-1 }; renderView(); break;
     case "age-period": state.ageP = +el.dataset.n; store.set("portal.ageP", el.dataset.n); renderView(); break;
     case "counsel-sync": counselSync(true); break;
+    case "cs-mode": state.csMode = el.dataset.m; store.set("portal.csMode", el.dataset.m); renderView(); break;
     case "fun-period": state.funP = el.dataset.n; store.set("portal.funP", el.dataset.n); renderView(); break;
     case "kpi-period": state.kpiPeriod = +el.dataset.n; store.set("portal.kpiPeriod", el.dataset.n); renderView(); break;
     case "ext-connect": extConnect(el.dataset.key, true); break;
@@ -4935,11 +4937,18 @@ function counselHTML(){
   if (!docs.length) return `<div class="card-h"><h2>상담 현황 <span class="sub">최근 30일</span></h2>${btn}</div><p class="empty">아직 불러온 상담 현황이 없어요.${state.isAdmin ? " '스케줄 매니저에서 다시 불러오기'를 눌러 주세요." : " 대표님이 불러오면 보여요."}</p>`;
   const map = {};
   for (const d of docs) for (const [t, v] of Object.entries(d.byTeacher || {})){ const x = map[t] ||= { t, v:0, bs:[] }; x.v += v; if (!x.bs.includes(d.branch)) x.bs.push(d.branch); }
-  const list = Object.values(map).sort((a, b) => b.v - a.v), mx = Math.max(1, ...list.map(x => x.v));
+  // 담당 원생 수(원생 명단의 교사별 재원생) → 원생 1명당 상담 횟수
+  const enrOf = (t, bsx) => bsx.reduce((a, b) => a + (state.kpi[b]?.teachers?.find(x => x.name === t)?.enrolled || 0), 0);
+  for (const x of Object.values(map)) { x.n = enrOf(x.t, x.bs); x.per = x.n ? Math.round(x.v / x.n * 100) / 100 : null; }
+  const per = state.csMode === "per", key = x => per ? (x.per ?? -1) : x.v;
+  const list = Object.values(map).sort((a, b) => key(b) - key(a)), mx = Math.max(per ? 0.01 : 1, ...list.map(x => per ? x.per || 0 : x.v));
   const tot = docs.reduce((a, d) => a + (d.total || 0), 0), last = Math.max(...docs.map(d => d.at || 0));
-  return `<div class="card-h"><h2>상담 현황 <span class="sub">최근 30일 새로 등록된 상담, ${esc(docs.map(d => `${SHORT[d.branch]} ${d.total || 0}건`).join(" · "))}</span></h2>${btn}</div>
-    <div class="cs-list">${list.map(x => `<div class="cs-row" data-tip="${esc(`${x.t}\n최근 30일 상담 ${x.v}건`)}"><span class="cs-t"><b>${esc(x.t)}</b>${state.branch === "all" ? `<small>${esc(x.bs.map(b => SHORT[b]).join("·"))}</small>` : ""}</span>
-      <span class="cs-bar"><i style="width:${x.v / mx * 100}%"></i></span><span class="cs-v">${x.v}<small>건</small></span></div>`).join("")}</div>
+  const enrTot = bs.reduce((a, b) => a + (state.kpi[b]?.cur?.enrolled || 0), 0), perTot = enrTot ? Math.round(tot / enrTot * 100) / 100 : null;
+  return `<div class="card-h"><h2>상담 현황 <span class="sub">최근 30일 새로 등록된 상담, ${esc(docs.map(d => `${SHORT[d.branch]} ${d.total || 0}건`).join(" · "))}${perTot != null ? ` · 원생 1명당 평균 ${perTot}회` : ""}</span></h2>
+      <div class="seg2 sm" role="group" aria-label="상담 현황 보기"><button type="button" data-act="cs-mode" data-m="cnt" aria-pressed="${!per}">건수</button><button type="button" data-act="cs-mode" data-m="per" aria-pressed="${per}">원생 1명당</button></div>${btn}</div>
+    <div class="cs-list">${list.map(x => `<div class="cs-row" data-tip="${esc(`${x.t}\n최근 30일 상담 ${x.v}건${x.n ? `\n담당 원생 ${x.n}명 → 1명당 ${x.per}회` : "\n원생 명단에 담당 원생이 없어요"}`)}"><span class="cs-t"><b>${esc(x.t)}</b>${state.branch === "all" ? `<small>${esc(x.bs.map(b => SHORT[b]).join("·"))}</small>` : ""}</span>
+      <span class="cs-bar"><i style="width:${(per ? x.per || 0 : x.v) / mx * 100}%"></i></span>
+      <span class="cs-v">${per ? (x.per != null ? `${x.per}<small>회</small>` : `<small>-</small>`) : `${x.v}<small>건</small>`}<em>${per ? `${x.v}건 · ${x.n}명` : x.n ? `${x.n}명 · ${x.per}회` : ""}</em></span></div>`).join("")}</div>
     <p class="fnote">합계 ${tot}건. 스케줄 매니저 학생 상담 기록 중 최근 30일에 새로 쓴 것을 그 학생 반의 담당 교사로 셌어요(두 반이면 두 교사 모두). 마지막으로 센 때: ${last ? new Date(last).toLocaleString("ko-KR", { month:"numeric", day:"numeric", hour:"2-digit", minute:"2-digit" }) : "-"}.</p>`;
 }
 
