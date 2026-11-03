@@ -650,6 +650,10 @@
   .rq-reply{color:#1F7A4D;font-size:13px}.rq-do{display:flex;gap:6px}.rq-do .inp{flex:1}
   .kb-home{margin-bottom:16px}
   @media (max-width:560px){ .ftable.kb .c-cat{display:none} .kb-banner{flex-direction:column;align-items:stretch} .flist .card-h .sub,#dropZone{display:none} }
+  .sync-list{display:grid;gap:12px}
+  .sync-t{border:1px solid var(--line);border-radius:var(--r-card);padding:12px 16px}
+  .sync-h{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.sync-h small{color:var(--text-sub);margin-right:auto}
+  .sync-t .mtable{margin-top:8px}
   .lv{display:inline-block;font-size:11px;font-weight:700;padding:1px 6px;border-radius:4px;margin-right:6px;vertical-align:1px}
   .lv-mgr{background:#E8EAF6;color:#3240B8}
   .lv-admin{background:var(--ink);color:var(--brand-yellow)}
@@ -4027,7 +4031,8 @@ function membersDialog(){
         소속 원은 여러 개 고를 수 있어요(겸임). 세 원을 모두 고르면 모든 원을 보고 쓸 수 있어요.
         <b>관리자</b>(원장·부원장·실장)는 워크허브에서 소속 원 업무를 배정하고 결과를 확인해요.
         <b>자료 담당</b>은 자료실 자료를 검토·게시하고 매뉴얼을 써서 승인 요청해요(따로 정하지 않으면 관리자). <b>매뉴얼 승인</b>은 공식 매뉴얼을 승인·개정해요(대표는 항상). 매출·미납액과 이 직원 계정 화면은 대표만 봐요.</p>
-      <div><button type="button" class="btn btn-ghost btn-sm" id="memImport">JP People에서 불러오기</button></div>
+      <div class="kb-acts"><button type="button" class="btn btn-ghost btn-sm" id="memImport">JP People에서 불러오기</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="memSync">앱에 명단 보내기</button><small class="hint">스케줄·결제·재료·주차 앱의 '들어올 수 있는 사람'을 이 명단으로 맞춰요</small></div>
       <div class="mem-wrap" id="memList"></div>
       <h3 class="vh">직접 추가</h3>
       <div class="mem-add">${fText("이름", "mName", "", 'maxlength="20"')}${fText("구글 이메일", "mEmail", "", 'type="email" placeholder="example@gmail.com"')}
@@ -4055,6 +4060,7 @@ function membersDialog(){
         toast(`${name} 선생님을 등록했어요.`);
       }
       if (t.id === "memImport") memImport();
+      if (t.id === "memSync") { $("dlg").close(); setTimeout(appAccessDialog, 0); }
       const del = t.closest("[data-mem-del]")?.dataset.memDel;
       if (del){
         const m = state.members.find(x => x.id === del);
@@ -4093,6 +4099,149 @@ function renderMemList(){
       <td><input type="checkbox" data-mem-active="${esc(m.id)}" ${m.active !== false ? "checked" : ""} aria-label="${esc(m.name)} 로그인 허용"></td>
       <td><button type="button" class="icon-btn" data-mem-del="${esc(m.id)}">삭제</button></td></tr>`).join("")}</tbody></table>`
     : `<p class="empty">아직 등록된 직원 계정이 없어요. JP People에서 불러오거나 아래에서 직접 추가해 주세요.</p>`;
+}
+/* =====================================================================
+   앱 출입 명단 (대표 전용) — JP ONE 직원 계정을 다른 업무 앱의 '들어올 수 있는 사람' 명단으로 보냄
+   앱마다 Firebase 프로젝트가 따로라 로그인은 앱에서 한 번씩(구글) 하고, 누가 들어올지는 이 명단 하나로 정함.
+   항상 미리보기 → 체크 → 적용 (프로젝트 지침 2-2). 원 공용 계정(이메일·비밀번호)과 최고 관리자는 건드리지 않음
+   ===================================================================== */
+const SYNC_TARGETS = [
+  { key:"schedP", ext:"pyeongchon", label:"스케줄 매니저 · 평촌", kind:"staff", branch:"pyeongchon", who:"평촌 소속 전원 (관리자는 앱 관리자)" },
+  { key:"schedB", ext:"banpo",      label:"스케줄 매니저 · 반포", kind:"staff", branch:"banpo",      who:"반포 소속 전원 (관리자는 앱 관리자)" },
+  { key:"schedD", ext:"daechi",     label:"스케줄 매니저 · 대치", kind:"staff", branch:"daechi",     who:"대치 소속 전원 (관리자는 앱 관리자)" },
+  { key:"pay",    ext:"pay",        label:"결제 매니저",          kind:"payAccess",                 who:"관리자(원장·부원장·실장), 소속 원만" },
+  { key:"mat",    ext:"mat",        label:"재료 요청",            kind:"jpAccess",                  who:"직원 계정 전원" },
+  { key:"park",   ext:"park",       label:"주차 쿠폰 관리",       kind:"jpAccess", branch:"pyeongchon", mgrOnly:true, who:"평촌 관리자" }
+];
+const SUPER_EMAILS = ["jinhyuck@gmail.com"];
+const SYNC_COLL = { staff:"staff", payAccess:"payAccess", jpAccess:"jpAccess" };
+// JP ONE 명단 → 이 앱에 있어야 할 문서들 { email: data }
+function syncWanted(t){
+  const out = {};
+  for (const m of state.members){
+    if (m.active === false || !EMAIL_RE.test(m.id)) continue;
+    const bs = memBranches(m);
+    if (t.branch && !bs.includes(t.branch)) continue;
+    if ((t.mgrOnly || t.kind === "payAccess") && !m.manager) continue;
+    const name = (m.name || "").slice(0, 40);
+    if (t.kind === "staff") out[m.id] = { email:m.id, name, role: m.manager ? "admin" : "teacher", login:"google" };
+    else if (t.kind === "payAccess") out[m.id] = { email:m.id, name, centers: bs.map(b => EXT.pay.centers[b]).filter(Boolean) };
+    else out[m.id] = { email:m.id, name, branches: bs, manager: !!m.manager };
+  }
+  return out;
+}
+const sameDoc = (a, b, keys) => keys.every(k => JSON.stringify(a?.[k] ?? null) === JSON.stringify(b?.[k] ?? null));
+const SYNC_KEYS = { staff:["name","role","login"], payAccess:["name","centers"], jpAccess:["name","branches","manager"] };
+// 지금 앱 명단과 비교해서 바뀔 내용
+function syncDiff(t, have, extraUsers){
+  const want = syncWanted(t), rows = [];
+  for (const [em, d] of Object.entries(want)){
+    const h = have[em];
+    if (!h) rows.push({ em, name:d.name, kind:"add", label:"새로 등록" + (d.role === "admin" ? " (관리자)" : ""), data:d, on:true });
+    else if (t.kind === "staff" && h.login === "password") continue;   // 원 공용 계정은 그대로
+    else if (!sameDoc(h, d, SYNC_KEYS[t.kind])){
+      const ch = [];
+      if ((h.name || "") !== d.name) ch.push(`이름 ${h.name || "-"} → ${d.name}`);
+      if (t.kind === "staff" && h.role !== d.role) ch.push(`${h.role === "admin" ? "관리자" : "교사"} → ${d.role === "admin" ? "관리자" : "교사"}`);
+      if (t.kind === "payAccess" && (h.centers || []).join() !== d.centers.join()) ch.push(`원 ${(h.centers || []).join("·") || "-"} → ${d.centers.join("·")}`);
+      if (t.kind === "jpAccess" && ((h.branches || []).join() !== d.branches.join() || !!h.manager !== d.manager)) ch.push("소속·관리자 정보 바뀜");
+      rows.push({ em, name:d.name, kind:"upd", label: ch.join(", ") || "정보 맞추기", data:d, on:true });
+    }
+  }
+  for (const [em, h] of Object.entries(have)){
+    if (want[em] || SUPER_EMAILS.includes(em) || BRANCH_BY_EMAIL[em]) continue;
+    if (t.kind === "staff" && h.login === "password") continue;
+    if (h.extra) continue;   // 대표가 따로 허락한 계정
+    // 스케줄 매니저 명단은 앱에서 직접 넣은 사람이 있을 수 있어 지우기는 기본으로 꺼 둠
+    rows.push({ em, name:h.name || "", kind:"del", label:"JP ONE 명단에 없음 → 빼기", on: t.kind !== "staff" });
+  }
+  // 재료 요청: 지금 쓰고 있는데 명단에 없는 구글 계정 (켜면 '따로 허락'으로 남김)
+  for (const em of extraUsers || []){
+    if (want[em] || have[em] || SUPER_EMAILS.includes(em)) continue;
+    rows.push({ em, name:"", kind:"extra", label:"지금 재료 요청을 쓰는 계정 → 따로 허락", data:{ email:em, name:em, branches:[], manager:false, extra:true }, on:false });
+  }
+  return rows;
+}
+async function syncLoad(t){
+  if (DEMO) return { have: demoSyncHave(t), extraUsers: t.key === "mat" ? ["desk.pyeongchon@gmail.com"] : [] };
+  const x = await extInit(t.ext);
+  if (!x.auth.currentUser) await fb.A.signInWithPopup(x.auth, new fb.A.GoogleAuthProvider());
+  if (!SUPER_EMAILS.includes((x.auth.currentUser.email || "").toLowerCase())) throw Object.assign(new Error("대표 구글 계정으로 로그인해 주세요."), { code:"wrong-account" });
+  const F = fb.F, have = {};
+  (await F.getDocs(F.collection(x.db, SYNC_COLL[t.kind]))).forEach(d => { have[d.id] = d.data(); });
+  let extraUsers = [];
+  if (t.key === "mat"){
+    try { const s = await F.getDocs(F.query(F.collection(x.db, "requests"), F.orderBy("createdAt", "desc"), F.limit(300)));
+      extraUsers = [...new Set(s.docs.map(d => String(d.data().by || "").toLowerCase()).filter(e => EMAIL_RE.test(e)))]; } catch (e) { /* 읽기 실패해도 명단 보내기는 진행 */ }
+  }
+  return { have, extraUsers };
+}
+function demoSyncHave(t){
+  const base = { schedP:{ "minsu.teacher@gmail.com":{ name:"김민수", role:"teacher", login:"google" }, "jarada_boys@naver.com":{ name:"평촌 공용", role:"teacher", login:"password" }, "old.teacher@gmail.com":{ name:"예전 교사", role:"teacher", login:"google" } } };
+  return base[t.key] || {};
+}
+async function syncApply(t, rows){
+  if (DEMO) { await new Promise(r => setTimeout(r, 150)); return; }
+  const x = await extInit(t.ext), F = fb.F, me = state.user.email, now = Date.now();
+  for (const r of rows){
+    const ref = F.doc(x.db, SYNC_COLL[t.kind], r.em);
+    if (r.kind === "del") { await F.deleteDoc(ref); continue; }
+    const d = { ...r.data };
+    if (t.kind === "staff") Object.assign(d, r.kind === "add" ? { addedAt: now, addedBy: me } : {}, { updatedAt: now, updatedBy: me });
+    else Object.assign(d, { updatedAt: now, updatedBy: me, source: "jpone" });
+    await F.setDoc(ref, d, { merge: true });
+  }
+}
+const syncState = {};
+function appAccessDialog(){
+  if (!state.isAdmin) return;
+  openForm({
+    title: "앱 출입 명단",
+    fields: `<p class="hint">JP ONE 직원 계정을 다른 앱의 '들어올 수 있는 사람' 명단으로 보내요. 앱마다 처음 한 번 <b>대표 구글 계정</b>으로 연결하면 돼요(창이 뜨면 로그인).
+        직원은 각 앱에서 <b>구글로 로그인</b>을 한 번만 누르면 그 기기에서는 계속 로그인돼 있어요. 원 공용 계정은 지금처럼 그대로 써요.</p>
+      <p class="hint small">JP People은 직원 정보의 원본이라 명단을 보내지 않아요(지금처럼 JP People 권한으로 들어가요). JP DOC STUDIO는 JP ONE 로그인을 그대로 써요.</p>
+      <div id="syncList" class="sync-list"></div>`,
+    saveLabel: "닫기", async onSave(){ return true; }
+  });
+  $("dlg").classList.add("wide");
+  renderSync();
+  $("dlgBody").addEventListener("click", async e => {
+    const b = e.target.closest("[data-sync]"); if (!b) return;
+    const t = SYNC_TARGETS.find(x => x.key === b.dataset.key), act = b.dataset.sync;
+    if (act === "load"){
+      syncState[t.key] = { status:"loading" }; renderSync();
+      try { const r = await syncLoad(t); syncState[t.key] = { status:"ok", rows: syncDiff(t, r.have, r.extraUsers), n: Object.keys(r.have).length }; }
+      catch (err) { syncState[t.key] = { status:"error", msg: err.code === "permission-denied" ? "읽기 권한이 없어요. 이 앱의 Firestore 규칙을 먼저 게시해 주세요."
+        : err.code === "auth/popup-closed-by-user" ? "로그인 창이 닫혔어요." : err.code === "wrong-account" ? err.message : "불러오지 못했어요. " + (err.code || err.message || "") }; }
+      renderSync();
+    }
+    if (act === "apply"){
+      const st = syncState[t.key], picked = [...$("dlgBody").querySelectorAll(`input[data-row="${t.key}"]:checked`)].map(x => st.rows[+x.value]);
+      if (!picked.length) return toast("적용할 항목을 골라 주세요.");
+      const dels = picked.filter(r => r.kind === "del").length;
+      if (!await confirmBox(`${t.label}에 ${picked.length}건을 적용할까요?${dels ? `\n${dels}명은 이 앱에 더 이상 들어올 수 없게 돼요.` : ""}`, "적용")) return;
+      syncState[t.key] = { ...st, status:"saving" }; renderSync();
+      try { await syncApply(t, picked); toast(`${t.label} 명단을 맞췄어요.`); syncState[t.key] = { status:"done" }; }
+      catch (err) { syncState[t.key] = { ...st, status:"ok", msg: err.code === "permission-denied" ? "쓰기 권한이 없어요. 이 앱의 Firestore 규칙을 먼저 게시해 주세요." : "적용하지 못했어요. " + (err.code || "") }; }
+      renderSync();
+    }
+  });
+}
+function renderSync(){
+  const box = $("syncList"); if (!box) return;
+  const KIND = { add:"tagb ok", upd:"tagb warn", del:"tagb bad", extra:"tagb" };
+  box.innerHTML = SYNC_TARGETS.map(t => { const s = syncState[t.key] || {};
+    const body = s.status === "loading" ? `<p class="hint">불러오는 중…</p>` : s.status === "saving" ? `<p class="hint">적용하는 중…</p>`
+      : s.status === "done" ? `<p class="hint">✓ 명단을 맞췄어요. <button type="button" class="linkish" data-sync="load" data-key="${t.key}">다시 확인</button></p>`
+      : s.status === "error" ? `<p class="kb-note">${esc(s.msg)}</p>`
+      : s.status === "ok" ? (s.rows.length ? `<table class="mtable"><tbody>${s.rows.map((r, i) => `<tr><td><input type="checkbox" data-row="${t.key}" value="${i}" ${r.on ? "checked" : ""} aria-label="${esc(r.name || r.em)} 적용"></td>
+            <td>${esc(r.name || "")}</td><td class="em">${esc(r.em)}</td><td><span class="${KIND[r.kind]}">${esc(r.label)}</span></td></tr>`).join("")}</tbody></table>
+          ${s.msg ? `<p class="kb-note">${esc(s.msg)}</p>` : ""}
+          <div class="kb-acts"><button type="button" class="btn btn-sub btn-sm" data-sync="apply" data-key="${t.key}">체크한 ${"것"} 적용</button></div>`
+        : `<p class="hint">✓ 이미 JP ONE 명단과 같아요 (지금 ${s.n}명).</p>`) : "";
+    return `<section class="sync-t"><div class="sync-h"><b>${esc(t.label)}</b><small>${esc(t.who)}</small>
+      ${s.status === "ok" || s.status === "done" || s.status === "loading" || s.status === "saving" ? "" : `<button type="button" class="btn btn-ghost btn-sm" data-sync="load" data-key="${t.key}">${s.status === "error" ? "다시 시도" : "연결해서 비교하기"}</button>`}</div>${body}</section>`;
+  }).join("");
 }
 /* JP People 직원 목록(이름·구글 이메일·소속·재직 상태만) → 바뀔 내용 미리보기 → 고른 것만 적용 */
 async function loadPeopleAccounts(db){
@@ -4197,7 +4346,13 @@ const EXT = {
               storageBucket:"jarada-checkin.firebasestorage.app", messagingSenderId:"527430354151", appId:"1:527430354151:web:f6e1127e969ebfe36c0e42" },
     centers: { pyeongchon:"안양평촌원", banpo:"서초반포원", daechi:"강남대치원" }
   },
-  // 스케줄 매니저 (원마다 다른 프로젝트). 평촌은 결제 매니저와 같은 프로젝트(jarada-checkin)라 그 연결을 같이 씀
+  // 스케줄 매니저 (원마다 다른 프로젝트). 평촌은 2026년 11월부터 jarada-pyeongchon (그 전 데이터는 jarada-checkin에 보관)
+  pyeongchon: { name: "스케줄 매니저(평촌)", config: { apiKey:"AIzaSyCloEOVFM8x1WPYXc0xcL175zBfWkq9NCg", authDomain:"jarada-pyeongchon.firebaseapp.com", projectId:"jarada-pyeongchon",
+    storageBucket:"jarada-pyeongchon.firebasestorage.app", messagingSenderId:"486231973508", appId:"1:486231973508:web:0f7ec0eb9e44786af3acd1" } },
+  mat: { name: "재료 요청", config: { apiKey:"AIzaSyCSPsm1kE336zBUaDX3A3D9NsIFSyoOJog", authDomain:"jarada-materials.firebaseapp.com", projectId:"jarada-materials",
+    storageBucket:"jarada-materials.firebasestorage.app", messagingSenderId:"381345580244", appId:"1:381345580244:web:eb8f585b58392a92db6741" } },
+  park: { name: "주차 쿠폰", config: { apiKey:"AIzaSyCuOIyucJQnhwfbZXamcTCII7aa0fxyOzU", authDomain:"jarada-iparking.firebaseapp.com", projectId:"jarada-iparking",
+    storageBucket:"jarada-iparking.firebasestorage.app", messagingSenderId:"419835605389", appId:"1:419835605389:web:29ab45962b538277fdcdc4" } },
   banpo: { name: "스케줄 매니저(반포)", config: { apiKey:"AIzaSyALml0ro7SvDL7awn9UlMiFjisx9OiSuXQ", authDomain:"jarada-banpo.firebaseapp.com", projectId:"jarada-banpo",
     storageBucket:"jarada-banpo.firebasestorage.app", messagingSenderId:"259819249661", appId:"1:259819249661:web:d5ff6db57196b3f225c394" } },
   daechi: { name: "스케줄 매니저(대치)", config: { apiKey:"AIzaSyByg6Wr45wtraJ-uUS0-kLeGRUhiocZ_zo", authDomain:"jarada-daechi.firebaseapp.com", projectId:"jarada-daechi",
@@ -4721,7 +4876,7 @@ const KPI_TILES = [
 const visBranches = () => state.branch === "all" ? BRANCH_KEYS : [state.branch];
 /* ── 상담 현황: 스케줄 매니저 상담 기록(학생별) + 반 배정 명단(학생 → 담당 교사)으로 최근 30일 교사별 새 상담 수
    대표 화면에서 계산해 portalCounsel/{원} 에 숫자만 저장 (상담 내용·학생 이름은 저장하지 않음) */
-const SCHED_EXT = { pyeongchon:"pay", banpo:"banpo", daechi:"daechi" };
+const SCHED_EXT = { pyeongchon:"pyeongchon", banpo:"banpo", daechi:"daechi" };
 const parseCls = raw => { const m = String(raw || "").trim().match(/^(.+?)\(([^)]+)\)\s*\(([월화수목금토일])-(\d+)\s+(\d{1,2}:\d{2})\)\s*$/); return m ? m[2].trim() : ""; };
 async function loadCounsel(db, branch){
   const F = fb.F, since = Date.now() - 30 * 864e5, sinceISO = addDays(todayISO(), -30);
