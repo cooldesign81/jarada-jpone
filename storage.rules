@@ -15,18 +15,25 @@ service firebase.storage {
         && firestore.exists(/databases/(default)/documents/portalMembers/$(request.auth.token.email))
         && firestore.get(/databases/(default)/documents/portalMembers/$(request.auth.token.email)).data.active == true;
     }
-    // 자료실 파일의 '볼 수 있는 사람'(level)을 받기 링크에도 적용. 자료실 문서가 아닌 파일(업무·미션 첨부, 매뉴얼 PDF)은 그대로
-    function isAdminS() { return request.auth.token.email == 'jinhyuck@gmail.com' && request.auth.token.email_verified == true; }
-    function isMgrS() {
-      return isStaff() && firestore.get(/databases/(default)/documents/portalMembers/$(request.auth.token.email)).data.get('manager', false) == true;
-    }
+    // 자료실 파일: 자료 문서(portalFiles/{fileId})의 공개 범위·상태·작성자를 받기·지우기에도 똑같이 적용.
+    // 자료실 문서가 아닌 파일(업무·미션 첨부, 매뉴얼 PDF)은 회원이면 됨. Firestore 문서는 평가당 2개까지만 읽음(직원 계정 + 자료 문서)
+    function myEmail()  { return request.auth.token.email; }
+    function isAdminS() { return myEmail() == 'jinhyuck@gmail.com' && request.auth.token.email_verified == true; }
+    function memData()  { return firestore.get(/databases/(default)/documents/portalMembers/$(myEmail())).data; }
+    function isMgrS()   { return isStaff() && memData().get('manager', false) == true; }
+    function isCurS()   { return isStaff() && memData().get('curator', memData().get('manager', false)) == true; }
     match /portal-files/{fileId}/{name} {
-      function fdoc() { return /databases/(default)/documents/portalFiles/$(fileId); }
+      function fdoc()  { return /databases/(default)/documents/portalFiles/$(fileId); }
+      function fd()    { return firestore.get(fdoc()).data; }
+      function lvOk()  { return fd().get('level', 'all') == 'all' || (fd().get('level', 'all') == 'mgr' && isMgrS()); }
+      function mine()  { return fd().get('createdBy', '') == myEmail(); }
       allow read: if isMember() && (isAdminS() || !firestore.exists(fdoc())
-        || firestore.get(fdoc()).data.get('level', 'all') == 'all'
-        || (firestore.get(fdoc()).data.get('level', 'all') == 'mgr' && isMgrS()));
+        || (fd().get('status', 'published') == 'published' && lvOk())
+        || (mine() && fd().get('status', 'published') != 'published')
+        || (fd().get('status', '') == 'pending' && isCurS() && lvOk()));
       allow create: if isMember() && request.resource.size < 100 * 1024 * 1024;
-      allow delete: if isMember();
+      // 지우기: 대표, 올린 사람, 자료 담당자. 자료실 문서가 없는 파일(업무 첨부 등)은 회원
+      allow delete: if isMember() && (isAdminS() || !firestore.exists(fdoc()) || mine() || (isCurS() && lvOk()));
     }
   }
 }

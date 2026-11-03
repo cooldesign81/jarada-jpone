@@ -3248,8 +3248,11 @@ function fileForm(f, files = []){
   const cat0 = f ? (fl.some(x => x.id === f.folder) ? f.folder : "") : (fl.some(x => x.id === state.folder) ? state.folder : cats[0][0]);
   const brOpts = [...new Set(["all", ...branchOptions("files")])];
   const br0 = f?.branch || "all", st = f ? fStatus(f) : "";
-  const modes = cur ? [["published", "바로 게시"], ["draft", "임시저장"]] : [["pending", "검토 요청"], ["draft", "임시저장"]];
-  const mode0 = f ? (cur ? (st === "draft" ? "draft" : "published") : (st === "draft" ? "draft" : "pending")) : modes[0][0];
+  // 자료 담당자가 남의 검토 대기 자료를 고칠 때는 '검토 대기로 두기'가 기본 — 게시는 자료 보기의 '게시하기'(아동 사례 확인 포함)로
+  const reviewing = cur && f && (st === "pending" || st === "revise") && f.createdBy !== myEmail();
+  const modes = reviewing ? [[st, st === "pending" ? "검토 대기로 두기" : "보완 요청으로 두기"], ["draft", "임시저장"]]
+    : cur ? [["published", "바로 게시"], ["draft", "임시저장"]] : [["pending", "검토 요청"], ["draft", "임시저장"]];
+  const mode0 = f ? (reviewing ? st : cur ? (st === "draft" ? "draft" : "published") : (st === "draft" ? "draft" : "pending")) : modes[0][0];
   const ch = f?.checks || {};
   let picked = files;
   openForm({
@@ -3288,7 +3291,7 @@ function fileForm(f, files = []){
       }
       if (picked[0]?.size > MAX_FILE_MB * 1048576) return formErr(`${MAX_FILE_MB}MB가 넘는 파일은 올릴 수 없어요.`);
       if (d.status === "published") { if (f?.status !== "published") { d.publishedAt = Date.now(); d.publishedBy = writerName(); } d.reviewNote = ""; }
-      if (d.status === "pending") d.reviewNote = "";
+      if (d.status === "pending" && !reviewing) d.reviewNote = "";
       if (!f) keepWriter(form);
       if (multi){
         for (let i = 0; i < picked.length; i++){
