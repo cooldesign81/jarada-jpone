@@ -179,6 +179,12 @@
   .kpi.multi .n{font-size:16px;font-weight:800;color:var(--ink);letter-spacing:-.01em}
   .kpi.multi .n small{font-size:11px;font-weight:700;margin-left:1px}
   .kpi.multi .d{font-size:10.5px;gap:2px 4px;justify-content:flex-end}
+  .kpi.multi .d .av{margin-right:auto;color:var(--text-sub);font-variant-numeric:tabular-nums}
+  .kpi .v-row{display:flex;align-items:flex-end;justify-content:space-between;gap:8px}
+  .kpi .avg3{text-align:right;margin:0 0 6px;line-height:1.25;white-space:nowrap}
+  .kpi .avg3 span{display:block;font-size:11px;color:var(--text-sub);font-weight:600}
+  .kpi .avg3 b{font-size:15px;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums}
+  .kpi .avg3 b small{font-size:11px;margin-left:1px}
 
   .grid2{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:16px;margin-bottom:16px}
   /* 월간 캘린더 */
@@ -4498,8 +4504,15 @@ function buildSnapshot(rows, branch, base){
   }
   const heat = {};
   for (const r of active.filter(isPure)) if (r.day && r.hour != null) { (heat[r.day] ||= {}); heat[r.day][r.hour] = (heat[r.day][r.hour] || 0) + 1; }
+  // 직전 3개월(이번 달 제외) 평균: 명단의 등록일·종료일로 거꾸로 계산할 수 있는 지표만. 휴원·대기·미납은 달마다 쌓는 기록(hist)으로
+  const P3 = [8, 9, 10], avg = a => Math.round(a.reduce((x, y) => x + y, 0) / a.length * 10) / 10;
+  const f3 = P3.map(i => funnelOf(months[i])), inq3 = f3.reduce((a, f) => a + f.inq, 0);
+  const avg3 = { months: P3.map(i => months[i]),
+    enrolled: avg(P3.map(i => enrolled[i])), newc: avg(P3.map(i => newc[i])), left: avg(P3.map(i => left[i])),
+    leftRate: avg(P3.map(i => rate(left[i], enrolled[i - 1]))), inq: avg(f3.map(f => f.inq)),
+    sampleRate: rate(f3.reduce((a, f) => a + f.reg, 0), inq3), canceled: avg(P3.map(i => canceledIn(months[i]))) };
   return {
-    branch, base, rowCount: rows.length, funnelW, months, enrolled, enrolledLY, newc, left, newcLY, leftLY,
+    branch, base, rowCount: rows.length, funnelW, months, enrolled, enrolledLY, newc, left, newcLY, leftLY, avg3,
     ageM: (() => { const o = {}; for (const k of AGE_KEYS){ const L = rows.filter(r => ageKey(r.age) === k);
         o[k] = { enr0: enrAt(L, monthEnd(prevYm(months[0]))), enr: months.map((ym, i) => i === 11 ? L.filter(isPure).length : enrAt(L, monthEnd(ym))),
                  new: months.map(ym => L.filter(r => isReg(r) && r.reg && ymOf(r.reg) === ym).length),
@@ -4610,7 +4623,11 @@ function lmsPreview(files){
         if (!opts.includes(b)) continue;
         const { pub, priv } = splitSnapshot(buildSnapshot(list, b, base));
         const meta = { fileName, uploadedAt: Date.now(), uploadedBy: state.user.email, uploader: writerName() };
-        await DB.set("kpi", b, { ...pub, ...meta });
+        // 달마다 기록 (그 달 마지막으로 올린 명단 값). 지난 달로 거꾸로 계산할 수 없는 휴원·대기·미납·순수 재원을 3개월 평균에 씀
+        const hist = { ...(state.kpi[b]?.hist || {}) }, c = pub.cur;
+        hist[ymOf(base)] = { enrolled: c.enrolled, rest: c.rest, waiting: c.waiting, unpaid: c.unpaid, base };
+        Object.keys(hist).sort().slice(0, -24).forEach(k => delete hist[k]);
+        await DB.set("kpi", b, { ...pub, hist, ...meta });
         await DB.set("kpiPriv", b, { ...priv, ...meta });
         n++;
       }
@@ -5188,6 +5205,16 @@ function checkListHTML(){
 const tealOf = t => { const A = [0xE0,0xF2,0xEE], B = [0x0B,0x5F,0x57]; return `rgb(${A.map((v, i) => Math.round(v + (B[i] - v) * Math.max(0, Math.min(1, t)))).join(",")})`; };
 /* 연령별 표 색: 옅은 인디고 #E6E8FB → 인디고 블루 #3240B8 */
 const indigoOf = t => { const A = [0xE6,0xE8,0xFB], B = [0x32,0x40,0xB8]; return `rgb(${A.map((v, i) => Math.round(v + (B[i] - v) * Math.max(0, Math.min(1, t)))).join(",")})`; };
+/* 지표 칸 오른쪽 '직전 3개월 평균'. 휴원·대기·미납은 명단을 달마다 올려 쌓인 기록이 3개월 다 있어야 나옴 */
+const HIST_KEYS = ["rest", "waiting", "unpaid"];
+function avg3Of(s, key){
+  const a = s?.avg3; if (!a) return null;
+  if (!HIST_KEYS.includes(key)) return a[key] ?? null;
+  const v = a.months.map(ym => s.hist?.[ym]?.[key]);
+  return v.every(x => x != null) ? Math.round(v.reduce((x, y) => x + y, 0) / 3 * 10) / 10 : null;
+}
+const avg3Label = s => { const m = s?.avg3?.months; return m ? `${+m[0].slice(5)}~${+m[2].slice(5)}월` : ""; };
+const fmtAvg = v => v == null ? "-" : String(Math.round(v * 10) / 10);
 function kpiPageHTML(){
   const bs = visBranches(), snaps = bs.map(b => state.kpi[b]).filter(Boolean), canUp = branchOptions("kpi").some(b => b !== "all");
   const metaLine = bs.map(b => state.kpi[b] ? `${BRANCHES[b]} ${md(state.kpi[b].base)} 기준` : `${BRANCHES[b]} 명단 없음`).join(", ");
@@ -5205,14 +5232,15 @@ function kpiPageHTML(){
       const sub = m.sub ? `<div class="sub-row"><span class="sl">${m.sub.label}</span><span class="sv">${fmt(m.sub, s.cur[m.sub.key])}${m.sub.unit}</span>
         <div class="d">${delta(m.sub, s.cur[m.sub.key], s.prev[m.sub.key])}</div></div>` : "";
       const extra = m.key === "unpaid" && state.isAdmin && privAmt(state.branch) ? `<div class="d"><span>${won(privAmt(state.branch))}</span></div>` : "";
+      const av = avg3Of(s, m.key), avH = s.avg3 ? `<div class="avg3" data-tip="${esc(av == null ? `${avg3Label(s)} 기록이 아직 없어요.\n매달 원생 명단을 올리면 3개월 뒤부터 나와요.` : `${avg3Label(s)} 3개월 평균${m.key === "enrolled" ? "\n(지난 달은 휴원생 포함 월말 기준)" : ""}`)}"><span>${avg3Label(s)} 평균</span><b>${av == null ? "기록 중" : fmtAvg(av) + `<small>${m.unit}</small>`}</b></div>` : "";
       return `<div class="kpi"><div class="l">${m.label}${m.mainLabel ? `<span class="ml">${m.mainLabel}</span>` : ""}</div>
-        <div class="v">${fmt(m, cur)}<small>${m.unit}</small></div><div class="d">${prev == null ? "<span>이번 명단 기준</span>" : delta(m, cur, prev)}</div>${extra}${sub}</div>`;
+        <div class="v-row"><div class="v">${fmt(m, cur)}<small>${m.unit}</small></div>${avH}</div><div class="d">${prev == null ? "<span>이번 명단 기준</span>" : delta(m, cur, prev)}</div>${extra}${sub}</div>`;
     }
     return `<div class="kpi multi"><div class="l">${m.label}${m.sub ? `<span class="ml">${m.mainLabel ? m.mainLabel + " / " : ""}${m.sub.label}</span>` : ""}</div>${BRANCH_KEYS.map(b => {
       const s = state.kpi[b]; if (!s) return `<div class="br"><div class="bv"><span class="bn">${SHORT[b]}</span><span class="n na">-</span></div></div>`;
       const cur = s.cur[m.key], prev = s.prev[m.key];
       return `<div class="br"><div class="bv"><span class="bn">${SHORT[b]}</span><span class="n">${fmt(m, cur)}<small>${m.unit}</small>${m.sub ? `<em>${fmt(m.sub, s.cur[m.sub.key])}${m.sub.unit}</em>` : ""}</span></div>
-        <div class="d">${prev == null ? "" : deltaShort(m, cur, prev)}${m.sub ? deltaShort(m.sub, s.cur[m.sub.key], s.prev[m.sub.key]) : ""}</div></div>`; }).join("")}</div>`;
+        <div class="d">${(() => { const av = avg3Of(s, m.key); return av == null ? "" : `<span class="av" data-tip="${esc(`${BRANCHES[b]} ${avg3Label(s)} 3개월 평균`)}">${avg3Label(s)} ${fmtAvg(av)}</span>`; })()}${prev == null ? "" : deltaShort(m, cur, prev)}${m.sub ? deltaShort(m.sub, s.cur[m.sub.key], s.prev[m.sub.key]) : ""}</div></div>`; }).join("")}</div>`;
   };
   /* 추이 차트 */
   const ref = snaps[0], labels = ref.months.map(mLabel);
