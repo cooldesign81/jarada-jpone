@@ -982,6 +982,7 @@
 <input type="file" id="revPick" accept=".xlsx,.xls,.csv" multiple hidden>
 <div class="tip hidden" id="tip" role="tooltip"></div>
 
+<script src="shared/jp-login.js?v=1"></script>
 <script type="module">
 /* =====================================================================
    자라다 JP ONE — 스크립트
@@ -1491,12 +1492,22 @@ function loginMsg(code){
   return "로그인하지 못했어요. (" + code + ")";
 }
 function stopWatching(){ unsubs.forEach(u => u && u()); unsubs = []; }
-function showLogin(){
+/* 로그인 화면: 공통 부품(shared/jp-login.js, 좌우 나눔)을 씀. 못 불러오면 예전 화면(#login)으로 */
+function showLogin(denied){
   $("boot")?.remove();
   stopWatching();
-  $("boot")?.remove();
   $("app").classList.add("hidden");
+  if (window.JPLogin && !DEMO) {
+    const google = sel => fb.A.signInWithPopup(fb.auth, (() => { const p = new fb.A.GoogleAuthProvider(); if (sel) p.setCustomParameters({ prompt:"select_account" }); return p; })());
+    const wrap = fn => async (...a) => { try { await fn(...a); } catch (e) { const m = loginMsg(e.code); if (!m) throw e; throw Object.assign(new Error(m), { code:e.code, userMessage:m }); } };
+    JPLogin.show({ app:"jpone", lead:"선생님은 본인 구글 계정으로 로그인해 주세요.",
+      google: wrap(() => google(false)),
+      common: wrap((em, pw) => fb.A.signInWithEmailAndPassword(fb.auth, em, pw)), commonLabel:"원 공용 계정",
+      denied: denied || null, onSwitch: wrap(() => google(true)) });
+    return;
+  }
   $("login").classList.remove("hidden");
+  if (denied) $("loginErr").textContent = `${denied.email} — ${denied.msg}`;
 }
 
 async function enter(user){
@@ -1510,9 +1521,8 @@ async function enter(user){
     const google = DEMO || !!user.providerData?.some(p => p.providerId === "google.com");
     if (!member || member.active === false || !memBranches(member).length || !google) {
       if (!DEMO) fb.A.signOut(fb.auth);
-      showLogin();
-      $("loginErr").textContent = member && member.active === false ? `${email} 계정은 사용이 중지됐어요. 대표님께 문의해 주세요.`
-        : `${user.email || "이 계정"}은(는) 아직 JP ONE 직원 목록에 없어요. 대표님께 이 구글 이메일로 등록을 요청해 주세요.`;
+      showLogin({ email: user.email || "이 계정", msg: member && member.active === false ? "사용이 중지된 계정이에요. 대표님께 문의해 주세요."
+        : !google && member ? "직원은 구글 계정으로 로그인해 주세요." : "아직 JP ONE 직원 명단에 없어요. 대표님께 이 구글 이메일로 등록을 요청해 주세요." });
       return;
     }
   }
@@ -1536,6 +1546,7 @@ async function enter(user){
   $("membersBtn").classList.toggle("hidden", !state.isAdmin);
   $("boot")?.remove();
   $("login").classList.add("hidden");
+  window.JPLogin?.hide();
   $("app").classList.remove("hidden");
   $("today").textContent = new Date().toLocaleDateString("ko-KR", { year:"numeric", month:"long", day:"numeric", weekday:"short" });
   $("branchSel").innerHTML = pickable.map(k => `<option value="${k}">${k === "all" ? (state.wide ? "전체 (3개 원)" : `전체 (${state.myBranches.map(b => SHORT[b]).join("·")})`) : BRANCHES[k]}</option>`).join("");
@@ -5470,7 +5481,7 @@ if (!DEMO) {
   ]);
   const fbApp = app.initializeApp(FIREBASE_CONFIG);
   fb = { auth: auth.getAuth(fbApp), db: fs.getFirestore(fbApp), storage: st.getStorage(fbApp), App: app, A: auth, F: fs, S: st };
-  fb.A.onAuthStateChanged(fb.auth, user => user ? enter(user) : showLogin());
+  fb.A.onAuthStateChanged(fb.auth, user => user ? enter(user) : (window.JPLogin?.open ? null : showLogin()));   // 거절 화면이 떠 있으면 그대로 둠
   $("loginForm").addEventListener("submit", async e => {
     e.preventDefault(); $("loginErr").textContent = "";
     try { await fb.A.signInWithEmailAndPassword(fb.auth, $("email").value.trim(), $("pw").value); }
