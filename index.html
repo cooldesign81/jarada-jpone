@@ -14,12 +14,12 @@
 <!--
   ───────────────────────────────────────────────
   자라다 JP ONE (직원용 운영 포털) v4
-  - 왼쪽: 업무 앱 / 위 노랑 메뉴: 홈 · 운영지표 · 공지·캘린더 · 워크허브 · 미션허브 · 자료실 · 북마크
+  - 왼쪽: 업무 앱 / 위 노랑 메뉴: 홈 · 대시보드 · 공지·캘린더 · 워크허브 · 미션허브 · 자료실 · 북마크
   - 배포: GitHub Pages (이 index.html 하나)
   - Firebase 프로젝트 하나에 세 원의 공지/일정/할 일/자료/북마크를 같이 저장 (각 문서의 branch 필드로 구분)
     · Authentication: 이메일/비밀번호 + Google
     · Firestore 컬렉션: portalNotices, portalEvents, portalTodos, portalFiles, portalFolders, portalBookmarks, portalBmGroups, portalKpi, portalMembers(직원 계정)
-    · 운영지표: 원생 명단 엑셀 → 계산 결과만 portalKpi/{원}에 저장
+    · 대시보드(예전 운영지표): 원생 명단 엑셀 → 계산 결과만 portalKpi/{원}에 저장
       매출은 결제 매니저(jarada-checkin), 선생님 현황은 JP People(jarada-people)을 대표 계정으로 직접 읽음 (저장 안 함)
     · Storage: portal-files/ 폴더 (자료실 파일)
     · 보안 규칙: 함께 드린 firestore.rules, storage.rules 를 그대로 배포
@@ -1020,7 +1020,7 @@ const SHORT = { pyeongchon:"평촌", banpo:"반포", daechi:"대치" };
 
 /* Firestore 컬렉션 이름 */
 const COLL = { notices:"portalNotices", events:"portalEvents", todos:"portalTodos", files:"portalFiles", bookmarks:"portalBookmarks", bmGroups:"portalBmGroups", kpi:"portalKpi", kpiPriv:"portalKpiPrivate", folders:"portalFolders", members:"portalMembers", birthdays:"portalBirthdays", teachers:"portalTeachers", manuals:"portalManuals", counsel:"portalCounsel", revenue:"portalRevenue", manCats:"portalManCats", tasks:"portalTasks", routines:"portalRoutines", missions:"portalMissions", evals:"portalEvals", nasJobs:"portalNasJobs", nasStatus:"portalNasStatus", plans:"portalPlans", favs:"portalFavs", acks:"portalAcks", requests:"portalRequests" };
-const COLL_LABEL = { notices:"공지", events:"일정", todos:"할 일", files:"자료", bookmarks:"북마크", bmGroups:"북마크 구분", kpi:"운영지표", kpiPriv:"운영지표(금액)", folders:"자료실 폴더", members:"직원 계정", birthdays:"생일", teachers:"선생님 입사월", manuals:"업무매뉴얼", counsel:"상담 현황", revenue:"과거 매출", manCats:"매뉴얼 분류", tasks:"워크허브 업무", routines:"루틴", missions:"미션", evals:"미션 평가", nasJobs:"NAS 작업", nasStatus:"NAS 커넥터 상태", plans:"월간 계획", favs:"즐겨찾기", acks:"필독 확인", requests:"수정 요청" };
+const COLL_LABEL = { notices:"공지", events:"일정", todos:"할 일", files:"자료", bookmarks:"북마크", bmGroups:"북마크 구분", kpi:"대시보드", kpiPriv:"대시보드(금액)", folders:"자료실 폴더", members:"직원 계정", birthdays:"생일", teachers:"선생님 입사월", manuals:"업무매뉴얼", counsel:"상담 현황", revenue:"과거 매출", manCats:"매뉴얼 분류", tasks:"워크허브 업무", routines:"루틴", missions:"미션", evals:"미션 평가", nasJobs:"NAS 작업", nasStatus:"NAS 커넥터 상태", plans:"월간 계획", favs:"즐겨찾기", acks:"필독 확인", requests:"수정 요청" };
 /* 북마크 구분선 색 */
 const LINE_COLORS = [["#222222","검정"],["#DE8619","주황"],["#C98100","황토"],["#D1495B","빨강"],["#8B5CF6","보라"],["#2563A6","파랑"],["#1F7A4D","초록"],["#767676","회색"]];
 
@@ -1042,7 +1042,7 @@ const APP_GROUPS = [
 
 const TABS = [
   { id: "home",   label: "홈" },
-  { id: "kpi",    label: "운영지표" },
+  { id: "kpi",    label: "대시보드" },
   { id: "notice", label: "공지 · 캘린더" },
   { id: "todo",   label: "워크허브" },
   { id: "mission",label: "미션허브" },
@@ -1286,7 +1286,7 @@ function seed(){
       { id:"m2", title:"샘플 상담 흐름", cat:"m_counsel", branch:"all", at:ago(15), createdBy:ADMIN, writer:"대표",
         body:"## 1. 첫 통화\n- 아이 나이, 관심사, 원하는 요일 묻기\n- 샘플 수업 날짜 잡기\n\n## 2. 샘플 당일\n- 수업 후 **5분 피드백** (작품 사진 보여 주기)\n\n## 3. 등록 안내\n- 교육비 안내판 기준으로 설명\n- 3일 안에 다시 연락" },
       { id:"m3", title:"월말 마감 순서", cat:"m_ops", branch:"pyeongchon", at:ago(8), createdBy:PC, writer:"평촌원 실장",
-        body:"1. 결제 매니저에서 미납 확인\n2. 원생 명단 엑셀 내려받아 JP ONE 운영지표에 올리기\n3. 다음 달 시간표 확정" }
+        body:"1. 결제 매니저에서 미납 확인\n2. 원생 명단 엑셀 내려받아 JP ONE 대시보드에 올리기\n3. 다음 달 시간표 확정" }
     ],
     members: DEMO_MEMBERS.map(m => ({ id:m.email, ...m, active:true, source:"people", at:ago(20), by:ADMIN })),
     bmGroups: [
@@ -1916,7 +1916,7 @@ function renderView({ keepFocus = false } = {}){
 
 const SOON = {
   mission: ["미션허브", "어떤 미션을 담을지 정해지면 이 화면을 만들어요.", "원별 목표, 교사 과제, 이벤트 미션 등 원하는 구성을 알려 주세요."],
-  kpi: ["운영지표", "원별 재원, 신규, 퇴원 흐름과 선생님별 지표를 자세히 보는 화면이에요.", "통합 모니터링 보드(jarada-dashboard)에 주 1회 올리는 데이터와 연결할 예정이에요."]
+  kpi: ["대시보드", "원별 재원, 신규, 퇴원 흐름과 선생님별 지표를 자세히 보는 화면이에요.", "통합 모니터링 보드(jarada-dashboard)에 주 1회 올리는 데이터와 연결할 예정이에요."]
 };
 function soonHTML(id){
   const [t,a,b] = SOON[id];
@@ -4358,7 +4358,7 @@ function memImportPreview(people){
 $("membersBtn").addEventListener("click", membersDialog);
 
 /* =====================================================================
-   운영지표
+   대시보드 (예전 이름: 운영지표)
    1) 원생 명단 엑셀(자라다 시스템에서 내려받은 것)을 올리면 → 브라우저에서 계산 → 미리보기 → 적용
       계산 결과만 portalKpi/{원} 에 저장 (원본 엑셀은 저장하지 않음)
    2) 매출: 결제 매니저(jarada-checkin)의 결제 장부를 대표 계정으로 직접 읽음
@@ -4643,7 +4643,7 @@ function lmsPreview(files){
         n++;
       }
       if (!n) return formErr("적용할 수 있는 원이 없어요.");
-      toast(`${n}개 원의 운영지표를 새로 계산했어요.`);
+      toast(`${n}개 원의 대시보드를 새로 계산했어요.`);
     }
   });
   const re = () => { const f = $("dlgForm"); $("pvBody").innerHTML = render(val(f, "base") || base0, items.map((it, i) => it.hasCenter ? "" : f.elements["pick" + i]?.value)); };
@@ -5229,7 +5229,7 @@ const fmtAvg = v => v == null ? "-" : String(Math.round(v * 10) / 10);
 function kpiPageHTML(){
   const bs = visBranches(), snaps = bs.map(b => state.kpi[b]).filter(Boolean), canUp = branchOptions("kpi").some(b => b !== "all");
   const metaLine = bs.map(b => state.kpi[b] ? `${BRANCHES[b]} ${md(state.kpi[b].base)} 기준` : `${BRANCHES[b]} 명단 없음`).join(", ");
-  const head = `<div class="head"><h1>운영지표</h1>
+  const head = `<div class="head"><h1>대시보드</h1>
     <div class="acts">${canUp ? `<button type="button" class="btn btn-primary btn-sm" data-act="lms-pick" data-tip="${state.branch === "all" && branchOptions("kpi").filter(b => b !== "all").length > 1 ? "3개 원 명단을 한 번에 골라도 돼요 (Ctrl 또는 Shift를 누른 채 여러 파일 선택)" : "자라다 시스템에서 내려받은 원생 목록 엑셀"}">원생 명단 올리기${state.branch === "all" && branchOptions("kpi").filter(b => b !== "all").length > 1 ? " (여러 원 한 번에)" : ""}</button>` : ""}</div></div>
     <p class="kpi-meta left">${esc(metaLine)}. 화살표는 전월 대비 <button type="button" class="linkish" data-act="kpi-help">계산 기준</button></p>`;
   if (!snaps.length) return head + `<div class="soon"><h2>아직 올린 원생 명단이 없어요</h2>
@@ -5289,7 +5289,7 @@ function kpiPageHTML(){
       ${restNote ? `<p class="fnote">* ${esc(labels.at(-1))}(이번 명단)부터 휴원생 제외: ${esc(restNote)}. 지난 달들은 당시 휴원 여부를 알 수 없어 포함돼 있어요.</p>` : ""}</section>
     <section class="card"><h2>요일 · 시간대별 재원생 <span class="sub">${snaps.length > 1 ? "원 합계, " : ""}반 이름 기준</span></h2>${heatHTML}</section>
   </div>
-  <section class="card tcard"><div class="card-h"><h2>교사별 운영지표 <span class="sub">${esc(periodLabel())}</span></h2>
+  <section class="card tcard"><div class="card-h"><h2>교사별 지표 <span class="sub">${esc(periodLabel())}</span></h2>
       ${state.isAdmin ? `<button type="button" class="icon-btn" data-act="people-resync" data-tip="JP People에서 입사일을 고쳤다면 눌러서 다시 맞춰요">JP People 다시 불러오기</button>` : ""}
       <div class="seg2 sm" role="group" aria-label="기간">${KPI_PERIODS.map(([n, l]) => `<button type="button" data-act="kpi-period" data-n="${n}" aria-pressed="${state.kpiPeriod === n}">${l}</button>`).join("")}</div></div>
     ${teacherHTML}</section>
@@ -5402,7 +5402,7 @@ function adminRowsHTML(bs){
 }
 
 function kpiHelp(){
-  openForm({ title:"운영지표 계산 기준", saveLabel:"닫기", async onSave(){ return true; }, fields:`<ul class="help">
+  openForm({ title:"대시보드 계산 기준", saveLabel:"닫기", async onSave(){ return true; }, fields:`<ul class="help">
     <li><b>재원생</b>: 상태가 재원·퇴원대기인 원생(휴원생은 빼요. 휴원생은 따로 세요). 지난 달은 등록(시작)일이 그달 말 이전이고 그 전에 퇴원하지 않은 원생으로 계산해요.</li>
     <li><b>신규생</b>: 등록일이 그 달인 원생 중 샘플수업·등록취소·대기가 아닌 원생.</li>
     <li><b>퇴원 · 퇴원율</b>: 상태가 퇴원이고 종료일이 그 달인 원생 ÷ 전월 말 재원생.</li>

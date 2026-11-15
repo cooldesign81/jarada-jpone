@@ -18,7 +18,7 @@
 (function () {
   const BASE = "https://cooldesign81.github.io/jarada-jpone/";
   const APPS = {
-    jpone:    { name: "JP ONE",        icon: "apple-touch-icon.png?v=4",            desc: "자라다 직원 시작 페이지.<br>공지·일정·할 일·자료실·운영지표를 한곳에서 봐요." },
+    jpone:    { name: "JP ONE",        icon: "apple-touch-icon.png?v=4",            desc: "자라다 직원 시작 페이지.<br>공지·일정·할 일·자료실·대시보드를 한곳에서 봐요." },
     schedule: { name: "스케줄 매니저", icon: "icons/apps/jp-management.png?v=3",   desc: "오늘 등원·결석·보강을 한 화면에서.<br>원의 출결을 여러 기기에서 실시간으로 함께 봐요." },
     payment:  { name: "결제 매니저",   icon: "icons/apps/jarada-payment.png?v=3",  desc: "결제 확인과 매출 장부.<br>미납 확인과 결제 안내 문자를 원별로 관리해요." },
     material: { name: "재료 요청",     icon: "icons/apps/material.png?v=4",        desc: "수업 재료 요청과 구매.<br>교사 요청부터 장바구니·결제까지 한 흐름으로." },
