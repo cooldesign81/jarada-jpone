@@ -584,6 +584,8 @@
   .folders button[aria-pressed="true"] b{color:var(--brand-yellow)}
   .drop{border:1.5px dashed #CFCFCF;border-radius:var(--r-card);padding:16px 14px;font-size:13px;color:var(--text);line-height:1.5;cursor:pointer;text-align:center}
   .drop small{display:block;color:var(--text-sub);font-size:11px;margin-top:4px}
+  body.kb-dragging .flist{outline:2px dashed var(--ink);outline-offset:4px}
+  body.kb-dragging .flist::before{content:"여기에 놓으면 올리기 화면이 열려요 (여러 개 가능)";display:block;text-align:center;font-weight:700;color:var(--ink);background:var(--brand-yellow);border-radius:6px;padding:8px;margin-bottom:12px}
   .drop:hover,.drop.over{border-color:var(--ink);background:#FAFAFA;color:var(--ink)}
   .fsearch{position:relative;display:flex;align-items:center}
   .fsearch svg{position:absolute;left:10px;color:var(--text-sub)}
@@ -672,6 +674,11 @@
   .uplist li{display:grid;grid-template-columns:1fr auto;gap:4px 12px;font-size:13px}
   .uplist .un{color:var(--ink);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .uplist .us{color:var(--text-sub)}
+  .uplist .up-x{border:0;background:none;color:var(--text-sub);font-size:12px;cursor:pointer;padding:0 0 0 8px}
+  .uplist .up-x:hover{color:var(--ink)}
+  .fdrop{border:1.5px dashed #CFCFCF;border-radius:var(--r-card);padding:14px;font-size:13px;color:var(--text);text-align:center;line-height:1.6}
+  .fdrop.over{border-color:var(--ink);background:#FAFAFA}
+  .fdrop small{display:block;color:var(--text-sub);font-size:12px}
   .uplist .bar{grid-column:1/-1;height:4px;background:#EEE;border-radius:2px;overflow:hidden}
   .uplist .bar i{display:block;height:100%;width:0;background:var(--ink);transition:width .2s}
   .fdet{display:grid;gap:4px}
@@ -3179,7 +3186,7 @@ function filesPageHTML(){
         ${cur ? `<li><button type="button" data-act="kb-reqs" data-kind="file"><span>수정 요청</span><b>${fileReqOpen().length}</b></button></li>` : ""}
       </ul>
       <p class="fold-note">"이렇게 해볼 수 있다"는 자료실에, "반드시 이렇게 해야 한다"는 <button type="button" class="linkish" data-act="go" data-tab="manual">매뉴얼</button>에 둬요.</p>
-      <div class="drop" id="dropZone" data-act="pick">여기로 파일을 끌어다 놓거나 눌러서 올려요.<small>파일당 ${MAX_FILE_MB}MB까지</small></div>
+      <div class="drop" id="dropZone" data-act="pick">파일을 끌어다 놓거나 눌러서 올려요. 여러 개도 한 번에 돼요.<small>파일당 ${MAX_FILE_MB}MB까지</small></div>
     </aside>
     <section class="card flist">
       <div class="card-h">
@@ -3270,7 +3277,22 @@ function fileView(f){
 }
 
 /* 자료 올리기 · 수정: 필수는 제목 · 분류 · 간단한 설명 · 본문 또는 파일 4가지. 작성자·날짜는 자동 */
-function fileForm(f, files = []){
+/* 자료 올리기 폼에서 쓴 값 그대로 두고 다시 열 때 (파일을 여러 개로 바꾸거나 더하거나 뺄 때) */
+const FORM_KEEP = ["title", "folder", "kind", "desc", "body", "branch", "level", "source", "writer"];
+function formSnap(form){
+  const k = {}; FORM_KEEP.forEach(n => { if (form.elements[n]) k[n] = form.elements[n].value; });
+  ["child", "ext", "share"].forEach(n => { if (form.elements[n]) k[n] = form.elements[n].checked; });
+  k.mode = form.querySelector("[name=mode]:checked")?.value; return k;
+}
+function formRestore(form, k){
+  if (!k) return;
+  FORM_KEEP.forEach(n => { if (k[n] != null && form.elements[n] && (n !== "title" || k[n])) form.elements[n].value = k[n]; });
+  ["child", "ext", "share"].forEach(n => { if (k[n] != null && form.elements[n]) form.elements[n].checked = k[n]; });
+  if (k.mode) { const r = form.querySelector(`[name=mode][value="${k.mode}"]`); if (r) r.checked = true; }
+  form.querySelector(".kb-ext") && (form.querySelector(".kb-ext").hidden = !form.elements.ext?.checked);
+  const cs = form.querySelector("[data-case]"); if (cs) cs.hidden = !(form.elements.folder?.value === "k_case" || form.elements.kind?.value === "사례");
+}
+function fileForm(f, files = [], keep = null){
   const big = files.filter(x => x.size > MAX_FILE_MB * 1048576);
   if (big.length) { toast(`${big.map(x => x.name).join(", ")}: ${MAX_FILE_MB}MB가 넘어서 올릴 수 없어요.`); files = files.filter(x => !big.includes(x)); }
   const multi = !f && files.length > 1, cur = isCurator();
@@ -3287,14 +3309,17 @@ function fileForm(f, files = []){
   let picked = files;
   openForm({
     title: f ? "자료 수정" : multi ? `자료 올리기 (파일 ${files.length}개)` : "자료 올리기",
-    fields: `${multi ? `<ul class="uplist">${files.map((x, i) => `<li><span class="un">${esc(x.name)}</span><span class="us">${sizeLabel(x.size)}</span><span class="bar"><i id="up-${i}"></i></span></li>`).join("")}</ul>
+    fields: `${multi ? `<ul class="uplist">${files.map((x, i) => `<li><span class="un">${esc(x.name)}</span><span class="us">${sizeLabel(x.size)}<button type="button" class="up-x" data-up-x="${i}" aria-label="${esc(x.name)} 빼기">✕</button></span><span class="bar"><i id="up-${i}"></i></span></li>`).join("")}</ul>
+        <div class="fdrop" data-fdrop><input type="file" name="upfile" multiple hidden>파일을 여기로 끌어다 놓거나 <button type="button" class="linkish" data-fpick>더 고르기</button></div>
         <p class="hint">파일마다 자료가 하나씩 생기고, 제목은 파일 이름으로 들어가요. 아래 내용은 모두에 같이 붙어요.</p>`
         : fText("제목", "title", f ? fileTitle(f) : (files[0]?.name.replace(/\.[^.]+$/, "") || ""), 'required maxlength="80" placeholder="예: 협동 그리기 3회차 수업안"')}
       <div class="row2">${fSelect("분류", "folder", cats, cat0)}${fSelect("자료 종류", "kind", KINDS.map(k => [k, k]), f ? fileKind(f) || KIND_BY_CAT[cat0] || KINDS[0] : KIND_BY_CAT[cat0] || KINDS[0])}</div>
       ${fText("간단한 설명 <small>목록에 보이는 한 줄</small>", "desc", f?.desc || "", 'required maxlength="120" placeholder="어떤 자료인지, 언제 쓰면 좋은지 한 줄로"')}
       ${multi ? "" : fArea("본문 <small>파일이 있으면 비워도 돼요</small>", "body", f?.body || "", 'rows="6" maxlength="20000" placeholder="수업 흐름, 사례 정리, 아이디어 등을 적어 주세요."')}
       ${multi ? "" : `<div class="fld"><span>파일 ${f?.versions?.length ? `<small>지금: ${esc(f.name || "")} — 바꾸면 새 버전으로 쌓여요</small>` : "<small>본문이 있으면 없어도 돼요</small>"}</span>
-        <input type="file" class="inp" name="upfile">${files[0] ? `<small class="hint">고른 파일: ${esc(files[0].name)} (${sizeLabel(files[0].size)})</small>` : ""}<div class="up-prog" hidden><i></i></div></div>`}
+        <div class="fdrop" data-fdrop><input type="file" name="upfile" ${f ? "" : "multiple"} hidden>
+          <span data-fname>${files[0] ? `<b>${esc(files[0].name)}</b> (${sizeLabel(files[0].size)}) · ` : ""}</span>파일을 여기로 끌어다 놓거나 <button type="button" class="linkish" data-fpick>${files[0] ? "다른 파일 고르기" : "파일 고르기"}</button>
+          ${f ? "" : `<small>여러 개를 한 번에 고르거나 끌어 놓으면 파일마다 자료가 하나씩 생겨요</small>`}</div><div class="up-prog" hidden><i></i></div></div>`}
       <div class="kb-checks">
         <label class="chk" data-case ${cat0 === "k_case" || (f && fileKind(f) === "사례") ? "" : "hidden"}><input type="checkbox" name="child" ${ch.child ? "checked" : ""}> <b>아동 사례</b> — 이름·연락처·학교·얼굴·이름표·작품 서명 등 아이를 알아볼 수 있는 정보를 지웠어요</label>
         <label class="chk"><input type="checkbox" name="ext" ${ch.ext ? "checked" : ""}> 외부 자료예요 (책·인터넷·다른 기관 자료)</label>
@@ -3344,9 +3369,33 @@ function fileForm(f, files = []){
   $("dlg").classList.add("wide");
   if (f) dlgCtx.deleteMsg = `'${fileTitle(f)}' 자료를 지울까요? 되돌릴 수 없어요.`;
   const body = $("dlgBody");
+  formRestore($("dlgForm"), keep);
+  // 파일 받기: 고르기·끌어 놓기 공통. 새 자료에서 여러 개가 되면 쓴 내용 그대로 '여러 개 올리기'로 다시 열기
+  const takeFiles = list => {
+    list = [...list].filter(x => x && x.size >= 0); if (!list.length) return;
+    const form = $("dlgForm");
+    if (f) { picked = [list[0]]; showPicked(); return; }
+    const next = multi ? [...picked, ...list] : list;
+    if (next.length > 1) { const k = formSnap(form); setTimeout(() => fileForm(null, next, k), 0); return; }
+    picked = [next[0]]; showPicked();
+    if (!val(form, "title")) form.elements.title.value = picked[0].name.replace(/\.[^.]+$/, "").slice(0, 80);
+  };
+  const showPicked = () => { const n = body.querySelector("[data-fname]"), x = picked[0]; if (n) n.innerHTML = x ? `<b>${esc(x.name)}</b> (${sizeLabel(x.size)}) · ` : "";
+    const b = body.querySelector("[data-fpick]"); if (b && x) b.textContent = "다른 파일 고르기"; };
+  body.addEventListener("click", e => {
+    if (e.target.closest("[data-fpick]")) body.querySelector("[name=upfile]")?.click();
+    const rx = e.target.closest("[data-up-x]");
+    if (rx) { const rest = picked.filter((_, i) => i !== +rx.dataset.upX), k = formSnap($("dlgForm")); setTimeout(() => fileForm(null, rest, k), 0); }
+  });
+  const dz = body.querySelector("[data-fdrop]");
+  if (dz) {
+    dz.addEventListener("dragover", e => { e.preventDefault(); dz.classList.add("over"); });
+    dz.addEventListener("dragleave", () => dz.classList.remove("over"));
+    dz.addEventListener("drop", e => { e.preventDefault(); dz.classList.remove("over"); takeFiles(e.dataTransfer.files); });
+  }
   body.addEventListener("change", e => {
     const el = e.target, form = $("dlgForm");
-    if (el.name === "upfile") { picked = el.files[0] ? [el.files[0]] : []; if (picked[0] && !val(form, "title")) form.elements.title.value = picked[0].name.replace(/\.[^.]+$/, "").slice(0, 80); }
+    if (el.name === "upfile") { const fs = [...el.files]; el.value = ""; takeFiles(fs); return; }
     if (el.name === "folder" && KIND_BY_CAT[el.value]) form.elements.kind.value = KIND_BY_CAT[el.value];
     if (el.name === "folder" || el.name === "kind") body.querySelector("[data-case]").hidden = !(form.elements.folder.value === "k_case" || form.elements.kind.value === "사례");
     if (el.name === "ext") body.querySelector(".kb-ext").hidden = !el.checked;
@@ -3914,12 +3963,19 @@ $("view").addEventListener("input", e => {
   renderView(); const q = $("fileQ"); if (q) { q.focus(); q.setSelectionRange(pos, pos); }
 });
 /* 끌어다 놓기 */
-$("view").addEventListener("dragover", e => { const z = e.target.closest("#dropZone, .flist"); if (!z || state.tab !== "files") return; e.preventDefault(); $("dropZone")?.classList.add("over"); });
-$("view").addEventListener("dragleave", e => { if (e.target.closest("#dropZone")) $("dropZone").classList.remove("over"); });
+// 자료실 화면 어디에 놓아도 올리기 폼이 열림 (여러 개 가능). 다른 곳에 잘못 놓아도 브라우저가 파일을 열어 버리지 않게 막음
+const hasFiles = e => [...(e.dataTransfer?.types || [])].includes("Files");
+let dragN = 0;
+const dropOn = on => { document.body.classList.toggle("kb-dragging", on); $("dropZone")?.classList.toggle("over", on); };
+$("view").addEventListener("dragenter", e => { if (state.tab !== "files" || !hasFiles(e) || $("dlg").open) return; dragN++; dropOn(true); });
+$("view").addEventListener("dragleave", () => { if (dragN && --dragN === 0) dropOn(false); });
+$("view").addEventListener("dragover", e => { if (state.tab !== "files" || !hasFiles(e) || $("dlg").open) return; e.preventDefault(); e.dataTransfer.dropEffect = "copy"; });
 $("view").addEventListener("drop", e => {
-  if (!e.target.closest("#dropZone, .flist")) return; e.preventDefault(); $("dropZone")?.classList.remove("over");
+  if (state.tab !== "files" || !hasFiles(e) || $("dlg").open) return; e.preventDefault(); dragN = 0; dropOn(false);
   if (e.dataTransfer.files.length) fileForm(null, [...e.dataTransfer.files]);
 });
+window.addEventListener("dragover", e => { if (hasFiles(e) && !e.target.closest?.("input[type=file]")) e.preventDefault(); });
+window.addEventListener("drop", e => { if (hasFiles(e) && !e.target.closest?.("input[type=file]")) e.preventDefault(); });
 $("filePick").addEventListener("change", e => { const fs = [...e.target.files]; e.target.value = ""; if (fs.length) fileForm(null, fs); });
 
 /* ========= 입력 폼 ========= */
