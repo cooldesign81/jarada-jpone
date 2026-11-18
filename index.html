@@ -242,6 +242,7 @@
   .gc-pick i{width:12px;height:12px;border-radius:3px;flex:none}
   fieldset.fld{border:0;padding:0;margin:0}
   /* 직원 계정 */
+  .mem-acts{white-space:nowrap}.mem-acts .icon-btn+.icon-btn{margin-left:4px}
   .mtable{width:100%;border-collapse:collapse;font-size:13px}
   .mtable th{text-align:left;font-size:12px;color:var(--text-sub);font-weight:700;padding:6px 6px;border-bottom:1px solid var(--line)}
   .mtable td{padding:6px;border-bottom:1px solid var(--line);color:var(--ink);vertical-align:middle}
@@ -1382,6 +1383,7 @@ const DB = (() => {
       const s = await fb.F.getDoc(fb.F.doc(fb.db, COLL.members, email));
       return s.exists() ? { id: s.id, ...s.data() } : null;
     },
+    dump(name){ if (!DEMO) return null; ensure(); return mem[name].map(x => ({ ...x })); },   // 미리보기(데모) 전용: 계정 바꾸기 찾아보기
     async remove(name, id){
       if (DEMO){ ensure(); mem[name] = mem[name].filter(x => x.id !== id); save(); emit(name); return; }
       await fb.F.deleteDoc(fb.F.doc(fb.db, COLL[name], id));
@@ -4152,6 +4154,8 @@ function membersDialog(){
       }
       if (t.id === "memImport") memImport();
       if (t.id === "memSync") { $("dlg").close(); setTimeout(appAccessDialog, 0); }
+      const mv = t.closest("[data-mem-move]")?.dataset.memMove;
+      if (mv) { $("dlg").close(); setTimeout(() => accountMoveDialog(mv), 0); }
       const del = t.closest("[data-mem-del]")?.dataset.memDel;
       if (del){
         const m = state.members.find(x => x.id === del);
@@ -4188,8 +4192,93 @@ function renderMemList(){
       <td><input type="checkbox" data-mem-cur="${esc(m.id)}" ${(m.curator ?? !!m.manager) ? "checked" : ""} aria-label="${esc(m.name)} 자료 담당자" title="자료실 자료를 검토·게시하고 매뉴얼을 써서 승인 요청해요"></td>
       <td><input type="checkbox" data-mem-apr="${esc(m.id)}" ${m.approver ? "checked" : ""} aria-label="${esc(m.name)} 매뉴얼 승인자" title="공식 매뉴얼을 승인·개정해요"></td>
       <td><input type="checkbox" data-mem-active="${esc(m.id)}" ${m.active !== false ? "checked" : ""} aria-label="${esc(m.name)} 로그인 허용"></td>
-      <td><button type="button" class="icon-btn" data-mem-del="${esc(m.id)}">삭제</button></td></tr>`).join("")}</tbody></table>`
+      <td class="mem-acts"><button type="button" class="icon-btn" data-mem-move="${esc(m.id)}" title="구글 계정이 바뀐 사람: 예전 계정의 기록을 새 계정으로 옮겨요">계정 바꾸기</button><button type="button" class="icon-btn" data-mem-del="${esc(m.id)}">삭제</button></td></tr>`).join("")}</tbody></table>`
     : `<p class="empty">아직 등록된 직원 계정이 없어요. JP People에서 불러오거나 아래에서 직접 추가해 주세요.</p>`;
+}
+/* =====================================================================
+   계정 바꾸기 (대표 전용) — 구글 계정이 바뀐 직원(예전 계정 비밀번호 분실 등)의 JP ONE 기록을 새 계정으로 옮김
+   JP ONE 모든 portal* 컬렉션에서 예전 이메일과 똑같은 값(작성자·담당자·확인자·필독 확인·즐겨찾기 주인 등)을 새 이메일로 바꾸고,
+   문서 ID에 예전 이메일이 들어간 것(직원 계정·즐겨찾기 등)은 새 ID로 옮김. 이름·내용은 그대로.
+   항상 찾아보기(미리보기) → 확인 → 적용 (지침 2-2). 다른 앱 출입 명단은 끝난 뒤 '앱에 명단 보내기'로 맞춤
+   ===================================================================== */
+const MOVE_SKIP = ["kpi", "kpiPriv", "counsel", "revenue", "nasStatus"];   // 원별 숫자 자료: 개인 이메일 없음
+function swapEmail(v, from, to){
+  if (typeof v === "string") return v.toLowerCase() === from ? to : v;
+  if (Array.isArray(v)) return v.map(x => swapEmail(x, from, to));
+  if (v && typeof v === "object" && Object.getPrototypeOf(v) === Object.prototype) { const o = {}; for (const [k, x] of Object.entries(v)) o[k] = swapEmail(x, from, to); return o; }
+  return v;   // 날짜(Timestamp) 등은 그대로
+}
+function hasEmail(v, from){
+  if (typeof v === "string") return v.toLowerCase() === from;
+  if (Array.isArray(v)) return v.some(x => hasEmail(x, from));
+  if (v && typeof v === "object" && Object.getPrototypeOf(v) === Object.prototype) return Object.values(v).some(x => hasEmail(x, from));
+  return false;
+}
+async function scanEmail(from){
+  const found = [];
+  for (const key of Object.keys(COLL)){
+    if (MOVE_SKIP.includes(key)) continue;
+    let docs;
+    if (DEMO) docs = DB.dump(key).map(({ id, ...data }) => ({ id, data }));
+    else { const snap = await fb.F.getDocs(fb.F.collection(fb.db, COLL[key])); docs = snap.docs.map(d => ({ id: d.id, data: d.data() })); }
+    for (const d of docs){
+      const idHit = d.id.toLowerCase().includes(from);
+      if (idHit || hasEmail(d.data, from)) found.push({ key, id: d.id, data: d.data, idHit });
+    }
+  }
+  return found;
+}
+function accountMoveDialog(oldId){
+  if (!state.isAdmin) return;
+  const m = state.members.find(x => x.id === oldId), from = oldId.toLowerCase();
+  let found = null;
+  openForm({
+    title: "계정 바꾸기",
+    fields: `<p class="hint"><b>${esc(m?.name || "")}</b> 선생님의 예전 구글 계정 <b>${esc(oldId)}</b>에 묶인 JP ONE 기록을 새 계정으로 옮겨요.
+        올린 자료·매뉴얼, 맡은 업무·미션, 필독 확인, 즐겨찾기, 수정 요청 등이 그대로 새 계정 것이 돼요. 옮긴 뒤 예전 계정으로는 로그인할 수 없어요.</p>
+      ${fText("새 구글 이메일", "newMail", "", 'type="email" required placeholder="new.account@gmail.com"')}
+      <div class="kb-acts"><button type="button" class="btn btn-sub btn-sm" id="mvScan">옮길 기록 찾아보기</button></div>
+      <div id="mvPrev"></div>`,
+    saveLabel: "옮기기",
+    async onSave(form){
+      const to = val(form, "newMail").toLowerCase();
+      if (!EMAIL_RE.test(to)) return formErr("새 구글 이메일을 바르게 넣어 주세요.");
+      if (to === from) return formErr("예전 계정과 같은 이메일이에요.");
+      if (ADMIN_EMAILS.includes(to) || BRANCH_BY_EMAIL[to]) return formErr("대표나 원 공용 계정으로는 옮길 수 없어요.");
+      if (state.members.some(x => x.id === to)) return formErr(`${to}는 이미 직원 계정에 있어요. 그 줄을 먼저 지운 뒤 옮겨 주세요.`);
+      if (!found || found.to !== to) return formErr("먼저 '옮길 기록 찾아보기'를 눌러 무엇이 옮겨지는지 확인해 주세요.");
+      if (!await confirmBox(`${oldId} → ${to}\n기록 ${found.list.length}건을 옮길까요? 옮긴 뒤 예전 계정은 직원 계정에서 빠져요.`, "옮기기")) return false;
+      let done = 0;
+      for (const d of found.list){
+        const data = swapEmail(d.data, from, to);
+        if (d.key === "members") Object.assign(data, { email: to, movedFrom: oldId, movedAt: Date.now() });
+        if (d.idHit){
+          const nid = d.id.split(oldId).join(to).split(from).join(to);
+          if (DEMO) { await DB.set(d.key, nid, data); await DB.remove(d.key, d.id); }
+          else { const b = fb.F.writeBatch(fb.db); b.set(fb.F.doc(fb.db, COLL[d.key], nid), data); b.delete(fb.F.doc(fb.db, COLL[d.key], d.id)); await b.commit(); }
+        } else if (DEMO) await DB.set(d.key, d.id, data);
+        else await fb.F.setDoc(fb.F.doc(fb.db, COLL[d.key], d.id), data);
+        done++; const pb = $("mvProg"); if (pb) pb.textContent = `${done} / ${found.list.length}`;
+      }
+      toast(`${m?.name || ""} 선생님 기록 ${done}건을 ${to}로 옮겼어요. 이어서 '앱에 명단 보내기'로 다른 앱도 맞춰 주세요.`);
+      setTimeout(membersDialog, 0);
+    }
+  });
+  $("dlg").classList.add("wide");
+  $("dlgBody").addEventListener("click", async e => {
+    if (e.target.id !== "mvScan") return;
+    const mail = val($("dlgForm"), "newMail").toLowerCase();
+    if (!EMAIL_RE.test(mail)) return formErr("새 구글 이메일을 먼저 넣어 주세요.");
+    $("dlgErr").textContent = ""; $("mvPrev").innerHTML = `<p class="hint">찾는 중…</p>`;
+    try {
+      const list = await scanEmail(from);
+      found = { to: mail, list };
+      const by = {}; list.forEach(d => { by[d.key] = (by[d.key] || 0) + 1; });
+      $("mvPrev").innerHTML = `<table class="mtable"><thead><tr><th>항목</th><th class="num">옮길 기록</th></tr></thead><tbody>
+          ${Object.entries(by).map(([k, n]) => `<tr><td>${esc(COLL_LABEL[k] || k)}</td><td class="num">${n}건</td></tr>`).join("")}</tbody></table>
+        <p class="hint">모두 <b>${esc(oldId)}</b> → <b>${esc(mail)}</b> 로 바뀌어요. 글 내용·이름은 그대로예요. 진행: <span id="mvProg">0 / ${list.length}</span></p>`;
+    } catch (err) { found = null; $("mvPrev").innerHTML = ""; formErr(err.code === "permission-denied" ? "권한이 없어서 찾지 못했어요. JP ONE 보안 규칙(firestore.rules) 최신본을 게시했는지 확인해 주세요." : "찾지 못했어요. " + (err.code || err.message || "")); }
+  });
 }
 /* =====================================================================
    앱 출입 명단 (대표 전용) — JP ONE 직원 계정을 다른 업무 앱의 '들어올 수 있는 사람' 명단으로 보냄

@@ -54,6 +54,12 @@ service cloud.firestore {
     function okDelete() { return isMember() && canWrite(resource.data.branch); }
     function okRead()   { return isMember() && canSee(resource.data.branch); }
 
+    // 대표: '계정 바꾸기'(구글 계정이 바뀐 직원의 기록을 새 이메일로 옮기기) 때 다른 사람 이름으로 된 JP ONE 기록도 읽고 고칠 수 있게.
+    // portal 로 시작하는 JP ONE 컬렉션만. 아래 컬렉션별 규칙과 함께 적용됨(어느 하나라도 허락하면 허락)
+    match /{coll}/{id} {
+      allow read, write: if isAdmin() && coll.matches('portal[A-Za-z]+');
+    }
+
     match /portalNotices/{id} {
       allow read: if okRead();
       allow create: if okCreate() && request.resource.data.title is string && request.resource.data.title.size() <= 100;
