@@ -1177,6 +1177,9 @@ const writerName = () => state.member?.name || store.get("portal.writer") || (st
 const visible = it => state.branch === "all" || it.branch === "all" || it.branch === state.branch;
 // wide = 3개 원을 모두 다루는 사람 (대표, 또는 직원 계정에서 '3개 원 전체'로 지정된 사람)
 const canEdit = it => state.wide || state.myBranches.includes(it.branch);
+// 공지·캘린더(일정·이달의 계획)는 사원(관리자 아닌 선생님)은 볼 수만. 대표·관리자·원 공용 계정이 쓰고 고침
+const canPost = () => state.isAdmin || !state.member || !!state.member.manager;
+const canEditPost = it => canPost() && canEdit(it);
 // '관리자 이상' 자료를 보는 사람: 대표 + 관리자(원장·부원장·실장)
 const canFolder = () => state.isAdmin || !!state.member?.manager;
 // 기획안 권한 — 자료 담당자: 자료실 검토·게시·분류 정리, 매뉴얼 작성(승인 요청). 따로 정하지 않으면 관리자가 자료 담당자
@@ -1204,6 +1207,7 @@ const isAllThree = bs => BRANCH_KEYS.every(b => bs.includes(b));
 const memBranchLabel = bs => isAllThree(bs) ? "3개 원 전체" : bs.map(b => SHORT[b]).join(" · ") || "-";
 /* 쓰기 가능한 원 목록. 할 일은 반드시 한 원에 속함("모든 원" 없음) */
 function branchOptions(kind){
+  if ((kind === "notices" || kind === "events") && !canPost()) return [];
   if (state.wide) return (kind === "todos" ? [] : ["all"]).concat(BRANCH_KEYS);
   return [...state.myBranches];
 }
@@ -2233,7 +2237,7 @@ function calHTML(mode){
           <span class="t">${esc(e.title)}${whenLabel(e) ? `<small>${esc(whenLabel(e))}</small>` : ""}${e.memo ? `<small>${esc(e.memo)}</small>` : ""}</span>
           <span class="w">${esc(scopeLabel(e.branch))}</span>
           <a class="icon-btn" href="${esc(gcalUrl(e))}" target="_blank" rel="noopener" title="내 구글 캘린더에 이 일정 넣기">구글 캘린더</a>
-          ${canEdit(e) ? `<button type="button" class="icon-btn" data-act="event-edit" data-id="${esc(e.id)}">수정</button>` : ""}
+          ${canEditPost(e) ? `<button type="button" class="icon-btn" data-act="event-edit" data-id="${esc(e.id)}">수정</button>` : ""}
         </div>`).join("") : ""}
       ${selMine.map(e => `<div class="ev">
           <span class="k mine">내 일정</span>
@@ -2423,7 +2427,7 @@ function noticePageHTML(){
           <span class="meta">${mdOfMs(n.at)} ${esc(n.writer || "")}</span>
         </button>
         ${open ? `<div class="ni-body">${esc(n.body || "") || "<span class='empty'>내용 없음</span>"}
-          ${canEdit(n) ? `<div class="ni-acts"><button type="button" class="icon-btn" data-act="notice-edit" data-id="${esc(n.id)}">수정</button></div>` : ""}</div>` : ""}
+          ${canEditPost(n) ? `<div class="ni-acts"><button type="button" class="icon-btn" data-act="notice-edit" data-id="${esc(n.id)}">수정</button></div>` : ""}</div>` : ""}
       </li>`; }).join("")}</ul>` : `<p class="empty">아직 공지가 없어요.${canWrite ? " 오른쪽 위 '공지 쓰기'로 첫 공지를 올려 보세요." : ""}</p>`}
   </section>
   <section class="card" style="margin-bottom:16px"><h2>지금 확인이 필요한 것</h2>${checkListHTML()}</section>
@@ -3915,11 +3919,11 @@ $("view").addEventListener("click", e => {
     case "cal-view": state.calView = el.dataset.v; store.set("portal.calView", state.calView); renderView(); break;
     case "plan-y": state.planY = +el.dataset.d ? state.planY + +el.dataset.d : new Date().getFullYear(); renderView(); break;
     case "plan-new": planForm(null, el.dataset.ym); break;
-    case "plan-edit": { const p = state.plans.find(x => x.id === id); if (p) (canEdit(p) ? planForm(p) : toast(p.memo || p.title)); break; }
+    case "plan-edit": { const p = state.plans.find(x => x.id === id); if (p) (canEditPost(p) ? planForm(p) : toast(p.memo || p.title)); break; }
     case "plan-ev": { const d = parse(el.dataset.day); state.cal = { y:d.getFullYear(), m:d.getMonth(), sel:el.dataset.day }; renderView(); document.querySelector(".cal-head")?.scrollIntoView({ behavior:"smooth", block:"start" }); break; }
-    case "event-edit": eventForm(state.events.find(x => x.id === id)); break;
+    case "event-edit": { const ev = state.events.find(x => x.id === id); if (ev && canEditPost(ev)) eventForm(ev); break; }
     case "notice-new": noticeForm(null); break;
-    case "notice-edit": noticeForm(state.notices.find(x => x.id === id)); break;
+    case "notice-edit": { const nt = state.notices.find(x => x.id === id); if (nt && canEditPost(nt)) noticeForm(nt); break; }
     case "notice-open": state.openNotice = id; goTab("notice"); break;
     case "notice-toggle": state.openNotice = state.openNotice === id ? null : id; renderView(); $("view").querySelector(`[data-fk="n-${id}"]`)?.focus(); break;
     case "todo-new": case "wh-new": taskForm(null, { title: el.dataset.title || "" }); break;

@@ -53,6 +53,8 @@ service cloud.firestore {
     }
     function okDelete() { return isMember() && canWrite(resource.data.branch); }
     function okRead()   { return isMember() && canSee(resource.data.branch); }
+    // 공지·캘린더(일정·이달의 계획) 쓰기: 대표·원 공용 계정·관리자. 사원(관리자 아닌 선생님)은 읽기만
+    function isPoster() { return isAdmin() || sharedBranch() != 'none' || (isStaff() && memData().get('manager', false) == true); }
 
     // 대표: '계정 바꾸기'(구글 계정이 바뀐 직원의 기록을 새 이메일로 옮기기) 때 다른 사람 이름으로 된 JP ONE 기록도 읽고 고칠 수 있게.
     // portal 로 시작하는 JP ONE 컬렉션만. 아래 컬렉션별 규칙과 함께 적용됨(어느 하나라도 허락하면 허락)
@@ -62,23 +64,23 @@ service cloud.firestore {
 
     match /portalNotices/{id} {
       allow read: if okRead();
-      allow create: if okCreate() && request.resource.data.title is string && request.resource.data.title.size() <= 100;
-      allow update: if okUpdate() && request.resource.data.title.size() <= 100;
-      allow delete: if okDelete();
+      allow create: if isPoster() && okCreate() && request.resource.data.title is string && request.resource.data.title.size() <= 100;
+      allow update: if isPoster() && okUpdate() && request.resource.data.title.size() <= 100;
+      allow delete: if isPoster() && okDelete();
     }
     match /portalEvents/{id} {
       allow read: if okRead();
-      allow create: if okCreate() && request.resource.data.date is string && request.resource.data.date.matches('^\\d{4}-\\d{2}-\\d{2}$');
-      allow update: if okUpdate();
-      allow delete: if okDelete();
+      allow create: if isPoster() && okCreate() && request.resource.data.date is string && request.resource.data.date.matches('^\\d{4}-\\d{2}-\\d{2}$');
+      allow update: if isPoster() && okUpdate();
+      allow delete: if isPoster() && okDelete();
     }
     // 월간 계획표 '이달의 계획'(날짜 없는 목표·할 일). 일정과 같은 범위 규칙
     match /portalPlans/{id} {
       allow read: if okRead();
-      allow create: if okCreate() && request.resource.data.ym is string && request.resource.data.ym.matches('^[0-9]{4}-[0-9]{2}$')
+      allow create: if isPoster() && okCreate() && request.resource.data.ym is string && request.resource.data.ym.matches('^[0-9]{4}-[0-9]{2}$')
         && request.resource.data.title is string && request.resource.data.title.size() <= 80;
-      allow update: if okUpdate() && request.resource.data.ym.matches('^[0-9]{4}-[0-9]{2}$') && request.resource.data.title.size() <= 80;
-      allow delete: if okDelete();
+      allow update: if isPoster() && okUpdate() && request.resource.data.ym.matches('^[0-9]{4}-[0-9]{2}$') && request.resource.data.title.size() <= 80;
+      allow delete: if isPoster() && okDelete();
     }
     match /portalTodos/{id} {
       allow read: if okRead();
