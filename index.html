@@ -675,6 +675,18 @@
   .uplist li{display:grid;grid-template-columns:1fr auto;gap:4px 12px;font-size:13px}
   .uplist .un{color:var(--ink);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .uplist .us{color:var(--text-sub)}
+  .uplist.att li{grid-template-columns:auto 1fr auto}
+  .uplist .att-th,.uplist .att-ic{width:36px;height:36px;border-radius:6px;object-fit:cover;flex:none;grid-row:span 2}
+  .uplist .att-ic{display:grid;place-items:center;background:var(--bg);border:1px solid var(--line);font-size:9.5px;font-weight:800;color:var(--text-sub)}
+  .uplist .att-new{font-style:normal;font-size:10.5px;color:var(--brand-orange);font-weight:700;margin-left:4px}
+  .uplist .att-main .us{color:var(--text-sub)}
+  .fthumbs{display:flex;gap:4px;margin:4px 0 2px;align-items:center}
+  .fthumbs img{width:40px;height:40px;border-radius:5px;object-fit:cover;border:1px solid var(--line)}
+  .fthumbs em{font-style:normal;font-size:11.5px;color:var(--text-sub);margin-left:2px}
+  .kb-att{margin:12px 0}
+  .kb-thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px;margin:0 0 10px}
+  .kb-thumbs img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:6px;border:1px solid var(--line);display:block}
+  .kb-thumbs a:hover img{outline:2px solid var(--ink)}
   .uplist .up-x{border:0;background:none;color:var(--text-sub);font-size:12px;cursor:pointer;padding:0 0 0 8px}
   .uplist .up-x:hover{color:var(--ink)}
   .fdrop{border:1.5px dashed #CFCFCF;border-radius:var(--r-card);padding:14px;font-size:13px;color:var(--text);text-align:center;line-height:1.6}
@@ -3201,12 +3213,14 @@ function filesPageHTML(){
       ${kindOn ? `<div class="kchips" role="group" aria-label="자료 종류로 좁히기">${["", ...KINDS].map(k => `<button type="button" data-act="kb-kind" data-k="${k}" aria-pressed="${(state.fKind || "") === k}">${k || "전체"}</button>`).join("")}</div>` : ""}
       ${list.length ? `<table class="ftable kb">
         <thead><tr><th class="c-cat">분류</th><th>제목 · 설명</th><th class="c-date">업데이트</th><th class="c-ed"><span class="sr">관리</span></th></tr></thead>
-        <tbody>${(state.folder === "_review" ? list.reverse() : list).map(f => { const last = f.versions?.[f.versions.length - 1];
+        <tbody>${(state.folder === "_review" ? list.reverse() : list).map(f => { const last = f.versions?.[f.versions.length - 1], all = fileAll(f), att = f.att || [];
+          const imgs = all.filter(v => isImgName(v.name) && DB.fileUrl(v)).slice(0, 4);
           return `<tr>
             <td class="c-cat">${esc(fl.find(x => x.id === f.folder)?.name || "분류 안 됨")}${fileKind(f) ? `<small>${esc(fileKind(f))}</small>` : ""}</td>
             <td><button type="button" class="ftitle" data-act="file-open" data-id="${esc(f.id)}">${statusTag(fStatus(f))}${levelTag(f)}${esc(fileTitle(f))}</button>
               ${f.desc ? `<span class="fdesc2">${esc(f.desc)}</span>` : ""}
-              <span class="fsub">${last ? `${esc(f.name || "")} · ${sizeLabel(f.size || last.size || 0)}${f.versions.length > 1 ? `, 버전 ${f.versions.length}개` : ""} · ` : f.body ? "글 · " : ""}${esc(f.writer || "")}${state.branch === "all" && f.branch !== "all" ? ` · ${esc(SHORT[f.branch] || "")}` : ""}</span></td>
+              ${imgs.length ? `<span class="fthumbs">${imgs.map(v => `<img src="${esc(DB.fileUrl(v))}" alt="" loading="lazy">`).join("")}${all.filter(v => isImgName(v.name)).length > imgs.length ? `<em>+${all.filter(v => isImgName(v.name)).length - imgs.length}</em>` : ""}</span>` : ""}
+              <span class="fsub">${all.length > 1 ? `📎 첨부 ${all.length}개 · ${sizeLabel(all.reduce((a, v) => a + (v.size || 0), 0))} · ` : last ? `${esc(f.name || "")} · ${sizeLabel(f.size || last.size || 0)}${f.versions.length > 1 ? `, 버전 ${f.versions.length}개` : ""} · ` : att.length ? `${esc(att[0].name)} · ${sizeLabel(att[0].size || 0)} · ` : f.body ? "글 · " : ""}${esc(f.writer || "")}${state.branch === "all" && f.branch !== "all" ? ` · ${esc(SHORT[f.branch] || "")}` : ""}</span></td>
             <td class="c-date">${mdOfMs(f.updatedAt || f.at)}</td>
             <td class="c-ed">${fStatus(f) === "published" ? favBtn("f:" + f.id, fileTitle(f)) : ""}${canEditFile(f) ? `<button type="button" class="mini" data-act="file-edit" data-id="${esc(f.id)}">수정</button><button type="button" class="mini danger" data-act="file-del" data-id="${esc(f.id)}">삭제</button>` : ""}</td>
           </tr>`; }).join("")}</tbody></table>`
@@ -3216,6 +3230,24 @@ function filesPageHTML(){
   </div>`;
 }
 
+/* 첨부 파일 도우미 (한 글에 여러 첨부: f.att, 예전 본 파일: f.versions 마지막) */
+const extOf = n => String(n || "").includes(".") ? String(n).split(".").pop().toLowerCase() : "";
+const isImgName = n => ["png", "jpg", "jpeg", "gif", "webp", "bmp", "heic"].includes(extOf(n)) && extOf(n) !== "heic";
+function fileAll(f){
+  const L = []; const last = f.versions?.at(-1);
+  if (last) L.push({ ...last, name: f.name || "", main: true });
+  return [...L, ...(f.att || [])];
+}
+// 자료 보기의 첨부: 이미지는 작은 미리보기 격자(누르면 크게), 나머지는 이름·크기·받기
+function attHTML(f){
+  const att = f.att || []; if (!att.length) return "";
+  const imgs = att.filter(v => isImgName(v.name)), others = att.filter(v => !isImgName(v.name));
+  return `<div class="kb-att"><h3 class="vh">첨부 파일 ${att.length}개</h3>
+    ${imgs.length ? `<div class="kb-thumbs">${imgs.map(v => { const u = DB.fileUrl(v);
+      return u ? `<a href="${esc(u)}" target="_blank" rel="noopener" title="${esc(v.name)} 크게 보기"><img src="${esc(u)}" alt="${esc(v.name)}" loading="lazy"></a>` : `<span class="nofile">${esc(v.name)}</span>`; }).join("")}</div>` : ""}
+    <ul class="vlist">${att.map(v => { const u = DB.fileUrl(v);
+      return `<li><span>${isImgName(v.name) ? "🖼" : "📄"} ${esc(v.name)} <small>${sizeLabel(v.size || 0)}</small></span>${u ? `<a href="${esc(u)}" download="${esc(v.name)}" target="_blank" rel="noopener">받기</a>` : `<span class="nofile">샘플</span>`}</li>`; }).join("")}</ul></div>`;
+}
 /* 자료 보기: 제목·한 줄 설명 · 내용·미리보기 · 첨부·받기 · 작성자·등록일 · 즐겨찾기·수정 요청. 담당자는 여기서 게시/보완 요청 */
 function fileView(f){
   if (!f) return;
@@ -3239,6 +3271,7 @@ function fileView(f){
       ${vs.length > 1 ? `<details class="man-h"><summary>버전 ${vs.length}개</summary><ul class="vlist">${vs.map((v, i) => { const u = DB.fileUrl(v);
         return `<li><span>${i === 0 ? "<b>최신</b> " : ""}${new Date(v.at).toLocaleDateString("ko-KR")} ${esc(v.by || "")}, ${sizeLabel(v.size || 0)}${v.note ? `<span class="vnote">${esc(v.note)}</span>` : ""}</span>
           ${u ? `<a href="${esc(u)}" download="${esc(f.name || "")}" target="_blank" rel="noopener">받기</a>` : `<span class="nofile">샘플</span>`}</li>`; }).join("")}</ul></details>` : ""}
+      ${attHTML(f)}
       ${st === "published" ? `<div class="kb-acts">${favBtn("f:" + f.id)}<button type="button" class="icon-btn" data-kb="req">수정 요청</button></div>` : ""}
       ${cur && st === "pending" ? `<div class="kb-review"><h3 class="vh">자료 담당자 확인</h3>
         <ul class="kb-q"><li>다른 직원에게 도움이 되나요?</li><li>이미 있는 자료와 겹치지 않나요?</li><li>개인정보·공유 권한에 문제가 없나요?</li></ul>
@@ -3254,7 +3287,8 @@ function fileView(f){
     deleteLabel: "자료 삭제"
   });
   $("dlg").classList.add("wide");
-  dlgCtx.deleteMsg = `'${fileTitle(f)}'${vs.length ? ` 자료와 파일 ${vs.length}개가` : "이"} 모두 지워져요. 삭제할까요?`;
+  const nf = vs.length + (f.att?.length || 0);
+  dlgCtx.deleteMsg = `'${fileTitle(f)}'${nf ? ` 자료와 파일 ${nf}개가` : "이"} 모두 지워져요. 삭제할까요?`;
   const body = $("dlgBody");
   body.addEventListener("click", async e => {
     const a = e.target.closest("[data-kb]")?.dataset.kb; if (!a) return;
@@ -3297,7 +3331,7 @@ function formRestore(form, k){
 function fileForm(f, files = [], keep = null){
   const big = files.filter(x => x.size > MAX_FILE_MB * 1048576);
   if (big.length) { toast(`${big.map(x => x.name).join(", ")}: ${MAX_FILE_MB}MB가 넘어서 올릴 수 없어요.`); files = files.filter(x => !big.includes(x)); }
-  const multi = !f && files.length > 1, cur = isCurator();
+  const cur = isCurator();
   const fl = folderList(), cats = fl.length ? fl.map(x => [x.id, x.name]) : [["", "분류 안 됨"]];
   const cat0 = f ? (fl.some(x => x.id === f.folder) ? f.folder : "") : (fl.some(x => x.id === state.folder) ? state.folder : cats[0][0]);
   const brOpts = [...new Set(["all", ...branchOptions("files")])];
@@ -3308,20 +3342,19 @@ function fileForm(f, files = [], keep = null){
     : cur ? [["published", "바로 게시"], ["draft", "임시저장"]] : [["pending", "검토 요청"], ["draft", "임시저장"]];
   const mode0 = f ? (reviewing ? st : cur ? (st === "draft" ? "draft" : "published") : (st === "draft" ? "draft" : "pending")) : modes[0][0];
   const ch = f?.checks || {};
-  let picked = files;
+  // 한 글에 첨부 여러 개: 새로 고른 파일(picked) + 이미 있는 첨부(keepAtt). 예전 '본 파일'(versions)은 그대로 두고 새 버전은 자료 보기에서
+  let picked = [...files];
+  const keepAtt = [...(f?.att || [])], removedAtt = [];
   openForm({
-    title: f ? "자료 수정" : multi ? `자료 올리기 (파일 ${files.length}개)` : "자료 올리기",
-    fields: `${multi ? `<ul class="uplist">${files.map((x, i) => `<li><span class="un">${esc(x.name)}</span><span class="us">${sizeLabel(x.size)}<button type="button" class="up-x" data-up-x="${i}" aria-label="${esc(x.name)} 빼기">✕</button></span><span class="bar"><i id="up-${i}"></i></span></li>`).join("")}</ul>
-        <div class="fdrop" data-fdrop><input type="file" name="upfile" multiple hidden>파일을 여기로 끌어다 놓거나 <button type="button" class="linkish" data-fpick>더 고르기</button></div>
-        <p class="hint">파일마다 자료가 하나씩 생기고, 제목은 파일 이름으로 들어가요. 아래 내용은 모두에 같이 붙어요.</p>`
-        : fText("제목", "title", f ? fileTitle(f) : (files[0]?.name.replace(/\.[^.]+$/, "") || ""), 'required maxlength="80" placeholder="예: 협동 그리기 3회차 수업안"')}
+    title: f ? "자료 수정" : "자료 올리기",
+    fields: `${fText("제목", "title", f ? fileTitle(f) : (files[0]?.name.replace(/\.[^.]+$/, "") || ""), 'required maxlength="80" placeholder="예: 협동 그리기 3회차 수업안"')}
       <div class="row2">${fSelect("분류", "folder", cats, cat0)}${fSelect("자료 종류", "kind", KINDS.map(k => [k, k]), f ? fileKind(f) || KIND_BY_CAT[cat0] || KINDS[0] : KIND_BY_CAT[cat0] || KINDS[0])}</div>
       ${fText("간단한 설명 <small>목록에 보이는 한 줄</small>", "desc", f?.desc || "", 'required maxlength="120" placeholder="어떤 자료인지, 언제 쓰면 좋은지 한 줄로"')}
-      ${multi ? "" : fArea("본문 <small>파일이 있으면 비워도 돼요</small>", "body", f?.body || "", 'rows="6" maxlength="20000" placeholder="수업 흐름, 사례 정리, 아이디어 등을 적어 주세요."')}
-      ${multi ? "" : `<div class="fld"><span>파일 ${f?.versions?.length ? `<small>지금: ${esc(f.name || "")} — 바꾸면 새 버전으로 쌓여요</small>` : "<small>본문이 있으면 없어도 돼요</small>"}</span>
-        <div class="fdrop" data-fdrop><input type="file" name="upfile" ${f ? "" : "multiple"} hidden>
-          <span data-fname>${files[0] ? `<b>${esc(files[0].name)}</b> (${sizeLabel(files[0].size)}) · ` : ""}</span>파일을 여기로 끌어다 놓거나 <button type="button" class="linkish" data-fpick>${files[0] ? "다른 파일 고르기" : "파일 고르기"}</button>
-          ${f ? "" : `<small>여러 개를 한 번에 고르거나 끌어 놓으면 파일마다 자료가 하나씩 생겨요</small>`}</div><div class="up-prog" hidden><i></i></div></div>`}
+      ${fArea("본문 <small>파일이 있으면 비워도 돼요</small>", "body", f?.body || "", 'rows="6" maxlength="20000" placeholder="수업 흐름, 사례 정리, 아이디어 등을 적어 주세요."')}
+      <div class="fld"><span>첨부 파일 <small>여러 개 가능 · 본문이 있으면 없어도 돼요</small></span>
+        <div id="attBox"></div>
+        <div class="fdrop" data-fdrop><input type="file" name="upfile" multiple hidden>파일을 여기로 끌어다 놓거나 <button type="button" class="linkish" data-fpick>파일 고르기</button>
+          <small>여러 개를 한 번에 고르거나 끌어 놓을 수 있어요. 파일당 ${MAX_FILE_MB}MB까지</small></div></div>
       <div class="kb-checks">
         <label class="chk" data-case ${cat0 === "k_case" || (f && fileKind(f) === "사례") ? "" : "hidden"}><input type="checkbox" name="child" ${ch.child ? "checked" : ""}> <b>아동 사례</b> — 이름·연락처·학교·얼굴·이름표·작품 서명 등 아이를 알아볼 수 있는 정보를 지웠어요</label>
         <label class="chk"><input type="checkbox" name="ext" ${ch.ext ? "checked" : ""}> 외부 자료예요 (책·인터넷·다른 기관 자료)</label>
@@ -3336,58 +3369,68 @@ function fileForm(f, files = [], keep = null){
     async onSave(form){
       const d = { folder: val(form, "folder"), kind: val(form, "kind"), desc: val(form, "desc"), branch: val(form, "branch"),
         level: form.elements.level ? val(form, "level") : (f?.level || "all"), status: form.querySelector("[name=mode]:checked")?.value || modes[0][0] };
-      const title = multi ? "" : val(form, "title"), body = multi ? "" : form.elements.body.value.trim();
+      const title = val(form, "title"), body = form.elements.body.value.trim();
       const isCase = d.folder === "k_case" || d.kind === "사례";
       d.checks = { child: isCase && form.elements.child.checked, ext: form.elements.ext.checked, source: form.elements.ext.checked ? val(form, "source") : "", share: form.elements.ext.checked && form.elements.share.checked };
-      if (!multi && !title) return formErr("제목을 넣어 주세요.");
+      if (!title) return formErr("제목을 넣어 주세요.");
       if (!d.desc) return formErr("간단한 설명을 한 줄 적어 주세요.");
-      if (!multi && !body && !picked[0] && !f?.versions?.length) return formErr("본문을 쓰거나 파일을 골라 주세요.");
+      if (!body && !picked.length && !keepAtt.length && !f?.versions?.length) return formErr("본문을 쓰거나 파일을 골라 주세요.");
       if (d.status !== "draft"){
         if (isCase && !d.checks.child) return formErr("아동 사례는 식별정보를 지웠는지 확인해 주세요.");
         if (d.checks.ext && (!d.checks.source || !d.checks.share)) return formErr("외부 자료는 출처를 적고 공유해도 되는지 확인해 주세요.");
       }
-      if (picked[0]?.size > MAX_FILE_MB * 1048576) return formErr(`${MAX_FILE_MB}MB가 넘는 파일은 올릴 수 없어요.`);
+      if (picked.some(x => x.size > MAX_FILE_MB * 1048576)) return formErr(`${MAX_FILE_MB}MB가 넘는 파일은 올릴 수 없어요.`);
       if (d.status === "published") { if (f?.status !== "published") { d.publishedAt = Date.now(); d.publishedBy = writerName(); } d.reviewNote = ""; }
       if (d.status === "pending" && !reviewing) d.reviewNote = "";
       if (!f) keepWriter(form);
-      if (multi){
-        for (let i = 0; i < picked.length; i++){
-          const x = picked[i], id = DB.newId(), bar = $(`up-${i}`), ver = await DB.putFile(id, x, p => { if (bar) bar.style.width = p + "%"; });
-          await DB.addWithId("files", id, { ...d, title: x.name.replace(/\.[^.]+$/, "").slice(0, 80), body: "", name: x.name, size: x.size, versions: [ver] });
-        }
-      } else {
-        const id = f?.id || DB.newId(), x = picked[0];
-        Object.assign(d, { title, body });
-        if (x){ const bar = $("dlgBody").querySelector(".up-prog"); bar.hidden = false;
-          const ver = await DB.putFile(id, x, p => bar.firstElementChild.style.width = p + "%");
-          Object.assign(d, { name: x.name, size: x.size, versions: [...(f?.versions || []), ver] }); }
-        if (f) await DB.update("files", id, d);
-        else await DB.addWithId("files", id, { name: "", size: 0, versions: [], ...d });
+      const id = f?.id || DB.newId();
+      Object.assign(d, { title, body });
+      body0.querySelectorAll("[data-up-x],[data-att-x],[data-fpick]").forEach(b => b.disabled = true);
+      const ups = [];
+      for (let i = 0; i < picked.length; i++){
+        const x = picked[i], bar = $(`up-${i}`);
+        const ver = await DB.putFile(id, x, p => { if (bar) bar.style.width = p + "%"; });
+        ups.push({ ...ver, name: x.name, type: x.type || "" });
       }
+      d.att = [...keepAtt, ...ups];
+      // 목록·검색용 대표 파일 이름: 예전 본 파일이 있으면 그대로, 없으면 첫 첨부
+      if (!f?.versions?.length) Object.assign(d, { name: d.att[0]?.name || "", size: d.att.reduce((a, v) => a + (v.size || 0), 0) });
+      if (f) await DB.update("files", id, d);
+      else await DB.addWithId("files", id, { versions: [], ...d });
+      if (removedAtt.length) DB.dropFiles(removedAtt).catch(() => {});
       toast(d.status === "published" ? "게시했어요." : d.status === "draft" ? "임시저장했어요. '내가 올린 자료'에서 이어서 고칠 수 있어요." : "검토를 요청했어요. 자료 담당자가 확인하면 게시돼요.");
     },
     onDelete: f && canEditFile(f) && (() => fileDrop(f)), deleteLabel: "자료 삭제"
   });
   $("dlg").classList.add("wide");
   if (f) dlgCtx.deleteMsg = `'${fileTitle(f)}' 자료를 지울까요? 되돌릴 수 없어요.`;
-  const body = $("dlgBody");
+  const body = $("dlgBody"), body0 = body;
   formRestore($("dlgForm"), keep);
+  // 첨부 목록: 이미 있는 것(✕ 하면 저장할 때 지워짐) + 새로 고른 것(✕ 하면 안 올라감). 이미지는 작은 미리보기
+  const thumbOf = (url, name) => url && isImgName(name) ? `<img class="att-th" src="${esc(url)}" alt="">` : `<span class="att-ic" aria-hidden="true">${esc(extOf(name).toUpperCase().slice(0, 4) || "FILE")}</span>`;
+  const blobUrls = new Map(); const blobOf = x => { if (!isImgName(x.name)) return ""; if (!blobUrls.has(x)) blobUrls.set(x, URL.createObjectURL(x)); return blobUrls.get(x); };
+  const drawAtt = () => {
+    const legacy = f?.versions?.length ? `<li class="att-main">${thumbOf(DB.fileUrl(f.versions.at(-1)), f.name)}<span class="un">${esc(f.name || "")}</span><span class="us">${sizeLabel(f.size || 0)} · 본 파일${f.versions.length > 1 ? ` (버전 ${f.versions.length}개)` : ""}</span></li>` : "";
+    const ex = keepAtt.map((v, i) => `<li>${thumbOf(DB.fileUrl(v), v.name)}<span class="un">${esc(v.name)}</span><span class="us">${sizeLabel(v.size || 0)}<button type="button" class="up-x" data-att-x="${i}" aria-label="${esc(v.name)} 빼기">✕</button></span></li>`).join("");
+    const nw = picked.map((x, i) => `<li>${thumbOf(blobOf(x), x.name)}<span class="un">${esc(x.name)} <em class="att-new">새 파일</em></span><span class="us">${sizeLabel(x.size)}<button type="button" class="up-x" data-up-x="${i}" aria-label="${esc(x.name)} 빼기">✕</button></span><span class="bar"><i id="up-${i}"></i></span></li>`).join("");
+    $("attBox").innerHTML = legacy || ex || nw ? `<ul class="uplist att">${legacy}${ex}${nw}</ul>` : "";
+  };
+  drawAtt();
   // 파일 받기: 고르기·끌어 놓기 공통. 새 자료에서 여러 개가 되면 쓴 내용 그대로 '여러 개 올리기'로 다시 열기
   const takeFiles = list => {
     list = [...list].filter(x => x && x.size >= 0); if (!list.length) return;
+    const big2 = list.filter(x => x.size > MAX_FILE_MB * 1048576);
+    if (big2.length) toast(`${big2.map(x => x.name).join(", ")}: ${MAX_FILE_MB}MB가 넘어서 뺐어요.`);
+    picked = [...picked, ...list.filter(x => !big2.includes(x))]; drawAtt();
     const form = $("dlgForm");
-    if (f) { picked = [list[0]]; showPicked(); return; }
-    const next = multi ? [...picked, ...list] : list;
-    if (next.length > 1) { const k = formSnap(form); setTimeout(() => fileForm(null, next, k), 0); return; }
-    picked = [next[0]]; showPicked();
-    if (!val(form, "title")) form.elements.title.value = picked[0].name.replace(/\.[^.]+$/, "").slice(0, 80);
+    if (!val(form, "title") && picked[0]) form.elements.title.value = picked[0].name.replace(/\.[^.]+$/, "").slice(0, 80);
   };
-  const showPicked = () => { const n = body.querySelector("[data-fname]"), x = picked[0]; if (n) n.innerHTML = x ? `<b>${esc(x.name)}</b> (${sizeLabel(x.size)}) · ` : "";
-    const b = body.querySelector("[data-fpick]"); if (b && x) b.textContent = "다른 파일 고르기"; };
   body.addEventListener("click", e => {
     if (e.target.closest("[data-fpick]")) body.querySelector("[name=upfile]")?.click();
     const rx = e.target.closest("[data-up-x]");
-    if (rx) { const rest = picked.filter((_, i) => i !== +rx.dataset.upX), k = formSnap($("dlgForm")); setTimeout(() => fileForm(null, rest, k), 0); }
+    if (rx) { picked.splice(+rx.dataset.upX, 1); drawAtt(); }
+    const ax = e.target.closest("[data-att-x]");
+    if (ax) { removedAtt.push(...keepAtt.splice(+ax.dataset.attX, 1)); drawAtt(); }
   });
   const dz = body.querySelector("[data-fdrop]");
   if (dz) {
@@ -3419,11 +3462,12 @@ function newVersionForm(f, file){
     }
   });
 }
-async function fileDrop(f){ await DB.dropFiles(f.versions || []); await DB.remove("files", f.id); toast("자료를 삭제했어요."); }
+async function fileDrop(f){ await DB.dropFiles([...(f.versions || []), ...(f.att || [])]); await DB.remove("files", f.id); toast("자료를 삭제했어요."); }
 // 목록에서 바로 삭제 (확인 한 번 더)
 async function fileDelete(f){
   if (!f || !canEditFile(f)) return;
-  if (!await confirmBox(`'${fileTitle(f)}'${f.versions?.length ? ` 자료와 파일 ${f.versions.length}개가` : "이"} 모두 지워져요. 되돌릴 수 없어요. 삭제할까요?`)) return;
+  const nf = (f.versions?.length || 0) + (f.att?.length || 0);
+  if (!await confirmBox(`'${fileTitle(f)}'${nf ? ` 자료와 파일 ${nf}개가` : "이"} 모두 지워져요. 되돌릴 수 없어요. 삭제할까요?`)) return;
   try { await fileDrop(f); } catch (err) { toast("삭제하지 못했어요. 권한을 확인해 주세요."); console.error(err); }
 }
 
