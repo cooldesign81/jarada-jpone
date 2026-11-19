@@ -901,6 +901,13 @@
   .help{margin:0;padding-left:18px;display:grid;gap:8px;font-size:14px;line-height:1.6}
   .help b{color:var(--ink)}
   .folders li{display:flex;align-items:center;gap:4px}
+  .folders li.sub{padding-left:16px;position:relative}
+  .folders li.sub::before{content:"";position:absolute;left:6px;top:0;bottom:50%;width:7px;border-left:1.5px solid #D6D6D6;border-bottom:1.5px solid #D6D6D6;border-bottom-left-radius:4px}
+  .folders li.sub > button[data-act="folder"]{font-size:.93em}
+  .folders .fold-drag{cursor:grab;color:#B5B5B5;font-size:13px;padding:0 2px;user-select:none}
+  .folders li.dragging{opacity:.45}
+  .folders li.drop-before{box-shadow:inset 0 3px 0 var(--ink)}
+  .fold-tip{font-size:11.5px;color:var(--text-sub);margin:-4px 0 8px;line-height:1.5}
   .folders li > button[data-act="folder"]{flex:1;min-width:0}
   .folders .fold-ed{flex:none;width:auto;border:1px solid var(--line);background:#fff;border-radius:4px;font-size:11px;
                     font-weight:700;padding:3px 6px;cursor:pointer;color:var(--ink)}
@@ -1938,6 +1945,7 @@ function renderView({ keepFocus = false } = {}){
     : state.tab === "kpi" ? kpiPageHTML()
     : soonHTML(state.tab);
   if (focusKey) v.querySelector(`[data-fk="${CSS.escape(focusKey)}"]`)?.focus();
+  if (state.tab === "files") folderDragInit();
 }
 
 const SOON = {
@@ -3150,7 +3158,7 @@ async function favToggle(key){
 function kbHits(q){
   q = q.trim().toLowerCase(); if (!q) return [];
   const files = state.files.filter(f => visible(f) && fStatus(f) === "published" && fileSearchText(f).includes(q))
-    .map(f => ({ t: (fileKind(f) === "서식" || f.folder === "k_form") ? "서식" : "참고자료", id: f.id, title: fileTitle(f), sub: f.desc || "", cat: folderList().find(x => x.id === f.folder)?.name || "분류 안 됨", at: f.updatedAt || f.at }));
+    .map(f => ({ t: (fileKind(f) === "서식" || f.folder === "k_form") ? "서식" : "참고자료", id: f.id, title: fileTitle(f), sub: f.desc || "", cat: folderName(f.folder) || "분류 안 됨", at: f.updatedAt || f.at }));
   const mans = state.manuals.filter(m => visible(m) && (m.status || "published") === "published" && manSearchText(m).toLowerCase().includes(q))
     .map(m => ({ t: "매뉴얼", id: m.id, title: m.title, sub: m.summary || manPreview(m), cat: manCatLabel(m.cat), at: m.updatedAt || m.at }));
   return [...mans, ...files];
@@ -3176,11 +3184,11 @@ function filesPageHTML(){
   if (!cur && state.folder === "_review") delete special._review;
   if (state.folder !== "all" && !special[state.folder] && !known.has(state.folder)) state.folder = "all";
   const base = state.folder === "_fav" ? pub.filter(f => favs.has("f:" + f.id)) : state.folder === "_mine" ? mine : state.folder === "_review" ? reviewQ
-    : state.folder === "_none" ? loose : state.folder === "all" ? pub : pub.filter(f => f.folder === state.folder);
+    : state.folder === "_none" ? loose : state.folder === "all" ? pub : pub.filter(f => inFolder(f, state.folder));
   const kindOn = !["_mine", "_review"].includes(state.folder);
   const list = base.filter(f => !kindOn || !state.fKind || fileKind(f) === state.fKind).sort((a, b) => (b.updatedAt || b.at || 0) - (a.updatedAt || a.at || 0));
   const q = state.fileQ.trim();
-  const heading = state.folder === "all" ? "전체 자료" : special[state.folder] || fl.find(x => x.id === state.folder)?.name;
+  const heading = state.folder === "all" ? "전체 자료" : special[state.folder] || folderName(state.folder);
   const migrate = state.isAdmin && state.loaded.folders && FILE_CATS.some(([id]) => !state.folders.some(f => f.id === id));
   const li = (id, label, n, extra = "") => `<li ${extra}><button type="button" data-act="folder" data-id="${esc(id)}" aria-pressed="${state.folder === id}"><span>${esc(label)}</span><b>${n}</b></button>`;
   return `
@@ -3189,10 +3197,11 @@ function filesPageHTML(){
   <div class="files">
     <aside class="card fold">
       <div class="card-h"><h2>공용 자료실</h2>${cur ? `<button type="button" class="icon-btn" data-act="folder-new">분류 추가</button>` : ""}</div>
+      ${cur && fl.length > 1 ? `<p class="fold-tip">⠿ 를 끌어 순서를 바꾸고, 수정에서 '위 분류'를 고르면 작은 분류가 돼요.</p>` : ""}
       <ul class="folders">
         ${li("all", "전체 자료", pub.length)}</li>
-        ${fl.map(fd => `${li(fd.id, fd.name, pub.filter(f => f.folder === fd.id).length, `class="${cur ? "can-edit" : ""}"`)}
-          ${cur ? `<button type="button" class="fold-ed" data-act="folder-edit" data-id="${esc(fd.id)}" aria-label="${esc(fd.name)} 분류 수정">수정</button>` : ""}</li>`).join("")}
+        ${fl.map(fd => `${li(fd.id, fd.name, pub.filter(f => inFolder(f, fd.id)).length, `class="${cur ? "can-edit" : ""} ${fd.depth ? "sub" : ""}" data-fold="${esc(fd.id)}" ${cur ? 'draggable="true"' : ""}`)}
+          ${cur ? `<span class="fold-drag" aria-hidden="true" title="끌어서 순서 바꾸기">⠿</span><button type="button" class="fold-ed" data-act="folder-edit" data-id="${esc(fd.id)}" aria-label="${esc(fd.name)} 분류 수정">수정</button>` : ""}</li>`).join("")}
         ${!fl.length && cur ? `<li><button type="button" class="btn btn-ghost btn-sm" data-act="folder-seed">기본 분류 만들기</button></li>` : ""}
         ${loose.length ? li("_none", "분류 안 됨", loose.length) + "</li>" : ""}
       </ul>
@@ -3220,7 +3229,7 @@ function filesPageHTML(){
         <tbody>${(state.folder === "_review" ? list.reverse() : list).map(f => { const last = f.versions?.[f.versions.length - 1], all = fileAll(f), att = f.att || [];
           const imgs = all.filter(v => isImgName(v.name) && DB.fileUrl(v)).slice(0, 4);
           return `<tr>
-            <td class="c-cat">${esc(fl.find(x => x.id === f.folder)?.name || "분류 안 됨")}${fileKind(f) ? `<small>${esc(fileKind(f))}</small>` : ""}</td>
+            <td class="c-cat">${esc(folderName(f.folder) || "분류 안 됨")}${fileKind(f) ? `<small>${esc(fileKind(f))}</small>` : ""}</td>
             <td><button type="button" class="ftitle" data-act="file-open" data-id="${esc(f.id)}">${statusTag(fStatus(f))}${levelTag(f)}${esc(fileTitle(f))}</button>
               ${f.desc ? `<span class="fdesc2">${esc(f.desc)}</span>` : ""}
               ${imgs.length ? `<span class="fthumbs">${imgs.map(v => `<img src="${esc(DB.fileUrl(v))}" alt="" loading="lazy">`).join("")}${all.filter(v => isImgName(v.name)).length > imgs.length ? `<em>+${all.filter(v => isImgName(v.name)).length - imgs.length}</em>` : ""}</span>` : ""}
@@ -3263,7 +3272,7 @@ function fileView(f){
   const vs = (f.versions || []).slice().reverse();
   openForm({
     title: "자료 보기",
-    fields: `<div class="kb-tags"><span class="tagk">${esc(folderList().find(x => x.id === f.folder)?.name || "분류 안 됨")}</span>${fileKind(f) ? `<span class="tagb">${esc(fileKind(f))}</span>` : ""}${statusTag(st)}${levelTag(f)}<span class="tagb">${esc(scopeLabel(f.branch))}</span></div>
+    fields: `<div class="kb-tags"><span class="tagk">${esc(folderName(f.folder) || "분류 안 됨")}</span>${fileKind(f) ? `<span class="tagb">${esc(fileKind(f))}</span>` : ""}${statusTag(st)}${levelTag(f)}<span class="tagb">${esc(scopeLabel(f.branch))}</span></div>
       <h2 class="kb-title">${esc(fileTitle(f))}</h2>
       ${f.desc ? `<p class="kb-desc">${esc(f.desc)}</p>` : ""}
       <p class="man-meta">${esc(f.writer || "")} · ${new Date(f.at || Date.now()).toLocaleDateString("ko-KR")} 등록${f.updatedAt ? ` · ${new Date(f.updatedAt).toLocaleDateString("ko-KR")} 업데이트` : ""}${f.publishedBy ? ` · ${esc(f.publishedBy)} 게시` : ""}</p>
@@ -3336,7 +3345,7 @@ function fileForm(f, files = [], keep = null){
   const big = files.filter(x => x.size > MAX_FILE_MB * 1048576);
   if (big.length) { toast(`${big.map(x => x.name).join(", ")}: ${MAX_FILE_MB}MB가 넘어서 올릴 수 없어요.`); files = files.filter(x => !big.includes(x)); }
   const cur = isCurator();
-  const fl = folderList(), cats = fl.length ? fl.map(x => [x.id, x.name]) : [["", "분류 안 됨"]];
+  const fl = folderList(), cats = fl.length ? fl.map(x => [x.id, (x.depth ? "　└ " : "") + x.name]) : [["", "분류 안 됨"]];
   const cat0 = f ? (fl.some(x => x.id === f.folder) ? f.folder : "") : (fl.some(x => x.id === state.folder) ? state.folder : cats[0][0]);
   const brOpts = [...new Set(["all", ...branchOptions("files")])];
   const br0 = f?.branch || "all", st = f ? fStatus(f) : "";
@@ -3800,7 +3809,7 @@ function manualForm(m){
         <div class="up-prog" hidden><i></i></div></div>
       <div class="fld"><span>관련 서식·자료 <small>자료실 자료를 연결해요(같은 파일을 두 번 올리지 않게)</small></span>
         <input type="search" class="inp" id="relQ" placeholder="자료 제목으로 찾기">
-        <div class="rel-pick">${relFiles.length ? relFiles.map(f => `<label data-t="${esc(fileTitle(f).toLowerCase())}"><input type="checkbox" name="rel" value="${esc(f.id)}" ${relSel.has(f.id) ? "checked" : ""}> ${esc(fileTitle(f))} <small>${esc(folderList().find(x => x.id === f.folder)?.name || "")}</small></label>`).join("") : `<span class="hint small">게시된 자료가 아직 없어요.</span>`}</div></div>
+        <div class="rel-pick">${relFiles.length ? relFiles.map(f => `<label data-t="${esc(fileTitle(f).toLowerCase())}"><input type="checkbox" name="rel" value="${esc(f.id)}" ${relSel.has(f.id) ? "checked" : ""}> ${esc(fileTitle(f))} <small>${esc(folderName(f.folder))}</small></label>`).join("") : `<span class="hint small">게시된 자료가 아직 없어요.</span>`}</div></div>
       ${m ? fText("개정 내용 <small>무엇이 바뀌었는지</small>", "changeNote", m.pending?.changeNote || "", 'maxlength="200" placeholder="예: 결제 확인 순서를 결제 매니저 기준으로 바꿈"') : ""}
       <label class="chk"><input type="checkbox" name="pinned" ${src?.pinned ? "checked" : ""}> 필독 — 대상자에게 '확인했습니다'를 받아요</label>
       ${m && published ? `<label class="chk"><input type="checkbox" name="reack" ${m.pending?.reack ? "checked" : ""}> 중요한 변경이라 필독 대상자에게 다시 확인 받기</label>` : ""}
@@ -4106,47 +4115,93 @@ function todoForm(t, presetTitle){
 }
 
 /* ── 자료실 폴더 (대표 + 관리자: 추가·이름 변경·순서·삭제) ── */
-const folderList = () => state.folders.slice().sort((a,b) => (a.order ?? 0) - (b.order ?? 0) || (a.at || 0) - (b.at || 0));
+// 분류는 2단까지: 큰 분류(parent 없음) 아래 작은 분류(parent = 큰 분류 id). 목록은 큰 분류 순서대로, 그 밑에 작은 분류를 끼워 펼침
+const folderSort = (a, b) => (a.order ?? 0) - (b.order ?? 0) || (a.at || 0) - (b.at || 0);
+const folderList = () => {
+  const all = state.folders.slice(), ids = new Set(all.map(x => x.id));
+  const top = all.filter(x => !x.parent || !ids.has(x.parent)).sort(folderSort);
+  return top.flatMap(t => [{ ...t, depth: 0 }, ...all.filter(x => x.parent === t.id).sort(folderSort).map(x => ({ ...x, depth: 1 }))]);
+};
+const folderKids = id => state.folders.filter(x => x.parent === id).map(x => x.id);
+const inFolder = (f, id) => f.folder === id || folderKids(id).includes(f.folder);   // 큰 분류를 고르면 작은 분류 자료까지
+const folderName = id => { const fd = state.folders.find(x => x.id === id); if (!fd) return ""; const pa = fd.parent && state.folders.find(x => x.id === fd.parent); return pa ? `${pa.name} › ${fd.name}` : fd.name; };
 async function seedFolders(){   // 폴더가 하나도 없을 때 대표가 버튼으로 기본 폴더를 만듦
   if (seedFolders.busy) return; seedFolders.busy = true;
   try { for (const [i, f] of DEFAULT_FOLDERS.entries()) await DB.set("folders", f.id, { name:f.name, order:i + 1, branch:"all", at:Date.now(), createdBy:state.user.email, writer:writerName() }); toast("기본 폴더를 만들었어요."); }
   finally { seedFolders.busy = false; }
 }
-function folderForm(fd){
-  const fl = folderList(), idx = fd ? fl.findIndex(x => x.id === fd.id) : -1, n = fd ? state.files.filter(f => f.folder === fd.id).length : 0;
+function folderForm(fd, preset = {}){
+  const fl = folderList(), kids = fd ? folderKids(fd.id) : [];
+  const parent0 = preset.parent ?? fd?.parent ?? "";
+  const sibs = fl.filter(x => (x.parent || "") === (fd?.parent || "") && (x.depth === 0) === !fd?.parent);
+  const idx = fd ? sibs.findIndex(x => x.id === fd.id) : -1;
+  const n = fd ? state.files.filter(f => f.folder === fd.id).length : 0;
+  const tops = fl.filter(x => x.depth === 0 && x.id !== fd?.id);
   openForm({
-    title: fd ? "폴더 수정" : "폴더 추가",
-    fields: `${fText("폴더 이름", "name", fd?.name, 'required maxlength="20" placeholder="예: 학부모 안내문"')}
-      ${fd ? `<div class="fld"><span>순서</span><div class="ord">
+    title: fd ? "분류 수정" : "분류 추가",
+    fields: `${fText("분류 이름", "name", preset.name ?? fd?.name, 'required maxlength="20" placeholder="예: 학부모 안내문"')}
+      ${kids.length ? `<p class="hint">작은 분류 ${kids.length}개가 들어 있는 큰 분류예요. (작은 분류 아래에 또 작은 분류는 만들 수 없어요)</p>`
+        : fSelect("위 분류 <small>고르면 그 아래 작은 분류가 돼요</small>", "parent", [["", "없음 (큰 분류)"], ...tops.map(x => [x.id, x.name])], parent0)}
+      ${fd ? `<div class="fld"><span>순서 <small>${fd.parent ? "같은 큰 분류 안에서" : "큰 분류끼리"}</small></span><div class="ord">
         <button type="button" class="icon-btn" data-ord="-1" ${idx <= 0 ? "disabled" : ""}>위로</button>
-        <button type="button" class="icon-btn" data-ord="1" ${idx >= fl.length - 1 ? "disabled" : ""}>아래로</button>
-        <span class="hint">${idx + 1}번째 / ${fl.length}개</span></div></div>
-        <p class="hint">이 폴더에 파일 ${n}개가 있어요.${n ? " 폴더를 지우면 파일은 지워지지 않고 '분류 안 됨'으로 옮겨져요." : ""}</p>` : ""}`,
-    saveLabel: fd ? "저장" : "폴더 추가",
+        <button type="button" class="icon-btn" data-ord="1" ${idx >= sibs.length - 1 ? "disabled" : ""}>아래로</button>
+        <span class="hint">${idx + 1}번째 / ${sibs.length}개 · 목록에서 ⠿ 를 끌어도 돼요</span></div></div>
+        <p class="hint">이 분류에 자료 ${n}개가 있어요.${n ? " 분류를 지우면 자료는 지워지지 않고 '분류 안 됨'으로 옮겨져요." : ""}${kids.length ? " 안의 작은 분류는 큰 분류로 올라가요." : ""}</p>` : ""}`,
+    saveLabel: fd ? "저장" : "분류 추가",
     async onSave(form){
-      const name = val(form, "name");
-      if (!name) return formErr("폴더 이름을 넣어 주세요.");
-      if (fl.some(x => x.name === name && x.id !== fd?.id)) return formErr("같은 이름의 폴더가 이미 있어요.");
-      if (fd) await DB.update("folders", fd.id, { name });
-      else await DB.add("folders", { name, branch:"all", order: Math.max(0, ...fl.map(x => x.order || 0)) + 1 });
-      toast(fd ? "폴더 이름을 바꿨어요." : "폴더를 추가했어요.");
+      const name = val(form, "name"), parent = form.elements.parent ? val(form, "parent") : "";
+      if (!name) return formErr("분류 이름을 넣어 주세요.");
+      if (fl.some(x => x.name === name && x.id !== fd?.id && (x.parent || "") === parent)) return formErr("같은 자리에 같은 이름의 분류가 이미 있어요.");
+      const lastOrder = Math.max(0, ...state.folders.filter(x => (x.parent || "") === parent).map(x => x.order || 0)) + 1;
+      if (fd) await DB.update("folders", fd.id, { name, parent, ...((fd.parent || "") !== parent ? { order: lastOrder } : {}) });
+      else await DB.add("folders", { name, parent, branch:"all", order: lastOrder });
+      toast(fd ? "분류를 고쳤어요." : parent ? "작은 분류를 추가했어요." : "분류를 추가했어요.");
     },
     onDelete: fd && (async () => {
       for (const f of state.files.filter(f => f.folder === fd.id)) await DB.update("files", f.id, { folder:"" });
+      for (const k of kids) await DB.update("folders", k, { parent:"" });
       await DB.remove("folders", fd.id); if (state.folder === fd.id) state.folder = "all";
-      toast(n ? `폴더를 지우고 파일 ${n}개를 '분류 안 됨'으로 옮겼어요.` : "폴더를 지웠어요.");
+      toast(n ? `분류를 지우고 자료 ${n}개를 '분류 안 됨'으로 옮겼어요.` : "분류를 지웠어요.");
     }),
-    deleteLabel: "폴더 삭제"
+    deleteLabel: "분류 삭제"
   });
-  dlgCtx.deleteMsg = fd && `'${fd.name}' 폴더를 지울까요?${n ? ` 안의 파일 ${n}개는 '분류 안 됨'으로 옮겨져요.` : ""}`;
+  dlgCtx.deleteMsg = fd && `'${fd.name}' 분류를 지울까요?${n ? ` 안의 자료 ${n}개는 '분류 안 됨'으로 옮겨져요.` : ""}${kids.length ? ` 작은 분류 ${kids.length}개는 큰 분류로 올라가요.` : ""}`;
   $("dlgBody").querySelectorAll("[data-ord]").forEach(b => b.addEventListener("click", async () => {
-    const j = idx + Number(b.dataset.ord), other = fl[j]; if (!other) return;
-    const a = fd.order ?? idx + 1, c = other.order ?? j + 1;
-    await DB.update("folders", fd.id, { order: c === a ? c + Number(b.dataset.ord) : c }); await DB.update("folders", other.id, { order: a });
-    const typed = val($("dlgForm"), "name");
-    $("dlg").close(); folderForm(state.folders.find(x => x.id === fd.id));
-    if (typed) $("dlgForm").elements.name.value = typed; toast("순서를 바꿨어요.");
+    const j = idx + Number(b.dataset.ord); if (!sibs[j]) return;
+    const ord = sibs.map(x => x.id); [ord[idx], ord[j]] = [ord[j], ord[idx]];
+    await saveFolderOrder(ord);
+    const typed = { name: val($("dlgForm"), "name"), parent: $("dlgForm").elements.parent ? val($("dlgForm"), "parent") : undefined };
+    $("dlg").close(); folderForm(state.folders.find(x => x.id === fd.id), typed); toast("순서를 바꿨어요.");
   }));
+}
+// 같은 자리(큰 분류끼리, 또는 한 큰 분류 안)의 순서를 1, 2, 3…으로 다시 매김
+async function saveFolderOrder(ids, parent){
+  for (const [i, id] of ids.entries()){
+    const fd = state.folders.find(x => x.id === id); if (!fd) continue;
+    const patch = {}; if ((fd.order ?? -1) !== i + 1) patch.order = i + 1; if (parent !== undefined && (fd.parent || "") !== parent) patch.parent = parent;
+    if (Object.keys(patch).length) await DB.update("folders", id, patch);
+  }
+}
+// 자료실 왼쪽 분류: ⠿ 를 끌어 다른 분류 위에 놓으면 그 앞으로. 작은 분류를 다른 큰 분류의 작은 분류 위에 놓으면 그 큰 분류로 옮겨감
+function folderDragInit(){
+  const ul = document.querySelector(".fold .folders"); if (!ul || ul.dataset.dnd) return; ul.dataset.dnd = "1";
+  let dragId = null;
+  ul.addEventListener("dragstart", e => { const li = e.target.closest("[data-fold]"); if (!li) return; dragId = li.dataset.fold; e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", dragId); li.classList.add("dragging"); });
+  ul.addEventListener("dragend", () => { dragId = null; ul.querySelectorAll(".dragging,.drop-before").forEach(x => x.classList.remove("dragging", "drop-before")); });
+  ul.addEventListener("dragover", e => { if (!dragId) return; const li = e.target.closest("[data-fold]"); if (!li || li.dataset.fold === dragId) return;
+    e.preventDefault(); ul.querySelectorAll(".drop-before").forEach(x => x.classList.remove("drop-before")); li.classList.add("drop-before"); });
+  ul.addEventListener("drop", async e => {
+    const li = e.target.closest("[data-fold]"); if (!dragId || !li) return; e.preventDefault(); e.stopPropagation();
+    const d = state.folders.find(x => x.id === dragId), t = state.folders.find(x => x.id === li.dataset.fold); if (!d || !t || d.id === t.id) return;
+    const hasKids = folderKids(d.id).length > 0;
+    // 큰 분류(작은 분류 있음)는 큰 분류 자리에만. 작은 분류 위에 놓으면 그 큰 분류 앞으로
+    const parent = hasKids || !d.parent ? (t.parent && !hasKids && d.parent ? t.parent : "") : (t.parent || "");
+    const tgt = parent === "" && t.parent ? state.folders.find(x => x.id === t.parent) : t;
+    const sibs = folderList().filter(x => (x.parent || "") === parent && x.id !== d.id).map(x => x.id);
+    const at = sibs.indexOf(tgt.id); sibs.splice(at < 0 ? sibs.length : at, 0, d.id);
+    try { await saveFolderOrder(sibs, parent); toast(parent && (d.parent || "") !== parent ? `'${folderName(d.id)}'로 옮겼어요.` : "순서를 바꿨어요."); }
+    catch (err) { toast("순서를 바꾸지 못했어요. (" + (err.code || err.message) + ")"); }
+  });
 }
 
 /* =====================================================================
