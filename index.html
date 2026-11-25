@@ -2488,7 +2488,7 @@ function noticePageHTML(){
           ${canEditPost(n) ? `<div class="ni-acts"><button type="button" class="icon-btn" data-act="notice-edit" data-id="${esc(n.id)}">수정</button></div>` : ""}</div>` : ""}
       </li>`; }).join("")}</ul>` : `<p class="empty">아직 공지가 없어요.${canWrite ? " 오른쪽 위 '공지 쓰기'로 첫 공지를 올려 보세요." : ""}</p>`}
   </section>
-  <section class="card" style="margin-bottom:16px"><h2>지금 확인이 필요한 것</h2>${checkListHTML()}</section>
+  <section class="card" style="margin-bottom:16px"><h2>오늘의 체크 포인트</h2>${checkListHTML()}</section>
   <section class="card" style="margin-bottom:16px">${calHTML("month")}</section>
   <section class="card">${planBoardHTML()}</section>`;
 }
@@ -5524,7 +5524,7 @@ function funnelHTML(snaps){
     <p class="fnote">막대 길이는 ${cols.length > 1 ? "세 원 공통 기준(가장 많은 문의)이에요. " : ""}회색 빗금 = 앞 단계에서 빠진 인원. ${k === "m" ? "이번 달에" : `최근 ${funLabel()} 동안`} 등록일이 있는 원생 기준. 샘플 진행 = '대기' 상태 제외, 샘플 후 등록 = 등록한 원생, 정규 등록 = 그중 지금 수업을 다니는 원생.</p>`;
 }
 
-/* ── 지금 확인이 필요한 것 (공지 · 캘린더 화면에 표시): 원생 명단에서 뽑은 확인 대상 ── */
+/* ── 오늘의 체크 포인트 (공지 · 캘린더 화면에 표시): 원생 명단에서 뽑은 확인 대상 ── */
 function checkListHTML(){
   const snaps = visBranches().map(b => state.kpi[b]).filter(Boolean);
   if (!snaps.length) return `<p class="empty">원생 명단을 올리면 미납·미등록 원생이 여기 나와요.</p>`;
