@@ -156,6 +156,10 @@
   .notice-card .list .title{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
   .notice-card .list li{align-items:center}
   .wide-cal{margin-bottom:16px}
+  .nscroll{max-height:460px;overflow:auto;margin-right:-8px;padding-right:8px}
+  .notice-card .ni-h .tt{font-size:14px}
+  .cal.month .day{min-height:150px}
+  .cal.month .day .chip{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.35}
   .kpi .l .ml{font-size:11px;font-weight:600;color:var(--text-sub);margin-left:6px}
   .sub-row{margin-top:10px;padding-top:10px;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 6px}
   .sub-row .sl{font-size:12px;font-weight:600;color:var(--text)}
@@ -1079,7 +1083,7 @@ const APP_GROUPS = [
 const TABS = [
   { id: "home",   label: "홈" },
   { id: "kpi",    label: "대시보드" },
-  { id: "notice", label: "공지 · 캘린더" },
+  { id: "notice", label: "캘린더" },
   { id: "todo",   label: "워크허브" },
   { id: "mission",label: "미션허브" },
   { id: "manual", label: "업무매뉴얼" },
@@ -2037,10 +2041,6 @@ function todoRow(t, compact){
 function homeHTML(){
   const bs = visBranches(), real = bs.every(b => state.kpi[b]);
   const cnt = k => bs.reduce((t, b) => t + (state.kpi[b] ? state.kpi[b].cur[k] : SAMPLE[b][k]?.[0] || 0), 0);
-  const lst = k => bs.reduce((t, b) => t + (state.kpi[b]?.lists?.[k]?.length || 0), 0);
-  const checks = [...CHECKS.filter(c => !(real && /샘플 후/.test(c[1]))),
-    ...(real ? [["critical","3주 이상 미납","결제를 확인해 주세요", cnt("unpaid") + "명"], ["info","샘플 후 3일 넘게 미등록","다시 연락할 대상", lst("sampleWait") + "명"]] : [])];
-  const notices = sortNotices(state.notices.filter(visible)).slice(0, 5);
   const myOpen = state.tasks.filter(t => visible(t) && whMine(t) && WH_OPEN.includes(t.status)).sort((a, b) => (b.status === "revise") - (a.status === "revise") || whSort(a, b));
   const reviewN = state.tasks.filter(t => visible(t) && t.status === "submitted" && isMgr(t.branch) && (t.assignee !== myEmail() || state.isAdmin)).length;
   const lateN = state.tasks.filter(t => visible(t) && isMgr(t.branch) && whLate(t)).length;
@@ -2053,17 +2053,7 @@ function homeHTML(){
         <button type="button" class="linkish" data-act="go" data-tab="kpi">자세히</button></p>
       <div class="kpis">${METRICS.map(kpiCard).join("")}</div>
     </div>
-    <section class="card notice-card">
-      <div class="card-h"><h2>최근 공지</h2></div>
-      ${notices.length ? `<ul class="nmini">${notices.map(n => `
-        <li><button type="button" class="nlink" data-act="notice-open" data-id="${esc(n.id)}">
-          <span class="date">${mdOfMs(n.at)}</span>
-          <span class="title">${n.pinned ? `<span class="pin">고정</span>` : ""}${esc(n.title)}</span>
-          ${isNew(n) ? `<span class="newb">새 글</span>` : ""}
-        </button></li>`).join("")}</ul>`
-      : `<p class="empty">아직 공지가 없어요.</p>`}
-      <button class="more" type="button" data-act="go" data-tab="notice">공지 전체 보기</button>
-    </section>
+    <section class="card notice-card">${noticeListHTML()}</section>
   </div>
 
   ${kbHomeHTML()}
@@ -2071,11 +2061,8 @@ function homeHTML(){
 
   <div class="grid2">
     <section class="card">
-      <h2>오늘의 체크포인트</h2>
-      <ul class="checks">${checks.map(([s,t,sub,v]) => `
-        <li class="check ${s}">${ICON[s]}<span class="t">${t}<small>${S_LABEL[s]}, ${sub}</small></span><span class="s">${v}</span>
-          ${canTodo ? `<button type="button" class="mk" data-act="todo-new" data-title="${esc(t)} 확인">할 일로</button>` : ""}</li>`).join("")}
-      </ul>
+      <h2>오늘의 체크 포인트</h2>
+      ${checkListHTML()}
     </section>
     <section class="card">
       <div class="card-h"><h2>내 업무<span class="sub">${myOpen.length}개 남음</span></h2>
@@ -2228,7 +2215,7 @@ function calHTML(mode){
   let start, weeks;
   if (wk) { start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay()); weeks = 2; }
   else { const first = new Date(y, m, 1); start = new Date(y, m, 1 - first.getDay()); weeks = Math.ceil((first.getDay() + new Date(y, m + 1, 0).getDate()) / 7); }
-  const maxChips = wk ? 3 : 2, cells = [], team = calTeam();
+  const maxChips = wk ? 3 : 7, cells = [], team = calTeam();
   for (let i = 0; i < weeks * 7; i++){
     const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
     const key = isoOf(d), bds = birthdaysOn(key), tk = team ? null : myTasksOn(key),
@@ -2272,7 +2259,7 @@ function calHTML(mode){
     <div class="cal-legend">${Object.values(CAL_KIND).map(k => `<span><i style="background:${k.color}"></i>${k.label}</span>`).join("")}<span><i class="bd"></i>생일</span><span><i class="task"></i>${team ? "원 업무 (관리자만 보여요)" : "내 업무 (나만 보여요)"}</span>${gcal.status === "on" ? `<span><i class="mine"></i>내 구글 일정 (나만 보여요)</span>` : ""}</div>
     ${gcal.err ? `<p class="gc-err">${esc(gcal.err)}</p>` : ""}
     ${team && !wk ? teamMonthSum() : ""}
-    <div class="cal">
+    <div class="cal ${wk ? "wk" : "month"}">
       ${WD.map((w,i) => `<div class="dow ${i===0?"sun":i===6?"sat":""}">${w}</div>`).join("")}
       ${cells.join("")}
     </div>
@@ -2468,15 +2455,13 @@ function demoGcal(c, y, m){
     ...(tn ? [ev("d", "저녁 약속", at(tn, 19, 0, 120)), ...(tn < 27 ? [ev("e", "운동", at(tn + 1, 7, 0, 60))] : [])] : [])];
 }
 
-/* ── 공지 · 캘린더 화면 ── */
-function noticePageHTML(){
+/* ── 공지 (홈에만): 누르면 그 자리에서 펼쳐 읽음 ── */
+function noticeListHTML(){
   const list = sortNotices(state.notices.filter(visible)), canWrite = branchOptions("notices").length > 0;
   return `
-  <div class="head"><h1>공지 · 캘린더</h1>
-    <div class="acts">${canWrite ? `<button type="button" class="btn btn-primary btn-sm" data-act="notice-new">공지 쓰기</button>` : ""}</div></div>
-  <section class="card" style="margin-bottom:16px">
-    <div class="card-h"><h2>공지<span class="sub">${list.length}개</span></h2></div>
-    ${list.length ? `<ul class="nlist">${list.map(n => {
+    <div class="card-h"><h2>공지<span class="sub">${list.length}개</span></h2>
+      ${canWrite ? `<button type="button" class="btn btn-ghost btn-sm" data-act="notice-new">공지 쓰기</button>` : ""}</div>
+    <div class="nscroll">${list.length ? `<ul class="nlist">${list.map(n => {
       const open = state.openNotice === n.id;
       return `<li class="ni ${open ? "open" : ""}">
         <button type="button" class="ni-h" data-act="notice-toggle" data-id="${esc(n.id)}" data-fk="n-${esc(n.id)}" aria-expanded="${open}">
@@ -2486,9 +2471,12 @@ function noticePageHTML(){
         </button>
         ${open ? `<div class="ni-body">${esc(n.body || "") || "<span class='empty'>내용 없음</span>"}
           ${canEditPost(n) ? `<div class="ni-acts"><button type="button" class="icon-btn" data-act="notice-edit" data-id="${esc(n.id)}">수정</button></div>` : ""}</div>` : ""}
-      </li>`; }).join("")}</ul>` : `<p class="empty">아직 공지가 없어요.${canWrite ? " 오른쪽 위 '공지 쓰기'로 첫 공지를 올려 보세요." : ""}</p>`}
-  </section>
-  <section class="card" style="margin-bottom:16px"><h2>오늘의 체크 포인트</h2>${checkListHTML()}</section>
+      </li>`; }).join("")}</ul>` : `<p class="empty">아직 공지가 없어요.${canWrite ? " '공지 쓰기'로 첫 공지를 올려 보세요." : ""}</p>`}</div>`;
+}
+/* ── 캘린더 화면: 월간 캘린더 + 월간 계획표 ── */
+function noticePageHTML(){
+  return `
+  <div class="head"><h1>캘린더</h1></div>
   <section class="card" style="margin-bottom:16px">${calHTML("month")}</section>
   <section class="card">${planBoardHTML()}</section>`;
 }
@@ -3984,7 +3972,7 @@ $("view").addEventListener("click", e => {
     case "event-edit": { const ev = state.events.find(x => x.id === id); if (ev && canEditPost(ev)) eventForm(ev); break; }
     case "notice-new": noticeForm(null); break;
     case "notice-edit": { const nt = state.notices.find(x => x.id === id); if (nt && canEditPost(nt)) noticeForm(nt); break; }
-    case "notice-open": state.openNotice = id; goTab("notice"); break;
+    case "notice-open": state.openNotice = id; goTab("home"); break;
     case "notice-toggle": state.openNotice = state.openNotice === id ? null : id; renderView(); $("view").querySelector(`[data-fk="n-${id}"]`)?.focus(); break;
     case "todo-new": case "wh-new": taskForm(null, { title: el.dataset.title || "" }); break;
     case "wh-open": case "mh-open-task": { const t = state.tasks.find(x => x.id === id); if (t) (t.missionId ? missionTaskDialog : taskDialog)(t); break; }
@@ -5524,7 +5512,7 @@ function funnelHTML(snaps){
     <p class="fnote">막대 길이는 ${cols.length > 1 ? "세 원 공통 기준(가장 많은 문의)이에요. " : ""}회색 빗금 = 앞 단계에서 빠진 인원. ${k === "m" ? "이번 달에" : `최근 ${funLabel()} 동안`} 등록일이 있는 원생 기준. 샘플 진행 = '대기' 상태 제외, 샘플 후 등록 = 등록한 원생, 정규 등록 = 그중 지금 수업을 다니는 원생.</p>`;
 }
 
-/* ── 오늘의 체크 포인트 (공지 · 캘린더 화면에 표시): 원생 명단에서 뽑은 확인 대상 ── */
+/* ── 오늘의 체크 포인트 (홈에 표시): 원생 명단에서 뽑은 확인 대상 ── */
 function checkListHTML(){
   const snaps = visBranches().map(b => state.kpi[b]).filter(Boolean);
   if (!snaps.length) return `<p class="empty">원생 명단을 올리면 미납·미등록 원생이 여기 나와요.</p>`;
