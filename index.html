@@ -230,6 +230,14 @@
   .cal-none{font-size:13px;color:var(--text-sub);margin:0}
   /* 내 구글 일정 (본인 화면에만) — 공유 일정과 헷갈리지 않게 점선 */
   .chip.task{border-color:var(--ink);background:#F2F2F2;font-weight:700}.chip.task.done{opacity:.55;text-decoration:line-through}.chip.task.revise{border-color:#D1495B;background:#FDECEE}.chip.task.rt{border-color:#9E9E9E;background:#fff;font-weight:500}
+  .chip.task.late{border-color:#D1495B;background:#fff;color:#B3261E}.chip.task.submitted{border-color:#C98100;background:#FFF6E0}.chip.task.rt.late{border-color:#D1495B;color:#B3261E}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:var(--r-btn);overflow:hidden}.seg button{border:0;border-radius:0;margin:0}
+  .seg button[aria-pressed="true"]{background:var(--ink);color:var(--brand-yellow)}
+  .cal-tsum{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center;font-size:13px;color:var(--text);background:#fff;border:1px solid var(--line);border-radius:var(--r-card);padding:8px 12px;margin:0 0 8px;font-variant-numeric:tabular-nums}
+  .cal-tsum .ok{color:#1F7A4D}.cal-tsum .wait{color:#A86B00}.cal-tsum .bad{color:#B3261E}
+  .ev .who{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+  .who-b{font:inherit;font-size:12px;border:1px solid var(--c);color:var(--c);background:#fff;border-radius:4px;padding:2px 8px;cursor:pointer;display:inline-flex;gap:4px;align-items:center}
+  .who-b i{font-style:normal;font-size:11px;opacity:.85}.who-b:hover{background:#F7F7F7}
   .dots i.task,.cal-legend i.task{background:var(--ink)}.ev .k.task{background:var(--ink);color:var(--brand-yellow)}
   .chip.mine{background:#fff;border:1px dashed #BDBDBD;border-left:3px solid var(--text-sub)}
   .chip.mine b{font-weight:700;color:var(--text-sub)}
@@ -2177,6 +2185,38 @@ function myTasksOn(day){
   const L = (state.tasks || []).filter(t => t.assignee === myEmail() && t.due === day && t.status !== "canceled");
   return { one: L.filter(t => !t.routineId), rt: L.filter(t => t.routineId) };
 }
+/* 관리자: 내가 맡은 원의 업무를 캘린더에서 한눈에 (누가 무엇을, 잘 되고 있나). 나 / 원 전체 전환은 사람마다 기억 */
+const calTeamKey = () => "portal.calTeam." + myEmail().toLowerCase();
+const calTeam = () => anyMgr() && store.get(calTeamKey()) !== "0";
+const teamTasksOn = day => (state.tasks || []).filter(t => t.due === day && t.status !== "canceled" && isMgr(t.branch) && visible(t));
+// 같이 배정한 업무(groupId) · 같은 미션은 한 줄로 묶음. 루틴도 루틴별로 묶음
+function taskGroups(list){
+  const m = new Map();
+  for (const t of list){
+    const k = t.routineId ? "r_" + t.routineId + "_" + t.branch : t.missionId ? "m_" + t.missionId + "_" + t.branch : "g_" + (t.groupId || t.id);
+    if (!m.has(k)) m.set(k, { key:k, title:t.title, branch:t.branch, rt:!!t.routineId, mission:!!t.missionId, items:[] });
+    m.get(k).items.push(t);
+  }
+  return [...m.values()].map(g => {
+    const I = g.items.sort((a, b) => (a.assigneeName || "").localeCompare(b.assigneeName || ""));
+    const done = I.filter(t => t.status === "done").length, late = I.filter(whOpenPast).length,
+      sub = I.filter(t => t.status === "submitted").length, rev = I.filter(t => t.status === "revise").length;
+    const st = done === I.length ? "done" : rev ? "revise" : late ? "late" : sub ? "submitted" : "open";
+    return { ...g, done, late, sub, rev, st, n:I.length };
+  }).sort((a, b) => (a.rt - b.rt) || ({ late:0, revise:1, submitted:2, open:3, done:4 }[a.st] - { late:0, revise:1, submitted:2, open:3, done:4 }[b.st]) || a.title.localeCompare(b.title));
+}
+const grpChipTxt = g => g.n === 1 && !g.rt ? `${g.items[0].assigneeName || ""} · ${g.title}` : `${g.rt ? "루틴 " : ""}${g.title} ${g.done}/${g.n}`;
+function teamMonthSum(){
+  const { y, m } = state.cal, mk = `${y}-${String(m + 1).padStart(2, "0")}`;
+  const L = (state.tasks || []).filter(t => t.due && t.due.startsWith(mk) && t.status !== "canceled" && isMgr(t.branch) && visible(t) && !t.routineId);
+  const R = (state.tasks || []).filter(t => t.due && t.due.startsWith(mk) && t.due < todayISO() && t.status !== "canceled" && isMgr(t.branch) && visible(t) && t.routineId);
+  if (!L.length && !R.length) return "";
+  const c = f => L.filter(f).length, rd = R.filter(t => t.status === "done").length;
+  return `<div class="cal-tsum" role="status"><b>${m + 1}월 원 업무</b>
+    <span>배정 ${L.length}건</span><span class="ok">완료 ${c(t => t.status === "done")}</span>
+    <span class="wait">확인 대기 ${c(t => t.status === "submitted")}</span><span class="bad">보완 요청 ${c(t => t.status === "revise")}</span>
+    <span class="bad">지연 ${c(whLate)}</span>${R.length ? `<span title="어제까지의 루틴">루틴 수행 ${Math.round(rd / R.length * 100)}% (${rd}/${R.length})</span>` : ""}</div>`;
+}
 function taskGcalUrl(t){
   const d = x => x.replace(/-/g, "");
   const q = new URLSearchParams({ action:"TEMPLATE", text:`[업무] ${t.title}`, dates:`${d(t.due)}/${d(addDays(t.due, 1))}`,
@@ -2188,24 +2228,28 @@ function calHTML(mode){
   let start, weeks;
   if (wk) { start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay()); weeks = 2; }
   else { const first = new Date(y, m, 1); start = new Date(y, m, 1 - first.getDay()); weeks = Math.ceil((first.getDay() + new Date(y, m + 1, 0).getDate()) / 7); }
-  const maxChips = wk ? 3 : 2, cells = [];
+  const maxChips = wk ? 3 : 2, cells = [], team = calTeam();
   for (let i = 0; i < weeks * 7; i++){
     const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
-    const key = isoOf(d), bds = birthdaysOn(key), tk = myTasksOn(key),
-      evs = [...tk.one.map(t => ({ task:t, title:t.title })), ...(tk.rt.length ? [{ rt:tk.rt, title:`루틴 ${tk.rt.filter(t => t.status === "done").length}/${tk.rt.length}` }] : []), ...bds.map(b => ({ bd:true, title:`${b.name} 생일` })), ...eventsOn(key)],
+    const key = isoOf(d), bds = birthdaysOn(key), tk = team ? null : myTasksOn(key),
+      tEvs = team ? (() => { const G = taskGroups(teamTasksOn(key)), one = G.filter(g => !g.rt), rt = G.filter(g => g.rt);
+          const rd = rt.reduce((a, g) => a + g.done, 0), rn = rt.reduce((a, g) => a + g.n, 0);
+          return [...one.map(g => ({ grp:g, title:grpChipTxt(g) })), ...(rn ? [{ rt:true, title:`루틴 ${rd}/${rn}`, late: key < today && rd < rn }] : [])]; })()
+        : [...tk.one.map(t => ({ task:t, title:t.title })), ...(tk.rt.length ? [{ rt:tk.rt, title:`루틴 ${tk.rt.filter(t => t.status === "done").length}/${tk.rt.length}` }] : [])],
+      evs = [...tEvs, ...bds.map(b => ({ bd:true, title:`${b.name} 생일` })), ...eventsOn(key)],
       mine = gcalOn(key), n = evs.length + mine.length, dow = d.getDay(), hol = holidayOn(key);
     const numTxt = wk && (i === 0 || d.getDate() === 1) ? `${d.getMonth()+1}/${d.getDate()}` : d.getDate();
     const cls = ["day", !wk && d.getMonth() !== m && "out", dow === 0 && "sun", dow === 6 && "sat", hol && "hol", key === today && "today", key === sel && "sel"].filter(Boolean).join(" ");
     cells.push(`<button type="button" class="${cls}" data-act="cal-day" data-day="${key}" data-fk="day-${key}"
         aria-label="${d.getMonth()+1}월 ${d.getDate()}일${hol ? `, ${hol}` : ""}${n ? `, 일정 ${n}개` : ""}" aria-pressed="${key === sel}">
       <span class="num">${numTxt}</span>${hol ? `<span class="hn">${esc(hol)}</span>` : ""}
-      ${evs.slice(0, maxChips).map(e => e.task ? `<span class="chip task ${e.task.status}">${e.task.status === "done" ? "✓ " : ""}${esc(e.title)}</span>` : e.rt ? `<span class="chip task rt">${esc(e.title)}</span>` : e.bd ? `<span class="chip bd">${esc(e.title)}</span>` : `<span class="chip" style="border-color:${CAL_KIND[e.kind]?.color}">${esc(e.title)}</span>`).join("")}
+      ${evs.slice(0, maxChips).map(e => e.grp ? `<span class="chip task ${e.grp.st}">${e.grp.st === "done" ? "✓ " : e.grp.st === "late" ? "! " : ""}${esc(e.title)}</span>` : e.rt && team ? `<span class="chip task rt ${e.late ? "late" : ""}">${esc(e.title)}</span>` : e.task ? `<span class="chip task ${e.task.status}">${e.task.status === "done" ? "✓ " : ""}${esc(e.title)}</span>` : e.rt ? `<span class="chip task rt">${esc(e.title)}</span>` : e.bd ? `<span class="chip bd">${esc(e.title)}</span>` : `<span class="chip" style="border-color:${CAL_KIND[e.kind]?.color}">${esc(e.title)}</span>`).join("")}
       ${mine.slice(0, Math.max(0, maxChips - evs.length)).map(e => `<span class="chip mine">${e.allDay ? "" : `<b>${e.time}</b> `}${esc(e.title)}</span>`).join("")}
       ${n > maxChips ? `<span class="more-n">+${n - maxChips}</span>` : ""}
-      ${n ? `<span class="dots">${evs.slice(0,3).map(e => e.task || e.rt ? `<i class="task"></i>` : `<i style="background:${e.bd ? "#1F7A4D" : CAL_KIND[e.kind]?.color}"></i>`).join("")}${mine.slice(0, Math.max(0, 3 - evs.length)).map(() => `<i class="mine"></i>`).join("")}</span>` : ""}
+      ${n ? `<span class="dots">${evs.slice(0,3).map(e => e.task || e.rt || e.grp ? `<i class="task"></i>` : `<i style="background:${e.bd ? "#1F7A4D" : CAL_KIND[e.kind]?.color}"></i>`).join("")}${mine.slice(0, Math.max(0, 3 - evs.length)).map(() => `<i class="mine"></i>`).join("")}</span>` : ""}
     </button>`);
   }
-  const selTk = myTasksOn(sel), selTasks = [...selTk.one, ...selTk.rt];
+  const selTk = team ? { one:[], rt:[] } : myTasksOn(sel), selTasks = [...selTk.one, ...selTk.rt], selGrp = team ? taskGroups(teamTasksOn(sel)) : [];
   const selEvs = eventsOn(sel), selMine = gcalOn(sel), selHol = holidayOn(sel), selBd = birthdaysOn(sel), canAdd = branchOptions("events").length > 0;
   const gBtn = !gcalCanUse() ? "" : gcal.status === "on"
     ? `<button type="button" class="gc-on" data-act="gcal-set" data-tip="내 구글 일정은 나만 보여요. 눌러서 캘린더 고르기 · 연결 끊기">내 구글 ${gcal.loading.size ? "불러오는 중…" : "표시 중"}</button>`
@@ -2219,13 +2263,15 @@ function calHTML(mode){
         ${wk ? "" : `<button type="button" data-act="cal-prev" data-fk="cal-prev" aria-label="이전 달">${arrow("m15 6-6 6 6 6")}</button>
           <button type="button" data-act="cal-today" data-fk="cal-today">오늘</button>
           <button type="button" data-act="cal-next" data-fk="cal-next" aria-label="다음 달">${arrow("m9 6 6 6-6 6")}</button>`}
+        ${anyMgr() ? `<span class="seg" role="group" aria-label="캘린더에 보일 업무"><button type="button" data-act="cal-team" data-v="0" aria-pressed="${!team}">내 업무</button><button type="button" data-act="cal-team" data-v="1" aria-pressed="${team}" data-tip="내가 맡은 원 선생님들의 업무를 마감일에 보여줘요. 이름을 누르면 그 업무가 열려요.">원 업무</button></span>` : ""}
         ${gBtn}
         ${canAdd ? `<button type="button" data-act="event-new" data-date="${sel}">일정 추가</button>` : ""}
         ${wk ? `<button type="button" data-act="go" data-tab="notice">전체 캘린더</button>` : ""}
       </div>
     </div>
-    <div class="cal-legend">${Object.values(CAL_KIND).map(k => `<span><i style="background:${k.color}"></i>${k.label}</span>`).join("")}<span><i class="bd"></i>생일</span><span><i class="task"></i>내 업무 (나만 보여요)</span>${gcal.status === "on" ? `<span><i class="mine"></i>내 구글 일정 (나만 보여요)</span>` : ""}</div>
+    <div class="cal-legend">${Object.values(CAL_KIND).map(k => `<span><i style="background:${k.color}"></i>${k.label}</span>`).join("")}<span><i class="bd"></i>생일</span><span><i class="task"></i>${team ? "원 업무 (관리자만 보여요)" : "내 업무 (나만 보여요)"}</span>${gcal.status === "on" ? `<span><i class="mine"></i>내 구글 일정 (나만 보여요)</span>` : ""}</div>
     ${gcal.err ? `<p class="gc-err">${esc(gcal.err)}</p>` : ""}
+    ${team && !wk ? teamMonthSum() : ""}
     <div class="cal">
       ${WD.map((w,i) => `<div class="dow ${i===0?"sun":i===6?"sat":""}">${w}</div>`).join("")}
       ${cells.join("")}
@@ -2233,6 +2279,10 @@ function calHTML(mode){
     <div class="cal-day">
       <h3>${selTitle}${sel === today ? " (오늘)" : ""}</h3>
       ${selHol ? `<div class="ev"><span class="k hol">공휴일</span><span class="t">${esc(selHol)}</span></div>` : ""}
+      ${selGrp.map(g => `<div class="ev grp"><span class="k task">${g.rt ? "루틴" : g.mission ? "미션" : "업무"}</span>
+          <span class="t">${esc(g.title)}<small>${g.n > 1 ? `${g.n}명 중 완료 ${g.done}` : ""}${g.sub ? `${g.n > 1 ? " · " : ""}확인 대기 ${g.sub}` : ""}${g.rev ? " · 보완 요청 " + g.rev : ""}${g.late ? ` · ${g.rt ? "안 함" : "지연"} ${g.late}` : ""}</small>
+            <span class="who">${g.items.map(t => `<button type="button" class="who-b" data-act="wh-open" data-id="${esc(t.id)}" style="--c:${whOpenPast(t) ? "#D1495B" : (WH_ST[t.status] || WH_ST.todo)[1]}" title="${esc(t.assigneeName || "")} — ${esc(whOpenPast(t) ? (t.routineId ? "안 함" : "지연") : (WH_ST[t.status] || WH_ST.todo)[0])}${(t.checklist || []).length ? ` · 체크 ${whChecks(t).c}/${whChecks(t).n}` : ""}">${t.status === "done" ? "✓ " : ""}${esc(t.assigneeName || t.assignee)}<i>${esc(whOpenPast(t) ? (t.routineId ? "안 함" : "지연") : (WH_ST[t.status] || WH_ST.todo)[0])}</i></button>`).join("")}</span></span>
+          <span class="w">${esc(SHORT[g.branch] || "")}</span></div>`).join("")}
       ${selTasks.map(t => `<div class="ev"><span class="k task">${t.routineId ? "루틴" : "내 업무"}</span>
           <span class="t">${esc(t.title)}<small>${esc((WH_ST[t.status] || WH_ST.todo)[0])}${(t.checklist || []).length ? ` · 체크 ${whChecks(t).c}/${whChecks(t).n}` : ""}${t.needCheck ? " · 확인 필요" : ""}</small></span>
           <span class="w">${esc(SHORT[t.branch] || "")}</span>
@@ -2253,7 +2303,7 @@ function calHTML(mode){
           <span class="w">${esc(e.cal)}</span>
           ${e.link ? `<a class="icon-btn" href="${esc(e.link)}" target="_blank" rel="noopener">구글에서 보기</a>` : ""}
         </div>`).join("")}
-      ${selEvs.length || selMine.length || selHol || selBd.length || selTasks.length ? "" : `<p class="cal-none">이날은 일정이 없어요.</p>`}
+      ${selEvs.length || selMine.length || selHol || selBd.length || selTasks.length || selGrp.length ? "" : `<p class="cal-none">이날은 일정이 없어요.</p>`}
     </div>`;
 }
 
@@ -3918,6 +3968,7 @@ $("view").addEventListener("click", e => {
   const act = el.dataset.act, id = el.dataset.id;
   switch (act){
     case "go": goTab(el.dataset.tab); break;
+    case "cal-team": store.set(calTeamKey(), el.dataset.v); renderView({ keepFocus:true }); break;
     case "cal-day": { const d = parse(el.dataset.day); state.cal = { y:d.getFullYear(), m:d.getMonth(), sel:el.dataset.day }; renderView(); $("view").querySelector(`[data-fk="day-${el.dataset.day}"]`)?.focus(); break; }
     case "cal-prev": case "cal-next": {
       const d = new Date(state.cal.y, state.cal.m + (act === "cal-next" ? 1 : -1), 1), now = new Date();
