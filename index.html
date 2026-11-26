@@ -160,6 +160,7 @@
   .htop{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:16px;margin-bottom:16px;align-items:stretch}
   .htop > .card{margin:0}
   .cal-day.cal-day-hide{display:none}
+  .htop .htiles{grid-template-columns:repeat(3,minmax(0,1fr))}.htop .htiles span{font-size:11px}
   .hbar{display:flex;align-items:center;gap:8px;margin:0 0 8px;flex-wrap:wrap}.hbar .sp{flex:1}
   .hgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:start;margin-bottom:16px}
   .hgrid .hc{grid-column:span var(--w);margin:0;min-width:0}
@@ -2094,7 +2095,7 @@ function homeCards(){
   const list = Array.isArray(saved) ? saved : HOME_DEF[k].map(([id, w]) => ({ id, w }));
   return list.filter(c => lib.includes(c.id)).map(c => ({ id:c.id, w: [1,2,3].includes(c.w) ? c.w : 1 }));
 }
-const homeLib = () => homeKind() === "m" ? [...M_IDS, ...T_IDS] : T_IDS.filter(id => id !== "T17");
+const homeLib = () => homeKind() === "m" ? [...M_IDS.filter(id => id !== "M15"), ...T_IDS] : T_IDS.filter(id => id !== "T17");
 async function homeSave(cards){
   const k = homeKind(), all = { ...(state.home || {}), [k]: cards };
   state.home = all; store.set(homeKey(), JSON.stringify(all)); renderView({ keepFocus:true });
@@ -2193,13 +2194,6 @@ function progressHTML(){
       <p class="hnote">오늘 마감 · 지연 업무와 오늘 끝낸 일 기준 (제출하면 끝낸 걸로 셈)</p>`
     : `<p class="empty">오늘 마감인 일이 없어요.</p>`;
 }
-function shortcutHTML(){
-  const B = [[anyMgr(), "wh-new", "업무 배정"], [anyMgr(), "wh-routine-new", "루틴 만들기"], [anyMgr(), "mh-new", "미션 만들기"], [canPost() && branchOptions("notices").length > 0, "notice-new", "공지 쓰기"],
-    [branchOptions("events").length > 0, "event-new", "일정 추가"], [isCurator(), "man-new", "매뉴얼 쓰기"]].filter(b => b[0]);
-  const V = mgrVisTasks(), sub = V.filter(t => t.status === "submitted").length, late = V.filter(whLate).length;
-  return `<div class="card-h"><h2>바로가기</h2></div><div class="hsc">${B.map(([, a, l]) => `<button type="button" class="btn btn-ghost" data-act="${a}">＋ ${l}</button>`).join("")}</div>
-    ${sub || late ? `<p class="wh-alert">${sub ? `<button type="button" class="linkish" data-act="go-wh" data-v="review">확인 대기 ${sub}건</button>` : ""}${late ? `<button type="button" class="linkish" data-act="go-wh" data-v="board" data-f="late">지연 ${late}건</button>` : ""}</p>` : ""}`;
-}
 function homeHTML(){
   const k = homeKind(), cards = homeCards(), edit = !!state.homeEdit, lib = homeLib(), hidden = lib.filter(id => !cards.some(c => c.id === id));
   const card = ({ id, w }, i) => { let r; try { r = HC[id].f(); } catch (e) { console.error(id, e); r = { body:`<p class="empty">불러오지 못했어요.</p>` }; }
@@ -2212,7 +2206,7 @@ function homeHTML(){
   return `
   <div class="htop ${k}">
     <section class="card notice-card">${noticeListHTML()}</section>
-    <section class="card">${k === "m" ? shortcutHTML() : `<div class="card-h"><h2>오늘 진행률</h2></div>${progressHTML()}`}</section>
+    <section class="card">${k === "m" ? `<div class="card-h"><h2>이번 달 업무 성적표</h2></div>${HC.M15.f().body}` : `<div class="card-h"><h2>오늘 진행률</h2></div>${progressHTML()}`}</section>
   </div>
   <section class="card wide-cal">${calHTML("week")}</section>
   ${kbHomeHTML()}
