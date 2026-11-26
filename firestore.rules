@@ -220,6 +220,12 @@ service cloud.firestore {
         && request.resource.data.date is string && request.resource.data.jarvisId is string && request.resource.data.time is string;
       allow delete: if isAdmin();
     }
+    // 자비스 업로더 허용 목록: 직원 계정의 '자비스 아이디'를 대표 화면이 모아 저장. 업로더 서버(jarvis-bot)는 이것만 읽음
+    match /portalJarvisAllow/{id} {
+      allow read: if isAdmin() || (signedIn() && email() == 'jarvis-bot@jarada-jpone.firebaseapp.com');
+      allow write: if isAdmin() && request.resource.data.keys().hasOnly(['ids', 'at', 'by'])
+        && request.resource.data.ids is list && request.resource.data.ids.size() <= 300;
+    }
     // 홈 카드 배치: 문서 ID = 본인 이메일, 본인만 (t = 교사 카드, m = 관리자 카드 순서·폭)
     match /portalHome/{mail} {
       allow read: if isMember() && resource.data.owner == email();

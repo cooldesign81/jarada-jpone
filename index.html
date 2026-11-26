@@ -1122,8 +1122,8 @@ const BRANCH_KEYS = ["pyeongchon","banpo","daechi"];
 const SHORT = { pyeongchon:"평촌", banpo:"반포", daechi:"대치" };
 
 /* Firestore 컬렉션 이름 */
-const COLL = { notices:"portalNotices", events:"portalEvents", todos:"portalTodos", files:"portalFiles", bookmarks:"portalBookmarks", bmGroups:"portalBmGroups", kpi:"portalKpi", kpiPriv:"portalKpiPrivate", folders:"portalFolders", members:"portalMembers", birthdays:"portalBirthdays", teachers:"portalTeachers", manuals:"portalManuals", counsel:"portalCounsel", revenue:"portalRevenue", manCats:"portalManCats", tasks:"portalTasks", routines:"portalRoutines", missions:"portalMissions", evals:"portalEvals", nasJobs:"portalNasJobs", nasStatus:"portalNasStatus", plans:"portalPlans", favs:"portalFavs", acks:"portalAcks", requests:"portalRequests", home:"portalHome", jarvis:"portalJarvis" };
-const COLL_LABEL = { notices:"공지", events:"일정", todos:"할 일", files:"자료", bookmarks:"북마크", bmGroups:"북마크 구분", kpi:"대시보드", kpiPriv:"대시보드(금액)", folders:"자료실 폴더", members:"직원 계정", birthdays:"생일", teachers:"선생님 입사월", manuals:"업무매뉴얼", counsel:"상담 현황", revenue:"과거 매출", manCats:"매뉴얼 분류", tasks:"워크허브 업무", routines:"루틴", missions:"미션", evals:"미션 평가", nasJobs:"NAS 작업", nasStatus:"NAS 커넥터 상태", plans:"월간 계획", favs:"즐겨찾기", acks:"필독 확인", requests:"수정 요청", home:"홈 배치", jarvis:"관찰일지 기록" };
+const COLL = { notices:"portalNotices", events:"portalEvents", todos:"portalTodos", files:"portalFiles", bookmarks:"portalBookmarks", bmGroups:"portalBmGroups", kpi:"portalKpi", kpiPriv:"portalKpiPrivate", folders:"portalFolders", members:"portalMembers", birthdays:"portalBirthdays", teachers:"portalTeachers", manuals:"portalManuals", counsel:"portalCounsel", revenue:"portalRevenue", manCats:"portalManCats", tasks:"portalTasks", routines:"portalRoutines", missions:"portalMissions", evals:"portalEvals", nasJobs:"portalNasJobs", nasStatus:"portalNasStatus", plans:"portalPlans", favs:"portalFavs", acks:"portalAcks", requests:"portalRequests", home:"portalHome", jarvis:"portalJarvis", jarvisAllow:"portalJarvisAllow" };
+const COLL_LABEL = { notices:"공지", events:"일정", todos:"할 일", files:"자료", bookmarks:"북마크", bmGroups:"북마크 구분", kpi:"대시보드", kpiPriv:"대시보드(금액)", folders:"자료실 폴더", members:"직원 계정", birthdays:"생일", teachers:"선생님 입사월", manuals:"업무매뉴얼", counsel:"상담 현황", revenue:"과거 매출", manCats:"매뉴얼 분류", tasks:"워크허브 업무", routines:"루틴", missions:"미션", evals:"미션 평가", nasJobs:"NAS 작업", nasStatus:"NAS 커넥터 상태", plans:"월간 계획", favs:"즐겨찾기", acks:"필독 확인", requests:"수정 요청", home:"홈 배치", jarvis:"관찰일지 기록", jarvisAllow:"자비스 허용 목록" };
 /* 북마크 구분선 색 */
 const LINE_COLORS = [["#222222","검정"],["#DE8619","주황"],["#C98100","황토"],["#D1495B","빨강"],["#8B5CF6","보라"],["#2563A6","파랑"],["#1F7A4D","초록"],["#767676","회색"]];
 
@@ -1719,6 +1719,7 @@ async function enter(user){
 }
 function onData(name){
   state.loaded[name] = true;
+  if (name === "members") syncJarvisAllowSoon();   // 자비스 업로더 허용 목록
   if (name === "members") { renderMemList(); if (state.tab !== "todo") return; }
   if (name === "manCats") state.loaded.manCats = true;
   if (name === "events") syncClosedSoon();   // 공휴일·휴원 → 스케줄 매니저 달력
@@ -2594,6 +2595,20 @@ function closedDaysFor(b){
     if (names.length) out[d] = [...new Set(names)].join(" · ");
   }
   return out;
+}
+/* ── 자비스 업로더 허용 목록 = 직원 계정의 '자비스 아이디' (로그인 허용된 사람만) ──
+   업로더 서버(jarvis-bot)는 이 문서 하나만 읽음. 대표 화면이 열려 있을 때 바뀌면 다시 저장 */
+let jvAllowLast = null;
+function syncJarvisAllowSoon(){ clearTimeout(syncJarvisAllowSoon.t); syncJarvisAllowSoon.t = setTimeout(syncJarvisAllow, 1500); }
+async function syncJarvisAllow(){
+  if (DEMO || !state.isAdmin || !state.loaded.members) return;
+  const ids = [...new Set(state.members.filter(m => m.active !== false && String(m.jarvisId || "").trim()).map(m => String(m.jarvisId).trim()))].sort();
+  const json = JSON.stringify(ids); if (json === jvAllowLast) return;
+  try {
+    const cur = await fb.F.getDoc(fb.F.doc(fb.db, COLL.jarvisAllow, "list"));
+    if (JSON.stringify((cur.exists() && cur.data().ids) || []) !== json) await DB.set("jarvisAllow", "list", { ids, at: Date.now(), by: myEmail() });
+    jvAllowLast = json;
+  } catch (e) { console.warn("자비스 허용 목록 저장 실패", e.code || e); }
 }
 const closedLast = {};
 function syncClosedSoon(){ clearTimeout(syncClosedSoon.t); syncClosedSoon.t = setTimeout(syncClosed, 2500); }
@@ -4848,7 +4863,7 @@ function renderMemList(){
    문서 ID에 예전 이메일이 들어간 것(직원 계정·즐겨찾기 등)은 새 ID로 옮김. 이름·내용은 그대로.
    항상 찾아보기(미리보기) → 확인 → 적용 (지침 2-2). 다른 앱 출입 명단은 끝난 뒤 '앱에 명단 보내기'로 맞춤
    ===================================================================== */
-const MOVE_SKIP = ["kpi", "kpiPriv", "counsel", "revenue", "nasStatus", "home", "jarvis"];   // 원별 숫자 자료: 개인 이메일 없음
+const MOVE_SKIP = ["kpi", "kpiPriv", "counsel", "revenue", "nasStatus", "home", "jarvis", "jarvisAllow"];   // 원별 숫자 자료: 개인 이메일 없음
 function swapEmail(v, from, to){
   if (typeof v === "string") return v.toLowerCase() === from ? to : v;
   if (Array.isArray(v)) return v.map(x => swapEmail(x, from, to));
