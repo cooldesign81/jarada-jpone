@@ -2153,12 +2153,27 @@ async function linkBoot(){
   for (const k of linkKeys()) await linkOne(k, false);
   linkRerender();
 }
-// '앱 연결' 버튼: 첫 앱은 구글 창, 그 토큰으로 나머지는 자동
-async function linkAll(){
+// '앱 연결' 버튼: 누르자마자 구글 창을 엶 (앞에 기다리는 게 있으면 브라우저가 팝업을 막음). 그 토큰으로 나머지는 조용히
+function linkAll(){
   const todo = linkKeys().filter(k => link[k].status !== "ok");
-  for (const k of todo) { await linkOne(k, !linkTok()); linkRerender(); }
-  const bad = todo.filter(k => link[k].status !== "ok");
-  toast(bad.length ? `${bad.map(k => LINK_NAME[k]).join(", ")} 연결이 안 됐어요. ${link[bad[0]].msg || ""}` : "앱을 모두 연결했어요.");
+  if (!todo.length) return;
+  if (DEMO) { (async () => { for (const k of todo) await linkOne(k, false); linkRerender(); toast("앱을 모두 연결했어요."); })(); return; }
+  const first = todo[0], x = extApps[first];
+  if (!x) { toast("연결 준비 중이에요. 잠깐 뒤 다시 눌러 주세요."); linkBoot(); return; }
+  const p = new fb.A.GoogleAuthProvider(); p.setCustomParameters({ login_hint: myEmail() });
+  const popup = fb.A.signInWithPopup(x.auth, p);   // ← 클릭 안에서 바로 호출
+  link[first] = { status:"loading" }; linkRerender();
+  popup.then(async r => {
+    if ((r.user?.email || "").toLowerCase() !== myEmail().toLowerCase()) { await fb.A.signOut(x.auth); throw Object.assign(new Error("JP ONE과 같은 구글 계정으로 연결해 주세요."), { code:"link/other-account" }); }
+    linkStash(r);
+    await linkOne(first, false); linkRerender();
+    for (const k of todo.slice(1)) { await linkOne(k, false); linkRerender(); }
+  }).catch(e => { link[first] = { status:"error", msg: LINK_ERR(e) }; })
+    .finally(() => {
+      linkRerender();
+      const left = linkKeys().filter(k => link[k].status !== "ok");
+      toast(!left.length ? "앱을 모두 연결했어요." : left.length < todo.length ? `${left.length}개 앱이 남았어요. '앱 연결하기'를 한 번 더 눌러 주세요.` : `연결이 안 됐어요. ${link[left[0]].msg || ""}`);
+    });
 }
 function linkStop(){ for (const k of Object.keys(linkUnsub)) { try { linkUnsub[k](); } catch {} delete linkUnsub[k]; } for (const k of Object.keys(link)) link[k] = { status:"off" }; }
 
