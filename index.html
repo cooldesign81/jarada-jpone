@@ -1107,7 +1107,7 @@ const ADMIN_EMAILS = ["jinhyuck@gmail.com"];
 const DEMO_MEMBERS = [
   { email:"minsu.teacher@gmail.com", name:"김민수", branches:["pyeongchon"], jarvisId:"minsu01" },
   { email:"jimin.teacher@gmail.com", name:"한지민", branches:["banpo"], jarvisId:"jimin02" },
-  { email:"jaehong.teacher@gmail.com", name:"허재홍", branches:["pyeongchon","banpo"], jarvisId:"jaehong03" },
+  { email:"jaehong.teacher@gmail.com", name:"허재홍", branches:["pyeongchon","banpo"], jarvisId:"jaehong03, jaehong_bp" },
   { email:"ops.manager@gmail.com", name:"운영 매니저", branches:["pyeongchon","banpo","daechi"] },
   { email:"sihyung.manager@gmail.com", name:"이시형", branches:["pyeongchon"], manager:true }
 ];
@@ -1401,6 +1401,7 @@ function seed(){
       { id:"j1", date:t, jarvisId:"minsu01", weekday:"", time:"13:30", total:6, done:6, absent:0, fail:0, at:ago(0) },
       { id:"j2", date:t, jarvisId:"jaehong03", weekday:"", time:"13:30", total:7, done:6, absent:1, fail:0, at:ago(0) },
       { id:"j3", date:t, jarvisId:"jaehong03", weekday:"", time:"15:10", total:8, done:8, absent:0, fail:0, at:ago(0) },
+      { id:"j5", date:t, jarvisId:"jaehong_bp", weekday:"", time:"16:50", total:5, done:5, absent:0, fail:0, at:ago(0) },
       { id:"j4", date:t, jarvisId:"jimin02", weekday:"", time:"13:30", total:6, done:5, absent:1, fail:0, at:ago(0) }
     ],
     bmGroups: [
@@ -2269,7 +2270,9 @@ function mySlots(d = todayISO()){
   for (const b of linkKeys().filter(k => BRANCH_KEYS.includes(k))) { const s = schedDay(b, d); if (s) for (const r of s.slots || []) if (isMyTeacherName(r.teacher)) out.push({ ...r, b }); }
   return out.sort((a, c) => a.time.localeCompare(c.time));
 }
-const jarvisOf = (jid, d = todayISO()) => (state.jarvis || []).filter(x => x.date === d && String(x.jarvisId || "").toLowerCase() === String(jid || "").toLowerCase()).sort((a, b) => (a.time || "").localeCompare(b.time || ""));
+// 자비스 아이디는 원마다 다를 수 있어 쉼표로 여러 개 (예: "minsu01, minsu_banpo")
+const jvIds = v => String(v || "").split(/[,\s/]+/).map(x => x.trim()).filter(Boolean);
+const jarvisOf = (jid, d = todayISO()) => { const ids = jvIds(jid).map(x => x.toLowerCase()); return (state.jarvis || []).filter(x => x.date === d && ids.includes(String(x.jarvisId || "").toLowerCase())).sort((a, b) => (a.time || "").localeCompare(b.time || "")); };
 const markKind = m => ["absent", "sickLeave", "noshow"].includes(m.s) ? "abs" : m.t === "makeup" ? "mk" : m.t === "newStudent" ? "new" : m.t === "sample" ? "smp" : ["moveOut", "leave", "withdrawn", "substituteOut"].includes(m.t) ? "away" : "etc";
 const slotCount = L => { const M = L.flatMap(r => r.marks || []); const c = k => M.filter(m => markKind(m) === k).length;
   return { classes:L.length, students:L.reduce((t, r) => t + (r.present || 0), 0), abs:c("abs"), mk:c("mk"), nw:c("new"), smp:c("smp"), away:c("away") }; };
@@ -2602,7 +2605,7 @@ let jvAllowLast = null;
 function syncJarvisAllowSoon(){ clearTimeout(syncJarvisAllowSoon.t); syncJarvisAllowSoon.t = setTimeout(syncJarvisAllow, 1500); }
 async function syncJarvisAllow(){
   if (DEMO || !state.isAdmin || !state.loaded.members) return;
-  const ids = [...new Set(state.members.filter(m => m.active !== false && String(m.jarvisId || "").trim()).map(m => String(m.jarvisId).trim()))].sort();
+  const ids = [...new Set(state.members.filter(m => m.active !== false).flatMap(m => jvIds(m.jarvisId)))].sort();
   const json = JSON.stringify(ids); if (json === jvAllowLast) return;
   try {
     const cur = await fb.F.getDoc(fb.F.doc(fb.db, COLL.jarvisAllow, "list"));
@@ -4831,7 +4834,7 @@ function membersDialog(){
         await memUpdate(id, { branches: row });
       }
       if (t.dataset.memSn !== undefined) { await memUpdate(t.dataset.memSn, { scheduleName: t.value.trim() }); toast("스케줄 이름을 저장했어요."); }
-      if (t.dataset.memJv !== undefined) { await memUpdate(t.dataset.memJv, { jarvisId: t.value.trim() }); toast("자비스 아이디를 저장했어요."); }
+      if (t.dataset.memJv !== undefined) { const v = jvIds(t.value).join(", "); t.value = v; await memUpdate(t.dataset.memJv, { jarvisId: v }); toast(v.includes(",") ? `자비스 아이디 ${jvIds(v).length}개를 저장했어요.` : "자비스 아이디를 저장했어요."); }
       if (t.dataset.memActive) await memUpdate(t.dataset.memActive, { active: t.checked });
       if (t.dataset.memMgr) await memUpdate(t.dataset.memMgr, { manager: t.checked });
       if (t.dataset.memCur) await memUpdate(t.dataset.memCur, { curator: t.checked });
@@ -4843,7 +4846,7 @@ function renderMemList(){
   const box = $("memList"); if (!box) return;
   const first = m => { const bs = memBranches(m); return isAllThree(bs) ? -1 : BRANCH_KEYS.indexOf(bs[0]); };
   const list = [...state.members].sort((a,b) => first(a) - first(b) || (a.name || "").localeCompare(b.name || ""));
-  box.innerHTML = list.length ? `<table class="mtable"><thead><tr><th>이름</th><th>구글 이메일</th><th>원</th><th>관리자</th><th title="자료실 검토·게시, 매뉴얼 작성">자료 담당</th><th title="공식 매뉴얼 승인·개정">매뉴얼 승인</th><th title="스케줄 매니저 시간표에 적힌 이 선생님 이름 (직원 계정 이름과 다를 때만)">스케줄 이름</th><th title="자비스(관찰일지) 로그인 아이디 — JP ONE 홈 '관찰일지' 카드가 이 아이디로 올린 반을 찾아요">자비스 아이디</th><th>로그인</th><th></th></tr></thead><tbody>
+  box.innerHTML = list.length ? `<table class="mtable"><thead><tr><th>이름</th><th>구글 이메일</th><th>원</th><th>관리자</th><th title="자료실 검토·게시, 매뉴얼 작성">자료 담당</th><th title="공식 매뉴얼 승인·개정">매뉴얼 승인</th><th title="스케줄 매니저 시간표에 적힌 이 선생님 이름 (직원 계정 이름과 다를 때만)">스케줄 이름</th><th title="자비스(관찰일지) 로그인 아이디. 원마다 아이디가 다르면 쉼표로 여러 개 — JP ONE 홈 '관찰일지' 카드가 이 아이디로 올린 반을 찾아요">자비스 아이디</th><th>로그인</th><th></th></tr></thead><tbody>
     ${list.map(m => `<tr class="${m.active === false ? "off" : ""}">
       <td>${esc(m.name || "")}${m.source === "people" ? "<small>JP People</small>" : ""}</td>
       <td class="em">${esc(m.id)}</td>
@@ -4852,7 +4855,7 @@ function renderMemList(){
       <td><input type="checkbox" data-mem-cur="${esc(m.id)}" ${(m.curator ?? !!m.manager) ? "checked" : ""} aria-label="${esc(m.name)} 자료 담당자" title="자료실 자료를 검토·게시하고 매뉴얼을 써서 승인 요청해요"></td>
       <td><input type="checkbox" data-mem-apr="${esc(m.id)}" ${m.approver ? "checked" : ""} aria-label="${esc(m.name)} 매뉴얼 승인자" title="공식 매뉴얼을 승인·개정해요"></td>
       <td><input type="text" class="mem-jv" data-mem-sn="${esc(m.id)}" value="${esc(m.scheduleName || "")}" maxlength="20" placeholder="${esc(m.name || "-")}" aria-label="${esc(m.name)} 스케줄 이름"></td>
-      <td><input type="text" class="mem-jv" data-mem-jv="${esc(m.id)}" value="${esc(m.jarvisId || "")}" maxlength="40" placeholder="-" aria-label="${esc(m.name)} 자비스 아이디"></td>
+      <td><input type="text" class="mem-jv" data-mem-jv="${esc(m.id)}" value="${esc(m.jarvisId || "")}" maxlength="120" placeholder="-" title="두 원을 다니면 쉼표로 여러 개 (예: minsu01, minsu_banpo)" aria-label="${esc(m.name)} 자비스 아이디 (여러 개면 쉼표로)"></td>
       <td><input type="checkbox" data-mem-active="${esc(m.id)}" ${m.active !== false ? "checked" : ""} aria-label="${esc(m.name)} 로그인 허용"></td>
       <td class="mem-acts"><button type="button" class="icon-btn" data-mem-move="${esc(m.id)}" title="구글 계정이 바뀐 사람: 예전 계정의 기록을 새 계정으로 옮겨요">계정 바꾸기</button><button type="button" class="icon-btn" data-mem-del="${esc(m.id)}">삭제</button></td></tr>`).join("")}</tbody></table>`
     : `<p class="empty">아직 등록된 직원 계정이 없어요. JP People에서 불러오거나 아래에서 직접 추가해 주세요.</p>`;
