@@ -166,6 +166,7 @@
   .mtag.abs{background:#D1495B}.mtag.mk{background:#3B9AD9}.mtag.new{background:#7B4FC9}.mtag.smp{background:#E08A1E}.mtag.away{background:#9E9E9E}
   .mem-jv{width:110px;font:inherit;font-size:12px;padding:3px 6px;border:1px solid var(--line);border-radius:4px}
   .hpick{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px}.hpick .hnote{flex-basis:100%}
+  .wh-ppl-g{margin-top:6px;align-items:center}.wh-pg{font-size:12px;color:var(--text-sub);min-width:34px}
   .htable td.chg{white-space:normal;text-align:left;min-width:120px}
   .pill2{margin-left:auto;flex:none;font-size:11px;font-weight:700;color:var(--c);border:1px solid var(--c);border-radius:10px;padding:0 8px;white-space:nowrap}
   .hlist li .pill2{align-self:center}
@@ -3167,17 +3168,22 @@ function whRoutinesHTML(){
 /* ── 업무 배정 / 내 업무 추가 ── */
 function taskForm(t, preset = {}){
   const mgrs = mgrBranches(), own = branchOptions("todos").filter(b => b !== "all");
-  const bOpts = t ? [t.branch] : (mgrs.length ? mgrs : own);
+  // 두 곳 이상 맡은 관리자는 '전체 원'으로 한 번에 배정 (업무는 사람마다 그 사람의 원으로 생김)
+  const bOpts = t ? [t.branch] : (mgrs.length ? (mgrs.length > 1 ? ["all", ...mgrs] : mgrs) : own);
   if (!bOpts.length) return toast("업무를 올릴 수 있는 원이 없어요.");
   const b0 = t?.branch || (bOpts.includes(state.branch) ? state.branch : bOpts[0]);
-  const asMgr = b => isMgr(b);
-  const pplHTML = (b, sel) => asMgr(b) ? (t ? fSelect("담당자", "assignee", whPeople(b).map(p => [p.email, p.name]), sel[0])
+  const asMgr = b => b === "all" ? mgrs.length > 1 : isMgr(b);
+  const allPpl = () => { const seen = new Set(); return mgrs.map(b => ({ b, ppl: whPeople(b).filter(p => !seen.has(p.email) && seen.add(p.email)) })).filter(g => g.ppl.length); };
+  const pplHTML = (b, sel) => b === "all" && !t
+    ? `<div class="fld"><span>담당자 <small>여러 원에서 골라도 돼요 · 업무는 사람마다 그 사람의 원으로 생겨요</small></span><div class="wh-ppl"><label class="all"><input type="checkbox" name="pplAll">전원 (전체 원)</label></div>
+        ${allPpl().map(g => `<div class="wh-ppl wh-ppl-g"><b class="wh-pg">${esc(SHORT[g.b] || BRANCHES[g.b])}</b><label class="all"><input type="checkbox" name="pplAllB" value="${g.b}">${esc(SHORT[g.b] || "")} 전원</label>${g.ppl.map(p => `<label><input type="checkbox" name="ppl" value="${esc(p.email)}" data-name="${esc(p.name)}" data-branch="${g.b}">${esc(p.name)}</label>`).join("")}</div>`).join("") || `<span class="hint">맡은 원에 등록된 직원 계정이 없어요.</span>`}</div>`
+    : asMgr(b) ? (t ? fSelect("담당자", "assignee", whPeople(b).map(p => [p.email, p.name]), sel[0])
       : `<div class="fld"><span>담당자 <small>여러 명 고르면 사람마다 따로 생겨요</small></span><div class="wh-ppl"><label class="all"><input type="checkbox" name="pplAll">전원</label>${whPeople(b).map(p => `<label><input type="checkbox" name="ppl" value="${esc(p.email)}" data-name="${esc(p.name)}" ${sel.includes(p.email) ? "checked" : ""}>${esc(p.name)}</label>`).join("") || `<span class="hint">이 원에 등록된 직원 계정이 없어요.</span>`}</div></div>`)
     : `<div class="fld"><span>담당자</span><div class="inp ro">${esc(writerName())} (나)</div></div>`;
   openForm({
     title: t ? "업무 수정" : anyMgr() ? "업무 배정" : "내 업무 추가",
     fields: `${fText("업무", "title", t?.title ?? preset.title ?? "", 'required maxlength="100" placeholder="예: 할로윈 수업 재료 준비 상태 사진으로 보고"')}
-      <div class="row2">${bOpts.length > 1 ? fSelect("원", "branch", bOpts.map(b => [b, BRANCHES[b]]), b0) : `<div class="fld"><span>원</span><div class="inp ro">${BRANCHES[b0]}</div><input type="hidden" name="branch" value="${b0}"></div>`}
+      <div class="row2">${bOpts.length > 1 ? fSelect("원", "branch", bOpts.map(b => [b, b === "all" ? "전체 원 (맡은 원 모두)" : BRANCHES[b]]), b0) : `<div class="fld"><span>원</span><div class="inp ro">${BRANCHES[b0]}</div><input type="hidden" name="branch" value="${b0}"></div>`}
         ${fDate("마감일", "due", t?.due ?? preset.due ?? todayISO())}</div>
       <div id="whPpl">${pplHTML(b0, t ? [t.assignee] : [])}</div>
       ${fArea("설명 <small>무엇을, 어떤 기준으로</small>", "desc", t?.desc ?? "", 'rows="4" maxlength="3000"')}
@@ -3189,6 +3195,7 @@ function taskForm(t, preset = {}){
       if (!title) return formErr("업무 이름을 넣어 주세요.");
       const base = { title, branch, due: val(form, "due"), desc: form.elements.desc.value.trim(),
         checklist: form.elements.checklist.value.split("\n").map(x => x.trim()).filter(Boolean).slice(0, 30), needCheck: asMgr(branch) && form.elements.needCheck.checked };
+      if (branch === "all" && t) return formErr("원을 골라 주세요.");
       if (t){
         const a = asMgr(branch) ? val(form, "assignee") : t.assignee, p = whPeople(branch).find(x => x.email === a);
         const patch = { ...base, assignee:a, assigneeName: p?.name || t.assigneeName, log: whLog(t, a !== t.assignee ? `담당자 변경: ${t.assigneeName} → ${p?.name}` : "업무 내용 수정") };
@@ -3196,11 +3203,11 @@ function taskForm(t, preset = {}){
         await DB.update("tasks", t.id, patch); toast("업무를 수정했어요."); return;
       }
       let ppl;
-      if (asMgr(branch)) ppl = [...form.querySelectorAll("input[name=ppl]:checked")].map(x => ({ email:x.value, name:x.dataset.name }));
+      if (asMgr(branch)) ppl = [...form.querySelectorAll("input[name=ppl]:checked")].map(x => ({ email:x.value, name:x.dataset.name, branch: x.dataset.branch || branch }));
       else ppl = [{ email:myEmail(), name:writerName() }];
       if (!ppl.length) return formErr("담당자를 한 명 이상 골라 주세요.");
       const groupId = ppl.length > 1 ? "g" + Date.now().toString(36) : "";
-      for (const p of ppl) await DB.add("tasks", { ...base, assignee:p.email, assigneeName:p.name, status:"todo", checks: base.checklist.map(() => false), files:[], note:"", groupId,
+      for (const p of ppl) await DB.add("tasks", { ...base, branch: p.branch || branch, assignee:p.email, assigneeName:p.name, status:"todo", checks: base.checklist.map(() => false), files:[], note:"", groupId,
         log:[{ at:Date.now(), by:writerName(), act: asMgr(branch) && p.email !== myEmail() ? `배정 → ${p.name}` : "추가" }] });
       toast(ppl.length > 1 ? `${ppl.length}명에게 배정했어요.` : asMgr(branch) && ppl[0].email !== myEmail() ? `${ppl[0].name}에게 배정했어요.` : "업무를 추가했어요.");
     },
@@ -3210,8 +3217,9 @@ function taskForm(t, preset = {}){
   $("dlg").classList.add("wide");
   dlgCtx.deleteMsg = t && `'${t.title}' 업무를 지울까요? 제출한 내용과 기록도 함께 지워져요.`;
   if (!t) $("dlgBody").addEventListener("change", e => {
-    if (e.target.name === "pplAll") { $("dlgBody").querySelectorAll("input[name=ppl]").forEach(x => x.checked = e.target.checked && !(state.isAdmin && x.value === myEmail())); return; }
-    if (e.target.name === "ppl" && !e.target.checked) { const a = $("dlgBody").querySelector("input[name=pplAll]"); if (a) a.checked = false; }
+    if (e.target.name === "pplAll") { $("dlgBody").querySelectorAll("input[name=ppl], input[name=pplAllB]").forEach(x => x.checked = e.target.checked && !(state.isAdmin && x.value === myEmail())); return; }
+    if (e.target.name === "pplAllB") { $("dlgBody").querySelectorAll(`input[name=ppl][data-branch="${e.target.value}"]`).forEach(x => x.checked = e.target.checked && !(state.isAdmin && x.value === myEmail())); return; }
+    if (e.target.name === "ppl" && !e.target.checked) { $("dlgBody").querySelectorAll("input[name=pplAll], input[name=pplAllB][value='" + (e.target.dataset.branch || "") + "']").forEach(a => a.checked = false); }
     if (e.target.name !== "branch") return; const b = e.target.value;
     $("whPpl").innerHTML = pplHTML(b, []); $("whNeedL").hidden = !asMgr(b); });
 }
