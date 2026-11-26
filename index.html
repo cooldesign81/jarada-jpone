@@ -164,6 +164,7 @@
   .slot2 .sb{padding:6px 10px;font-size:13px;line-height:1.9}
   .mtag{display:inline-block;font-size:11px;font-weight:700;border-radius:4px;padding:0 6px;color:#fff;margin-right:3px;line-height:1.7;background:#8A8A8A}
   .mtag.abs{background:#D1495B}.mtag.mk{background:#3B9AD9}.mtag.new{background:#7B4FC9}.mtag.smp{background:#E08A1E}.mtag.away{background:#9E9E9E}
+  .mem-jv{width:110px;font:inherit;font-size:12px;padding:3px 6px;border:1px solid var(--line);border-radius:4px}
   .htable td.chg{white-space:normal;text-align:left;min-width:120px}
   .pill2{margin-left:auto;flex:none;font-size:11px;font-weight:700;color:var(--c);border:1px solid var(--c);border-radius:10px;padding:0 8px;white-space:nowrap}
   .hlist li .pill2{align-self:center}
@@ -1097,9 +1098,9 @@ const FIREBASE_CONFIG = {
 const ADMIN_EMAILS = ["jinhyuck@gmail.com"];
 /* 미리보기 전용 샘플 선생님 계정 (실제 직원 계정은 Firestore portalMembers 에 있음) */
 const DEMO_MEMBERS = [
-  { email:"minsu.teacher@gmail.com", name:"김민수", branches:["pyeongchon"] },
-  { email:"jimin.teacher@gmail.com", name:"한지민", branches:["banpo"] },
-  { email:"jaehong.teacher@gmail.com", name:"허재홍", branches:["pyeongchon","banpo"] },
+  { email:"minsu.teacher@gmail.com", name:"김민수", branches:["pyeongchon"], jarvisId:"minsu01" },
+  { email:"jimin.teacher@gmail.com", name:"한지민", branches:["banpo"], jarvisId:"jimin02" },
+  { email:"jaehong.teacher@gmail.com", name:"허재홍", branches:["pyeongchon","banpo"], jarvisId:"jaehong03" },
   { email:"ops.manager@gmail.com", name:"운영 매니저", branches:["pyeongchon","banpo","daechi"] },
   { email:"sihyung.manager@gmail.com", name:"이시형", branches:["pyeongchon"], manager:true }
 ];
@@ -1114,8 +1115,8 @@ const BRANCH_KEYS = ["pyeongchon","banpo","daechi"];
 const SHORT = { pyeongchon:"평촌", banpo:"반포", daechi:"대치" };
 
 /* Firestore 컬렉션 이름 */
-const COLL = { notices:"portalNotices", events:"portalEvents", todos:"portalTodos", files:"portalFiles", bookmarks:"portalBookmarks", bmGroups:"portalBmGroups", kpi:"portalKpi", kpiPriv:"portalKpiPrivate", folders:"portalFolders", members:"portalMembers", birthdays:"portalBirthdays", teachers:"portalTeachers", manuals:"portalManuals", counsel:"portalCounsel", revenue:"portalRevenue", manCats:"portalManCats", tasks:"portalTasks", routines:"portalRoutines", missions:"portalMissions", evals:"portalEvals", nasJobs:"portalNasJobs", nasStatus:"portalNasStatus", plans:"portalPlans", favs:"portalFavs", acks:"portalAcks", requests:"portalRequests", home:"portalHome" };
-const COLL_LABEL = { notices:"공지", events:"일정", todos:"할 일", files:"자료", bookmarks:"북마크", bmGroups:"북마크 구분", kpi:"대시보드", kpiPriv:"대시보드(금액)", folders:"자료실 폴더", members:"직원 계정", birthdays:"생일", teachers:"선생님 입사월", manuals:"업무매뉴얼", counsel:"상담 현황", revenue:"과거 매출", manCats:"매뉴얼 분류", tasks:"워크허브 업무", routines:"루틴", missions:"미션", evals:"미션 평가", nasJobs:"NAS 작업", nasStatus:"NAS 커넥터 상태", plans:"월간 계획", favs:"즐겨찾기", acks:"필독 확인", requests:"수정 요청", home:"홈 배치" };
+const COLL = { notices:"portalNotices", events:"portalEvents", todos:"portalTodos", files:"portalFiles", bookmarks:"portalBookmarks", bmGroups:"portalBmGroups", kpi:"portalKpi", kpiPriv:"portalKpiPrivate", folders:"portalFolders", members:"portalMembers", birthdays:"portalBirthdays", teachers:"portalTeachers", manuals:"portalManuals", counsel:"portalCounsel", revenue:"portalRevenue", manCats:"portalManCats", tasks:"portalTasks", routines:"portalRoutines", missions:"portalMissions", evals:"portalEvals", nasJobs:"portalNasJobs", nasStatus:"portalNasStatus", plans:"portalPlans", favs:"portalFavs", acks:"portalAcks", requests:"portalRequests", home:"portalHome", jarvis:"portalJarvis" };
+const COLL_LABEL = { notices:"공지", events:"일정", todos:"할 일", files:"자료", bookmarks:"북마크", bmGroups:"북마크 구분", kpi:"대시보드", kpiPriv:"대시보드(금액)", folders:"자료실 폴더", members:"직원 계정", birthdays:"생일", teachers:"선생님 입사월", manuals:"업무매뉴얼", counsel:"상담 현황", revenue:"과거 매출", manCats:"매뉴얼 분류", tasks:"워크허브 업무", routines:"루틴", missions:"미션", evals:"미션 평가", nasJobs:"NAS 작업", nasStatus:"NAS 커넥터 상태", plans:"월간 계획", favs:"즐겨찾기", acks:"필독 확인", requests:"수정 요청", home:"홈 배치", jarvis:"관찰일지 기록" };
 /* 북마크 구분선 색 */
 const LINE_COLORS = [["#222222","검정"],["#DE8619","주황"],["#C98100","황토"],["#D1495B","빨강"],["#8B5CF6","보라"],["#2563A6","파랑"],["#1F7A4D","초록"],["#767676","회색"]];
 
@@ -1388,6 +1389,12 @@ function seed(){
         body:"1. 결제 매니저에서 미납 확인\n2. 원생 명단 엑셀 내려받아 JP ONE 대시보드에 올리기\n3. 다음 달 시간표 확정" }
     ],
     members: DEMO_MEMBERS.map(m => ({ id:m.email, ...m, active:true, source:"people", at:ago(20), by:ADMIN })),
+    jarvis: [
+      { id:"j1", date:t, jarvisId:"minsu01", weekday:"", time:"13:30", total:6, done:6, absent:0, fail:0, at:ago(0) },
+      { id:"j2", date:t, jarvisId:"jaehong03", weekday:"", time:"13:30", total:7, done:6, absent:1, fail:0, at:ago(0) },
+      { id:"j3", date:t, jarvisId:"jaehong03", weekday:"", time:"15:10", total:8, done:8, absent:0, fail:0, at:ago(0) },
+      { id:"j4", date:t, jarvisId:"jimin02", weekday:"", time:"13:30", total:6, done:5, absent:1, fail:0, at:ago(0) }
+    ],
     bmGroups: [
       { id:"g1", name:"자주 쓰는 사이트", color:"#DE8619", branch:"all", order:1, at:ago(30), createdBy:ADMIN, writer:"대표" },
       { id:"g2", name:"문자 · 알림", color:"#2563A6", branch:"all", order:2, at:ago(30), createdBy:ADMIN, writer:"대표" },
@@ -1685,6 +1692,8 @@ async function enter(user){
   unsubs.push(DB.watch("requests", l => { state.requests = l; onData("requests"); }, { where: staffAll ? [] : [["createdBy", "==", me]] }));
   unsubs.push(DB.watch("favs", l => { state.favs = l[0]?.ids || []; onData("favs"); }, { where: [["owner", "==", me]] }));
   // 홈 카드 배치(사람마다). 규칙 게시 전이면 읽기가 막혀도 이 기기 기억으로 동작
+  // 자비스 업로더가 남긴 '관찰일지 올린 반' (오늘·어제). 반·인원 숫자만 있음
+  unsubs.push(DB.watch("jarvis", l => { state.jarvis = l; onData("jarvis"); }, { where: [["date", "in", [todayISO(), addDays(todayISO(), -1)]]] }));
   unsubs.push(DB.watch("home", l => { const d = l[0]; if (d) { state.home = { t: d.t || undefined, m: d.m || undefined }; store.set(homeKey(), JSON.stringify(state.home)); } onData("home"); }, { where: [["owner", "==", me]] }));
   // 미션 평가: 대표는 전부, 관리자는 자기 원 전부(확정 전 포함), 교사는 자기 것 중 공개된 것만 (보안 규칙과 같은 조건으로 요청)
   state.evals = {}; const evParts = {};
@@ -1705,7 +1714,7 @@ function onData(name){
   if (name === "manCats") state.loaded.manCats = true;
   if (name === "tasks" || name === "routines") { state.loaded[name] = true; clearTimeout(onData.gt); onData.gt = setTimeout(genRoutineTasks, 800); }
   if (name === "birthdays" || name === "teachers") { state.loaded[name] = true; if (bdPending && state.loaded.birthdays && state.loaded.teachers) { const x = bdPending; bdPending = null; syncPeople(x); } }
-  const uses = { notice:["notices","events","plans","birthdays","kpi","kpiPriv"], todo:["tasks","routines","members"], mission:["tasks","missions","evals","members","nasStatus"], files:["files","folders","manuals","favs","requests"], manual:["manuals","manCats","files","acks","favs","requests"], home:["notices","events","tasks","kpi","birthdays","manuals","acks","files","requests","missions","routines","members","evals","home"], bm:["bookmarks","bmGroups"], kpi:["kpi","kpiPriv","teachers","counsel","revenue"] }[state.tab] || [];
+  const uses = { notice:["notices","events","plans","birthdays","kpi","kpiPriv"], todo:["tasks","routines","members"], mission:["tasks","missions","evals","members","nasStatus"], files:["files","folders","manuals","favs","requests"], manual:["manuals","manCats","files","acks","favs","requests"], home:["notices","events","tasks","kpi","birthdays","manuals","acks","files","requests","missions","routines","members","evals","home","jarvis"], bm:["bookmarks","bmGroups"], kpi:["kpi","kpiPriv","teachers","counsel","revenue"] }[state.tab] || [];
   if (uses.includes(name)) renderView({ keepFocus: true });
 }
 
@@ -2207,6 +2216,7 @@ function mySlots(d = todayISO()){
   for (const b of linkKeys().filter(k => BRANCH_KEYS.includes(k))) { const s = schedDay(b, d); if (s) for (const r of s.slots || []) if (isMyTeacherName(r.teacher)) out.push({ ...r, b }); }
   return out.sort((a, c) => a.time.localeCompare(c.time));
 }
+const jarvisOf = (jid, d = todayISO()) => (state.jarvis || []).filter(x => x.date === d && String(x.jarvisId || "").toLowerCase() === String(jid || "").toLowerCase()).sort((a, b) => (a.time || "").localeCompare(b.time || ""));
 const markKind = m => ["absent", "sickLeave", "noshow"].includes(m.s) ? "abs" : m.t === "makeup" ? "mk" : m.t === "newStudent" ? "new" : m.t === "sample" ? "smp" : ["moveOut", "leave", "withdrawn", "substituteOut"].includes(m.t) ? "away" : "etc";
 const slotCount = L => { const M = L.flatMap(r => r.marks || []); const c = k => M.filter(m => markKind(m) === k).length;
   return { classes:L.length, students:L.reduce((t, r) => t + (r.present || 0), 0), abs:c("abs"), mk:c("mk"), nw:c("new"), smp:c("smp"), away:c("away") }; };
@@ -2268,7 +2278,7 @@ function demoLink(key){
    배치(순서·폭)는 portalHome/{내 이메일}에 저장 → 다른 기기에서도 같음. 규칙 게시 전이면 이 기기에만 기억 */
 const APP_URL = n => (APP_GROUPS.flatMap(g => g.apps).find(a => a.name === n) || {}).url || "#";
 const HOME_DEF = {
-  t: [["T1",3],["T2",2],["T8",1],["T9",1],["T10",1],["T12",1],["T15",1],["T16",2]],
+  t: [["T1",3],["T2",2],["T8",1],["T6",1],["T9",1],["T10",1],["T15",1],["T16",1],["T12",1]],
   m: [["M1",3],["M2",2],["M4",1],["M5",1],["M7",1],["M8",1],["M10",2],["M11",1]]
 };
 const homeKind = () => anyMgr() ? "m" : "t";
@@ -2319,6 +2329,16 @@ const HC = {
           <div class="sh"><b>${esc(r.time)}</b><span>${esc(r.room)}${bs.length > 1 ? ` · ${esc(SHORT[r.b] || "")}` : ""}${r.time === cur ? " · 지금" : ""}</span><span class="n">${r.present}명${r.total !== r.present ? `<small> / ${r.total}</small>` : ""}</span></div>
           <div class="sb">${(r.marks || []).length ? r.marks.map(markTag).join(" ") : `<span class="hnote" style="margin:0">변동 없음</span>`}</div></div>`).join("")
         + `<p class="hnote">${upd ? `스케줄 매니저 ${new Date(upd).toLocaleTimeString("ko-KR", { hour:"2-digit", minute:"2-digit" })} 기준 · ` : ""}바뀌면 바로 반영돼요.</p>` }; } },
+  T6: { t:"관찰일지", f(){
+      const jid = (state.member?.jarvisId || "").trim(), today = todayISO();
+      if (!jid) return { body:`<div class="hsoon"><p>직원 계정에 내 <b>자비스 아이디</b>가 있어야 내가 올린 반을 찾아요. 대표에게 등록을 요청해 주세요.</p><a class="btn btn-ghost btn-sm" href="${esc(APP_URL("자비스 업로더"))}" target="_blank" rel="noopener">자비스 업로더 열기</a></div>` };
+      const up = jarvisOf(jid, today), bs = linkKeys().filter(k => BRANCH_KEYS.includes(k)), L = schedLinked(bs) ? mySlots() : null;
+      const act = `<a class="btn btn-ghost btn-sm" href="${esc(APP_URL("자비스 업로더"))}" target="_blank" rel="noopener">올리기</a>`;
+      if (L && L.length) { const done = L.filter(r => up.some(u => u.time === r.time)).length, now = nowHM();
+        return { sub:`${done}/${L.length}반`, act, body:`<ul class="hlist">${L.map(r => { const u = up.find(x => x.time === r.time);
+          return `<li><b>${esc(r.time)}</b><span class="hnote" style="margin:0">${esc(r.room)}${u ? ` · ${u.done}명 올림${u.absent ? ` · 결석 ${u.absent}` : ""}` : ""}</span>${u ? `<span class="pill2" style="--c:#1F7A4D">올림 ✓</span>` : r.time > now ? `<span class="pill2" style="--c:#9A9A9A">수업 전</span>` : `<span class="pill2" style="--c:#B3261E">아직</span>`}</li>`; }).join("")}</ul>` }; }
+      return { sub: up.length ? `${up.length}반 올림` : "", act, body: up.length ? `<ul class="hlist">${up.map(u => `<li><b>${esc(u.time)}</b><span class="hnote" style="margin:0">${u.done}명 올림${u.absent ? ` · 결석 ${u.absent}` : ""}</span><span class="pill2" style="--c:#1F7A4D">올림 ✓</span></li>`).join("")}</ul>`
+        : `<p class="empty">오늘 올린 관찰일지가 아직 없어요.</p>` + (L ? "" : `<p class="hnote">스케줄 매니저를 연결하면 '오늘 수업한 반 중 안 올린 반'까지 보여요.</p>`) }; } },
   T8: { t:"내 업무", f(){ const L = myTasks().filter(t => !t.routineId && !t.missionId && WH_OPEN.includes(t.status)).sort((a, b) => (b.status === "revise") - (a.status === "revise") || whSort(a, b));
     return { sub:`${L.length}개 남음`, act: branchOptions("todos").length ? `<button type="button" class="btn btn-ghost btn-sm" data-act="wh-new">${anyMgr() ? "업무 배정" : "추가"}</button>` : "",
       body: L.length ? `<ul class="wh-list">${L.slice(0, 6).map(t => whRow(t, { who:false })).join("")}</ul>${L.length > 6 ? `<button class="more" type="button" data-act="go-wh" data-v="mine">${L.length - 6}개 더 보기</button>` : ""}` : `<p class="empty">남은 업무가 없어요.</p>` }; } },
@@ -2349,15 +2369,16 @@ const HC = {
       for (const b of bs) for (const p of whPeople(b)) { if (p.email === myEmail() || seen.has(p.email)) continue; seen.add(p.email);
         const L = V.filter(t => t.assignee === p.email), rt = L.filter(t => t.routineId && t.due === today);
         const sd = schedDay(b), my = sd ? (sd.slots || []).filter(r => { const a = normName(r.teacher), c = normName(p.name); return a && c && (a === c || a.includes(c) || c.includes(a)); }) : null;
-        rows.push({ sc: my ? slotCount(my) : null, p, b, due: L.filter(t => !t.routineId && t.due === today && WH_OPEN.includes(t.status)).length, late: L.filter(whLate).length, sub: L.filter(t => t.status === "submitted").length,
+        const jid = (state.members.find(m => m.id === p.email)?.jarvisId || "").trim(), jv = jid ? jarvisOf(jid) : null;
+        rows.push({ jv: jv ? { up: my ? my.filter(r => jv.some(u => u.time === r.time)).length : jv.length, n: my ? my.filter(r => r.time <= nowHM() || jv.some(u => u.time === r.time)).length : null } : null, sc: my ? slotCount(my) : null, p, b, due: L.filter(t => !t.routineId && t.due === today && WH_OPEN.includes(t.status)).length, late: L.filter(whLate).length, sub: L.filter(t => t.status === "submitted").length,
           rev: L.filter(t => t.status === "revise").length, rt, ms: L.filter(t => t.missionId && WH_OPEN.includes(t.status)).length, miss: L.filter(whMissed).length }); }
       rows.sort((a, c) => (c.late + c.rev) - (a.late + a.rev) || a.p.name.localeCompare(c.p.name));
-      const anySc = rows.some(r => r.sc);
+      const anySc = rows.some(r => r.sc), anyJv = state.members.some(m => m.jarvisId);
       const cell = (v, c) => v ? `<b style="color:${c || "var(--ink)"}">${v}</b>` : `<span class="z">0</span>`;
-    return { body: rows.length ? `<div class="hscroll"><table class="htable"><thead><tr><th>선생님</th>${bs.length > 1 ? "<th>원</th>" : ""}${anySc ? "<th>수업</th><th>학생</th><th>변동</th>" : ""}<th>오늘 업무</th><th>지연</th><th>보완</th><th>확인 대기</th><th>오늘 루틴</th><th>놓친 루틴</th><th>미션</th></tr></thead><tbody>
-        ${rows.map(r => `<tr><td><b>${esc(r.p.name)}</b></td>${bs.length > 1 ? `<td>${esc(SHORT[r.b] || "")}</td>` : ""}${anySc ? (r.sc ? `<td>${r.sc.classes || `<span class="z">0</span>`}</td><td>${r.sc.students || `<span class="z">0</span>`}</td><td class="chg">${[["abs", r.sc.abs, "결석"], ["mk", r.sc.mk, "보강"], ["new", r.sc.nw, "신규"], ["smp", r.sc.smp, "샘플"]].filter(x => x[1]).map(([k, v, l]) => `<span class="mtag ${k}" title="${l}">${l} ${v}</span>`).join("") || `<span class="z">-</span>`}</td>` : `<td><span class="z">-</span></td><td><span class="z">-</span></td><td><span class="z">-</span></td>`) : ""}<td>${cell(r.due)}</td><td>${cell(r.late, RED)}</td><td>${cell(r.rev, RED)}</td><td>${cell(r.sub, AMB)}</td>
+    return { body: rows.length ? `<div class="hscroll"><table class="htable"><thead><tr><th>선생님</th>${bs.length > 1 ? "<th>원</th>" : ""}${anySc ? "<th>수업</th><th>학생</th><th>변동</th>" : ""}${anyJv ? `<th title="자비스로 오늘 관찰일지를 올린 반 / 지금까지 수업한 반">일지</th>` : ""}<th>오늘 업무</th><th>지연</th><th>보완</th><th>확인 대기</th><th>오늘 루틴</th><th>놓친 루틴</th><th>미션</th></tr></thead><tbody>
+        ${rows.map(r => `<tr><td><b>${esc(r.p.name)}</b></td>${bs.length > 1 ? `<td>${esc(SHORT[r.b] || "")}</td>` : ""}${anySc ? (r.sc ? `<td>${r.sc.classes || `<span class="z">0</span>`}</td><td>${r.sc.students || `<span class="z">0</span>`}</td><td class="chg">${[["abs", r.sc.abs, "결석"], ["mk", r.sc.mk, "보강"], ["new", r.sc.nw, "신규"], ["smp", r.sc.smp, "샘플"]].filter(x => x[1]).map(([k, v, l]) => `<span class="mtag ${k}" title="${l}">${l} ${v}</span>`).join("") || `<span class="z">-</span>`}</td>` : `<td><span class="z">-</span></td><td><span class="z">-</span></td><td><span class="z">-</span></td>`) : ""}${anyJv ? `<td>${r.jv ? (r.jv.n != null ? `<b style="color:${r.jv.up < r.jv.n ? RED : GRN}">${r.jv.up}/${r.jv.n}</b>` : `${r.jv.up}반`) : `<span class="z" title="직원 계정에 자비스 아이디 없음">-</span>`}</td>` : ""}<td>${cell(r.due)}</td><td>${cell(r.late, RED)}</td><td>${cell(r.rev, RED)}</td><td>${cell(r.sub, AMB)}</td>
           <td>${r.rt.length ? `${r.rt.filter(doneish).length}/${r.rt.length}${r.rt.every(doneish) ? " ✓" : ""}` : `<span class="z">-</span>`}</td><td>${cell(r.miss, RED)}</td><td>${cell(r.ms)}</td></tr>`).join("")}</tbody></table></div>
-        <p class="hnote">${anySc ? "수업 · 학생 · 변동은 스케줄 매니저 기준(선생님 이름으로 찾음)이에요. 관찰일지는 자비스 연결 후 추가돼요." : `수업 · 학생 변동 칸은 스케줄 매니저를 연결하면 추가돼요.${linkable() ? ` <button type="button" class="linkish" data-act="link-all">앱 연결하기</button>` : ""}`}</p>` : `<p class="empty">직원 계정에 등록된 선생님이 없어요.</p>` }; } },
+        <p class="hnote">${anySc ? "수업 · 학생 · 변동은 스케줄 매니저 기준(선생님 이름으로 찾음)이에요. 일지 = 자비스로 올린 반 / 지금까지 수업한 반 (직원 계정의 자비스 아이디로 찾음)." : `수업 · 학생 변동 칸은 스케줄 매니저를 연결하면 추가돼요.${linkable() ? ` <button type="button" class="linkish" data-act="link-all">앱 연결하기</button>` : ""}`}</p>` : `<p class="empty">직원 계정에 등록된 선생님이 없어요.</p>` }; } },
   M4: { t:"지연 업무 · 놓친 루틴", f(){ const V = mgrVisTasks(), L = [...V.filter(whLate), ...V.filter(whMissed)].sort((a, b) => (a.due || "").localeCompare(b.due || ""));
     return { sub: L.length ? `${L.length}건` : "", body: L.length ? `<ul class="wh-list">${L.slice(0, 6).map(t => whRow(t)).join("")}</ul>${L.length > 6 ? `<button class="more" type="button" data-act="go-wh" data-v="board" data-f="late">${L.length - 6}건 더 보기</button>` : ""}` : `<p class="empty">지연된 업무가 없어요. 👍</p>` }; } },
   M5: { t:"오늘의 체크 포인트", f(){ return { body: checkListHTML() }; } },
@@ -2389,8 +2410,8 @@ const HC = {
       const R = V.filter(t => t.routineId && t.due < today), rd = R.filter(doneish).length, pct = (a, b) => b ? Math.round(a / b * 100) + "%" : "-";
     return { body: tiles([[pct(done.length, A.length), "마감 지난 업무 완료"], [pct(onTime.length, done.length), "기한 안에 끝냄"], [pct(rd, R.length), "루틴 수행"]]) + `<p class="hnote">${+mk.slice(5)}월 · 어제까지 마감인 업무 기준</p>` }; } }
 };
-const T_IDS = ["T1","T2","T8","T9","T10","T12","T15","T16","T17"], M_IDS = ["M1","M2","M4","M5","M6","M7","M8","M10","M11","M15"];
-const HC_NOTE = { T1:"할 일 · 루틴 · 지연 숫자", T2:"시간대별 수업과 학생 변동", T8:"남은 업무", T9:"오늘 루틴", T10:"진행 중인 미션", T12:"최근 공지 5개", T15:"요청 → 주문 → 도착", T16:"휴가 승인 · 서류", T17:"오늘 할 일 완료 막대",
+const T_IDS = ["T1","T2","T6","T8","T9","T10","T12","T15","T16","T17"], M_IDS = ["M1","M2","M4","M5","M6","M7","M8","M10","M11","M15"];
+const HC_NOTE = { T1:"할 일 · 루틴 · 지연 숫자", T2:"시간대별 수업과 학생 변동", T6:"오늘 반별 관찰일지 올렸는지", T8:"남은 업무", T9:"오늘 루틴", T10:"진행 중인 미션", T12:"최근 공지 5개", T15:"요청 → 주문 → 도착", T16:"휴가 승인 · 서류", T17:"오늘 할 일 완료 막대",
   M1:"원 전체 오늘 숫자", M2:"선생님 한 명이 한 줄", M4:"누가 무엇을 놓쳤나", M5:"미납 · 샘플 후 미등록", M6:"재원 · 신규 · 퇴원 숫자", M7:"필독 매뉴얼 미확인자", M8:"샘플 후 미등록 원생", M10:"미션별 제출 현황", M11:"재료 요청 대기", M15:"완료율 · 루틴 수행률" };
 
 function progressHTML(){
@@ -4698,6 +4719,7 @@ function membersDialog(){
         $("dlgErr").textContent = "";
         await memUpdate(id, { branches: row });
       }
+      if (t.dataset.memJv !== undefined) { await memUpdate(t.dataset.memJv, { jarvisId: t.value.trim() }); toast("자비스 아이디를 저장했어요."); }
       if (t.dataset.memActive) await memUpdate(t.dataset.memActive, { active: t.checked });
       if (t.dataset.memMgr) await memUpdate(t.dataset.memMgr, { manager: t.checked });
       if (t.dataset.memCur) await memUpdate(t.dataset.memCur, { curator: t.checked });
@@ -4709,7 +4731,7 @@ function renderMemList(){
   const box = $("memList"); if (!box) return;
   const first = m => { const bs = memBranches(m); return isAllThree(bs) ? -1 : BRANCH_KEYS.indexOf(bs[0]); };
   const list = [...state.members].sort((a,b) => first(a) - first(b) || (a.name || "").localeCompare(b.name || ""));
-  box.innerHTML = list.length ? `<table class="mtable"><thead><tr><th>이름</th><th>구글 이메일</th><th>원</th><th>관리자</th><th title="자료실 검토·게시, 매뉴얼 작성">자료 담당</th><th title="공식 매뉴얼 승인·개정">매뉴얼 승인</th><th>로그인</th><th></th></tr></thead><tbody>
+  box.innerHTML = list.length ? `<table class="mtable"><thead><tr><th>이름</th><th>구글 이메일</th><th>원</th><th>관리자</th><th title="자료실 검토·게시, 매뉴얼 작성">자료 담당</th><th title="공식 매뉴얼 승인·개정">매뉴얼 승인</th><th title="자비스(관찰일지) 로그인 아이디 — JP ONE 홈 '관찰일지' 카드가 이 아이디로 올린 반을 찾아요">자비스 아이디</th><th>로그인</th><th></th></tr></thead><tbody>
     ${list.map(m => `<tr class="${m.active === false ? "off" : ""}">
       <td>${esc(m.name || "")}${m.source === "people" ? "<small>JP People</small>" : ""}</td>
       <td class="em">${esc(m.id)}</td>
@@ -4717,6 +4739,7 @@ function renderMemList(){
       <td><input type="checkbox" data-mem-mgr="${esc(m.id)}" ${m.manager ? "checked" : ""} aria-label="${esc(m.name)} 워크허브 관리자" title="워크허브에서 자기 원 업무를 배정하고 확인해요"></td>
       <td><input type="checkbox" data-mem-cur="${esc(m.id)}" ${(m.curator ?? !!m.manager) ? "checked" : ""} aria-label="${esc(m.name)} 자료 담당자" title="자료실 자료를 검토·게시하고 매뉴얼을 써서 승인 요청해요"></td>
       <td><input type="checkbox" data-mem-apr="${esc(m.id)}" ${m.approver ? "checked" : ""} aria-label="${esc(m.name)} 매뉴얼 승인자" title="공식 매뉴얼을 승인·개정해요"></td>
+      <td><input type="text" class="mem-jv" data-mem-jv="${esc(m.id)}" value="${esc(m.jarvisId || "")}" maxlength="40" placeholder="-" aria-label="${esc(m.name)} 자비스 아이디"></td>
       <td><input type="checkbox" data-mem-active="${esc(m.id)}" ${m.active !== false ? "checked" : ""} aria-label="${esc(m.name)} 로그인 허용"></td>
       <td class="mem-acts"><button type="button" class="icon-btn" data-mem-move="${esc(m.id)}" title="구글 계정이 바뀐 사람: 예전 계정의 기록을 새 계정으로 옮겨요">계정 바꾸기</button><button type="button" class="icon-btn" data-mem-del="${esc(m.id)}">삭제</button></td></tr>`).join("")}</tbody></table>`
     : `<p class="empty">아직 등록된 직원 계정이 없어요. JP People에서 불러오거나 아래에서 직접 추가해 주세요.</p>`;
@@ -4727,7 +4750,7 @@ function renderMemList(){
    문서 ID에 예전 이메일이 들어간 것(직원 계정·즐겨찾기 등)은 새 ID로 옮김. 이름·내용은 그대로.
    항상 찾아보기(미리보기) → 확인 → 적용 (지침 2-2). 다른 앱 출입 명단은 끝난 뒤 '앱에 명단 보내기'로 맞춤
    ===================================================================== */
-const MOVE_SKIP = ["kpi", "kpiPriv", "counsel", "revenue", "nasStatus", "home"];   // 원별 숫자 자료: 개인 이메일 없음
+const MOVE_SKIP = ["kpi", "kpiPriv", "counsel", "revenue", "nasStatus", "home", "jarvis"];   // 원별 숫자 자료: 개인 이메일 없음
 function swapEmail(v, from, to){
   if (typeof v === "string") return v.toLowerCase() === from ? to : v;
   if (Array.isArray(v)) return v.map(x => swapEmail(x, from, to));
