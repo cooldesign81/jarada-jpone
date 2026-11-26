@@ -1158,7 +1158,8 @@ const CAL_KIND = {
   edu:   { label:"학회 · 교육", color:"#2563A6" },
   event: { label:"원 행사",     color:"#8B5CF6" },
   due:   { label:"마감",        color:"#C98100" },
-  off:   { label:"휴원",        color:"#D1495B" }
+  off:   { label:"휴원 (원 휴가)", color:"#D1495B" },
+  hol:   { label:"공휴일 (추가)", color:"#B3261E" }   // 임시공휴일 등 달력 표에 없는 쉬는 날. 공휴일·휴원은 스케줄 매니저 달력에도 휴일로 감
 };
 
 /* 공용 자료실 분류 5개 (기획안). 처음 한 번 만들고, 이후에는 자료 담당자가 추가·이름 변경·삭제 */
@@ -1719,6 +1720,7 @@ function onData(name){
   state.loaded[name] = true;
   if (name === "members") { renderMemList(); if (state.tab !== "todo") return; }
   if (name === "manCats") state.loaded.manCats = true;
+  if (name === "events") syncClosedSoon();   // 공휴일·휴원 → 스케줄 매니저 달력
   if (name === "tasks" || name === "routines") { state.loaded[name] = true; clearTimeout(onData.gt); onData.gt = setTimeout(genRoutineTasks, 800); }
   if (name === "birthdays" || name === "teachers") { state.loaded[name] = true; if (bdPending && state.loaded.birthdays && state.loaded.teachers) { const x = bdPending; bdPending = null; syncPeople(x); } }
   const uses = { notice:["notices","events","plans","birthdays","kpi","kpiPriv"], todo:["tasks","routines","members"], mission:["tasks","missions","evals","members","nasStatus"], files:["files","folders","manuals","favs","requests"], manual:["manuals","manCats","files","acks","favs","requests"], home:["notices","events","tasks","kpi","birthdays","manuals","acks","files","requests","missions","routines","members","evals","home","jarvis"], bm:["bookmarks","bmGroups"], kpi:["kpi","kpiPriv","teachers","counsel","revenue"] }[state.tab] || [];
@@ -2202,6 +2204,7 @@ const LINK_LOAD = {
       e => { link[key] = { status:"error", msg: LINK_ERR(e) }; linkRerender(); }));
     linkUnsub[key] = () => subs.forEach(u => u());
     link[key] = { status:"ok", data:{ days }, at: Date.now() };
+    syncClosedSoon();
   },
   // 재료 요청: 내 요청(최근 60일) + 관리자는 내 원의 대기 요청 수
   async mat(key, x){
@@ -2538,7 +2541,7 @@ function occurs(e, day){
   const end = e.end && e.end > e.date ? e.end : e.date;
   return day >= e.date && day <= end;
 }
-const KIND_ORDER = { off:0, edu:1, due:2, event:3 };
+const KIND_ORDER = { hol:0, off:0, edu:1, due:2, event:3 };
 
 /* ── 대한민국 공휴일 (모두에게 보임) ──
    양력 공휴일은 매년 자동. 음력 공휴일(설날·부처님오신날·추석)과 선거일은 아래 표에 있는 해만.
@@ -2579,6 +2582,33 @@ function holidaysOf(year){
   return map;
 }
 const holidayOn = day => holidaysOf(+day.slice(0, 4)).get(day) || "";
+
+/* ── 쉬는 날 → 스케줄 매니저 달력 (오늘 등원 · 보강 · 샘플 달력에 휴일로 표시) ──
+   공휴일(표) + '공휴일 (추가)' 일정 + '휴원 (원 휴가)' 일정(그 원 또는 전체). 대표·그 원 관리자 화면이 열려 있고
+   스케줄 매니저가 연결돼 있으면 바뀔 때마다 settings/closedDays 에 저장 (내용이 같으면 안 씀) */
+function closedDaysFor(b){
+  const out = {}, now = new Date(), start = iso(now.getFullYear(), now.getMonth() - 1, 1), ev = state.events.filter(e => (e.kind === "hol" || e.kind === "off") && (e.branch === "all" || e.branch === b));
+  for (let d = start, i = 0; i < 430; i++, d = addDays(d, 1)) {
+    const names = [holidayOn(d), ...ev.filter(e => occurs(e, d)).map(e => e.title)].filter(Boolean);
+    if (names.length) out[d] = [...new Set(names)].join(" · ");
+  }
+  return out;
+}
+const closedLast = {};
+function syncClosedSoon(){ clearTimeout(syncClosedSoon.t); syncClosedSoon.t = setTimeout(syncClosed, 2500); }
+async function syncClosed(){
+  if (DEMO || !state.loaded.events) return;
+  for (const b of BRANCH_KEYS) {
+    if (link[b]?.status !== "ok" || !extApps[b] || !(state.isAdmin || isMgr(b))) continue;
+    const days = closedDaysFor(b), json = JSON.stringify(days);
+    if (closedLast[b] === json) continue;
+    try {
+      const F = fb.F, ref = F.doc(extApps[b].db, "settings", "closedDays"), cur = await F.getDoc(ref);
+      if (!cur.exists() || JSON.stringify(cur.data().days || {}) !== json) await F.setDoc(ref, { days, updatedAt: Date.now(), by: myEmail() });
+      closedLast[b] = json;
+    } catch (e) { console.warn("스케줄 매니저 휴일 저장 실패", b, e.code || e); }
+  }
+}
 
 /* ── 직원 생일 (JP People에서 대표 화면이 열릴 때 자동으로 맞춤. 이름과 월·일만 저장, 태어난 해는 저장 안 함) ── */
 const isLeap = y => (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
@@ -2680,7 +2710,7 @@ function calHTML(mode){
           return [...one.map(g => ({ grp:g, title:grpChipTxt(g) })), ...(rn ? [{ rt:true, title:`루틴 ${rd}/${rn}`, late: key < today && rd < rn }] : [])]; })()
         : [...tk.one.map(t => ({ task:t, title:t.title })), ...(tk.rt.length ? [{ rt:tk.rt, title:`루틴 ${tk.rt.filter(t => t.status === "done").length}/${tk.rt.length}` }] : [])],
       evs = [...tEvs, ...leavesOn(key).map(l => ({ lv:l, title:`${l.name} ${LV_TYPE[l.type] || "휴가"}${l.status === "submitted" ? "(대기)" : ""}` })), ...bds.map(b => ({ bd:true, title:`${b.name} 생일` })), ...eventsOn(key)],
-      mine = gcalOn(key), n = evs.length + mine.length, dow = d.getDay(), hol = holidayOn(key);
+      mine = gcalOn(key), n = evs.length + mine.length, dow = d.getDay(), hol = holidayOn(key) || eventsOn(key).find(e => e.kind === "hol")?.title || "";
     const numTxt = wk && (i === 0 || d.getDate() === 1) ? `${d.getMonth()+1}/${d.getDate()}` : d.getDate();
     const cls = ["day", !wk && d.getMonth() !== m && "out", dow === 0 && "sun", dow === 6 && "sat", hol && "hol", key === today && "today", key === sel && "sel"].filter(Boolean).join(" ");
     cells.push(`<button type="button" class="${cls}" data-act="cal-day" data-day="${key}" data-fk="day-${key}"
@@ -4569,6 +4599,7 @@ function eventForm(ev, date){
       <div class="row2">${fSelect("종류", "kind", Object.entries(CAL_KIND).map(([k,v]) => [k, v.label]), ev?.kind || "event")}
         ${fBranch("events", ev?.branch)}</div>
       <div class="row2">${fDate("날짜", "date", d0, "required")}${fDate("끝나는 날 <small>여러 날이면</small>", "end", ev?.end || "")}</div>
+      <p class="hint" style="margin:-4px 0 10px">종류를 <b>휴원 (원 휴가)</b>나 <b>공휴일 (추가)</b>로 고르면 스케줄 매니저의 오늘 등원 · 보강 · 샘플 달력에도 휴일로 표시돼요. (달력 표에 있는 공휴일은 따로 넣지 않아도 돼요)</p>
       <div class="row2">${fSelect("반복", "repeat", [["none","반복 안 함"],["weekly","매주 같은 요일"]], ev?.repeat || "none")}
         ${fDate("반복 끝 <small>비우면 계속</small>", "until", ev?.until || "")}</div>
       ${fArea("메모", "memo", ev?.memo, 'maxlength="500" rows="3"')}
