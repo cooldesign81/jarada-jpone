@@ -178,8 +178,13 @@
   .cal-day.cal-day-hide{display:none}
   .htop .htiles{grid-template-columns:repeat(3,minmax(0,1fr))}.htop .htiles span{font-size:11px}
   .hbar{display:flex;align-items:center;gap:8px;margin:0 0 8px;flex-wrap:wrap}.hbar .sp{flex:1}
-  .hgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:start;margin-bottom:16px}
-  .hgrid .hc{grid-column:span var(--w);margin:0;min-width:0}
+  .hgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-rows:212px;grid-auto-flow:row dense;gap:16px;margin-bottom:16px}
+  .hgrid .hc{grid-column:span var(--w);grid-row:span var(--h);margin:0;min-width:0;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+  .hgrid .hc > .card-h{flex:none}
+  .hgrid .hc-body{flex:1;min-height:0;overflow:auto;margin-right:-8px;padding-right:8px;scrollbar-width:thin}
+  .hgrid .hc-tools{flex:none}
+  .hgrid .htiles{gap:6px}.hgrid .htiles > div{padding:5px 10px}.hgrid .htiles b{font-size:19px}.hgrid .htiles span{font-size:11px}
+  .hgrid .hc > .card-h{margin-bottom:10px}
   .hgrid.editing .hc{outline:2px dashed #C9C9C9;outline-offset:-2px;cursor:grab}
   .hgrid.editing .hc.drag{opacity:.4}.hgrid.editing .hc.over{outline-color:var(--brand-orange);box-shadow:0 0 0 3px rgba(222,134,25,.25)}
   .hc-tools{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:-4px 0 10px;padding-bottom:8px;border-bottom:1px solid var(--line);font-size:12px}
@@ -210,7 +215,7 @@
   .hmis:first-of-type{border-top:0;padding-top:0}.hmis .wh-t{display:flex;gap:6px;align-items:center}.hmis .wh-t .hnote{margin:0 0 0 auto}.hmis .hnote{margin:0}
   .hmis:hover b{text-decoration:underline;text-underline-offset:3px}
   .newb.warn{background:#FFF3D6;color:#A86B00}
-  @media (max-width:768px){ .htop{grid-template-columns:minmax(0,1fr)} .hgrid{grid-template-columns:minmax(0,1fr)} .hgrid .hc{grid-column:auto} .hsc{grid-template-columns:1fr} }
+  @media (max-width:768px){ .htop{grid-template-columns:minmax(0,1fr)} .hgrid{grid-template-columns:minmax(0,1fr);grid-auto-rows:196px} .hgrid .hc{grid-column:auto} .hsc{grid-template-columns:1fr} }
 
   .nscroll{max-height:460px;overflow:auto;margin-right:-8px;padding-right:8px}
   .notice-card .ni-h .tt{font-size:14px}
@@ -2300,9 +2305,12 @@ const homeKind = () => anyMgr() ? "m" : "t";
 const homeKey = () => "portal.home." + myEmail().toLowerCase();
 function homeCards(){
   const k = homeKind(), lib = homeLib(), saved = state.home?.[k] || (() => { try { return JSON.parse(store.get(homeKey()) || "null")?.[k]; } catch { return null; } })();
-  const list = Array.isArray(saved) ? saved : HOME_DEF[k].map(([id, w]) => ({ id, w }));
-  return list.filter(c => lib.includes(c.id)).map(c => ({ id:c.id, w: [1,2,3].includes(c.w) ? c.w : 1 }));
+  const list = Array.isArray(saved) ? saved : homeDefault(k);
+  return list.filter(c => lib.includes(c.id)).map(c => ({ id:c.id, w: [1,2,3].includes(c.w) ? c.w : 1, h: [1,2,3].includes(c.h) ? c.h : (HOME_H[c.id] || 1) }));
 }
+// 카드 높이(칸): 1 = 작게, 2 = 보통, 3 = 크게. 정한 높이를 넘는 내용은 카드 안에서 스크롤 (휴대폰 위젯처럼)
+const HOME_H = { T1:1, T2:2, T6:2, T8:2, T9:1, T10:1, T12:1, T15:1, T16:1, T17:1, M1:1, M2:2, M4:2, M5:1, M6:1, M7:1, M8:2, M10:1, M11:1 };
+const homeDefault = k => HOME_DEF[k].map(([id, w]) => ({ id, w, h: HOME_H[id] || 1 }));
 const homeLib = () => homeKind() === "m" ? [...M_IDS.filter(id => id !== "M15"), ...T_IDS] : T_IDS.filter(id => id !== "T17");
 async function homeSave(cards){
   const k = homeKind(), all = { ...(state.home || {}), [k]: cards };
@@ -2445,13 +2453,14 @@ function linkStatusHTML(){
 }
 function homeHTML(){
   const k = homeKind(), cards = homeCards(), edit = !!state.homeEdit, lib = homeLib(), hidden = lib.filter(id => !cards.some(c => c.id === id));
-  const card = ({ id, w }, i) => { let r; try { r = HC[id].f(); } catch (e) { console.error(id, e); r = { body:`<p class="empty">불러오지 못했어요.</p>` }; }
-    return `<section class="card hc" data-hc="${id}" style="--w:${w}" ${edit ? `draggable="true"` : ""}>
+  const card = ({ id, w, h }, i) => { let r; try { r = HC[id].f(); } catch (e) { console.error(id, e); r = { body:`<p class="empty">불러오지 못했어요.</p>` }; }
+    return `<section class="card hc" data-hc="${id}" style="--w:${w};--h:${h}" ${edit ? `draggable="true"` : ""}>
       ${edit ? `<div class="hc-tools"><span class="hc-grip" title="끌어서 옮기기" aria-hidden="true">⠿</span>
-        <span class="seg" role="group" aria-label="폭">${[1,2,3].map(n => `<button type="button" data-act="hc-w" data-id="${id}" data-w="${n}" aria-pressed="${w === n}">${n === 3 ? "한 줄" : n + "칸"}</button>`).join("")}</span>
+        <span class="seg" role="group" aria-label="폭" title="폭">${[1,2,3].map(n => `<button type="button" data-act="hc-w" data-id="${id}" data-w="${n}" aria-pressed="${w === n}">${n === 3 ? "한 줄" : n + "칸"}</button>`).join("")}</span>
+        <span class="seg" role="group" aria-label="높이" title="높이">${[1,2,3].map(n => `<button type="button" data-act="hc-h" data-id="${id}" data-h="${n}" aria-pressed="${h === n}">${["낮게","보통","높게"][n - 1]}</button>`).join("")}</span>
         <button type="button" data-act="hc-mv" data-id="${id}" data-d="-1" aria-label="앞으로" ${i === 0 ? "disabled" : ""}>↑</button><button type="button" data-act="hc-mv" data-id="${id}" data-d="1" aria-label="뒤로" ${i === cards.length - 1 ? "disabled" : ""}>↓</button>
         <button type="button" data-act="hc-rm" data-id="${id}" aria-label="빼기">✕</button></div>` : ""}
-      <div class="card-h"><h2>${HC[id].t}${r.sub ? `<span class="sub">${r.sub}</span>` : ""}</h2>${edit ? "" : r.act || ""}</div>${r.body}</section>`; };
+      <div class="card-h"><h2>${HC[id].t}${r.sub ? `<span class="sub">${r.sub}</span>` : ""}</h2>${edit ? "" : r.act || ""}</div><div class="hc-body">${r.body}</div></section>`; };
   return `
   <div class="htop ${k}">
     <section class="card notice-card">${noticeListHTML()}</section>
@@ -2460,7 +2469,7 @@ function homeHTML(){
   <section class="card wide-cal">${calHTML("week")}</section>
   ${kbHomeHTML()}
   <div class="hbar">${edit
-    ? `<b>홈 편집 중</b><span class="hnote">카드를 끌어서 옮기거나 ↑↓로 순서를, 칸 수로 폭을 바꿔요. 배치는 나에게만 적용돼요.</span>
+    ? `<b>홈 편집 중</b><span class="hnote">끌어서 옮기거나 ↑↓로 순서를, 폭(1칸·2칸·한 줄)과 높이(낮게·보통·높게)를 골라요. 빈 자리는 뒤 카드가 채워요. 넘치는 내용은 카드 안에서 스크롤돼요. 배치는 나에게만 적용돼요.</span>
        <span class="sp"></span><button type="button" class="btn btn-ghost btn-sm" data-act="hc-reset">기본 배치로</button><button type="button" class="btn btn-primary btn-sm" data-act="hc-edit">완료</button>`
     : `${linkStatusHTML()}<span class="sp"></span><button type="button" class="btn btn-ghost btn-sm" data-act="hc-edit">홈 편집</button>`}</div>
   ${edit && hidden.length ? `<div class="hadd"><span class="hnote">카드 추가</span>${hidden.map(id => `<button type="button" class="hadd-b" data-act="hc-add" data-id="${id}"><b>＋ ${HC[id].t}</b><small>${HC_NOTE[id] || ""}${id.startsWith("T") && k === "m" ? " · 교사 카드" : ""}</small></button>`).join("")}</div>` : ""}
@@ -2469,11 +2478,12 @@ function homeHTML(){
 function homeAct(act, el){
   const id = el.dataset.id, cards = homeCards(), i = cards.findIndex(c => c.id === id);
   if (act === "hc-edit") { state.homeEdit = !state.homeEdit; renderView(); return; }
-  if (act === "hc-reset") { const k = homeKind(); homeSave(HOME_DEF[k].map(([id, w]) => ({ id, w }))); return; }
-  if (act === "hc-add") { homeSave([...cards, { id, w: 1 }]); return; }
+  if (act === "hc-reset") { homeSave(homeDefault(homeKind())); return; }
+  if (act === "hc-add") { homeSave([...cards, { id, w: 1, h: HOME_H[id] || 1 }]); return; }
   if (i < 0) return;
   if (act === "hc-rm") cards.splice(i, 1);
   else if (act === "hc-w") cards[i].w = +el.dataset.w;
+  else if (act === "hc-h") cards[i].h = +el.dataset.h;
   else if (act === "hc-mv") { const j = i + +el.dataset.d; if (j < 0 || j >= cards.length) return; [cards[i], cards[j]] = [cards[j], cards[i]]; }
   homeSave(cards);
 }
@@ -4390,7 +4400,7 @@ $("view").addEventListener("click", e => {
     case "notice-edit": { const nt = state.notices.find(x => x.id === id); if (nt && canEditPost(nt)) noticeForm(nt); break; }
     case "notice-open": state.openNotice = id; goTab("home"); break;
     case "link-all": linkAll(); break;
-    case "hc-edit": case "hc-reset": case "hc-add": case "hc-rm": case "hc-w": case "hc-mv": homeAct(act, el); break;
+    case "hc-edit": case "hc-reset": case "hc-add": case "hc-rm": case "hc-w": case "hc-h": case "hc-mv": homeAct(act, el); break;
     case "home-notice": state.openNotice = id; renderView(); { const n = $("view").querySelector(`.notice-card [data-fk="n-${id}"]`); n?.scrollIntoView({ block:"nearest", behavior:"smooth" }); n?.focus({ preventScroll:true }); } break;
     case "home-mission": state.mhOpen = id; state.mhView = "list"; goTab("mission"); break;
     case "notice-toggle": state.openNotice = state.openNotice === id ? null : id; renderView(); $("view").querySelector(`[data-fk="n-${id}"]`)?.focus(); break;
