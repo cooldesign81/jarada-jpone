@@ -2628,8 +2628,10 @@ function myTasksOn(day){
 }
 /* 관리자: 내가 맡은 원의 업무를 캘린더에서 한눈에 (누가 무엇을, 잘 되고 있나). 나 / 원 전체 전환은 사람마다 기억 */
 const calTeamKey = () => "portal.calTeam." + myEmail().toLowerCase();
-const calTeam = () => anyMgr() && store.get(calTeamKey()) !== "0";
-const teamTasksOn = day => (state.tasks || []).filter(t => t.due === day && t.status !== "canceled" && isMgr(t.branch) && visible(t));
+// 관리자 캘린더 업무 보기: all = 전체(내 업무 + 내가 맡은 원 업무, 기본) · 0 = 내 업무만 · 1 = 원 업무만
+const calMode = () => !anyMgr() ? "0" : ["0", "1"].includes(store.get(calTeamKey())) ? store.get(calTeamKey()) : "all";
+const calTeam = () => calMode() !== "0";
+const teamTasksOn = day => (state.tasks || []).filter(t => t.due === day && t.status !== "canceled" && visible(t) && (isMgr(t.branch) || (calMode() === "all" && whMine(t))));
 // 같이 배정한 업무(groupId) · 같은 미션은 한 줄로 묶음. 루틴도 루틴별로 묶음
 function taskGroups(list){
   const m = new Map();
@@ -2704,13 +2706,13 @@ function calHTML(mode){
         ${wk ? "" : `<button type="button" data-act="cal-prev" data-fk="cal-prev" aria-label="이전 달">${arrow("m15 6-6 6 6 6")}</button>
           <button type="button" data-act="cal-today" data-fk="cal-today">오늘</button>
           <button type="button" data-act="cal-next" data-fk="cal-next" aria-label="다음 달">${arrow("m9 6 6 6-6 6")}</button>`}
-        ${anyMgr() ? `<span class="seg" role="group" aria-label="캘린더에 보일 업무"><button type="button" data-act="cal-team" data-v="0" aria-pressed="${!team}">내 업무</button><button type="button" data-act="cal-team" data-v="1" aria-pressed="${team}" data-tip="내가 맡은 원 선생님들의 업무를 마감일에 보여줘요. 이름을 누르면 그 업무가 열려요.">원 업무</button></span>` : ""}
+        ${anyMgr() ? `<span class="seg" role="group" aria-label="캘린더에 보일 업무"><button type="button" data-act="cal-team" data-v="all" aria-pressed="${calMode() === "all"}" data-tip="내 업무와 내가 맡은 원 선생님들의 업무를 함께 보여줘요.">전체 업무</button><button type="button" data-act="cal-team" data-v="0" aria-pressed="${calMode() === "0"}">내 업무</button><button type="button" data-act="cal-team" data-v="1" aria-pressed="${calMode() === "1"}" data-tip="내가 맡은 원 선생님들의 업무를 마감일에 보여줘요. 이름을 누르면 그 업무가 열려요.">원 업무</button></span>` : ""}
         ${gBtn}
         ${canAdd ? `<button type="button" data-act="event-new" data-date="${sel}">일정 추가</button>` : ""}
         ${wk ? `<button type="button" data-act="go" data-tab="notice">전체 캘린더</button>` : ""}
       </div>
     </div>
-    <div class="cal-legend">${Object.values(CAL_KIND).map(k => `<span><i style="background:${k.color}"></i>${k.label}</span>`).join("")}<span><i class="bd"></i>생일</span>${anyMgr() && link.people?.status === "ok" ? `<span><i class="lv"></i>휴가 (JP People)</span>` : ""}<span><i class="task"></i>${team ? "원 업무 (관리자만 보여요)" : "내 업무 (나만 보여요)"}</span>${gcal.status === "on" ? `<span><i class="mine"></i>내 구글 일정 (나만 보여요)</span>` : ""}</div>
+    <div class="cal-legend">${Object.values(CAL_KIND).map(k => `<span><i style="background:${k.color}"></i>${k.label}</span>`).join("")}<span><i class="bd"></i>생일</span>${anyMgr() && link.people?.status === "ok" ? `<span><i class="lv"></i>휴가 (JP People)</span>` : ""}<span><i class="task"></i>${calMode() === "all" ? "업무 (내 업무 + 원 업무)" : team ? "원 업무 (관리자만 보여요)" : "내 업무 (나만 보여요)"}</span>${gcal.status === "on" ? `<span><i class="mine"></i>내 구글 일정 (나만 보여요)</span>` : ""}</div>
     ${gcal.err ? `<p class="gc-err">${esc(gcal.err)}</p>` : ""}
     ${team && !wk ? teamMonthSum() : ""}
     <div class="cal ${wk ? "wk" : "month"}">
