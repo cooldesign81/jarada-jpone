@@ -13,6 +13,12 @@
      lg.update({ denied:{ email, msg }, onSwitch: async () => {...} })   // 명단에 없는 계정
      JPLogin.hide()   // 로그인되면 닫기
      links:[{ label:"다른 원으로 변경", fn(){...} }]   // 아래쪽 작은 글자 링크
+   ── 구글 로그인 이어받기 (v2) ──
+     sso: t => signInWithCredential(auth, GoogleAuthProvider.credential(null, t))   // 넘기면: JP ONE(또는 다른 자라다 앱)에서
+        한 시간 안에 구글로 로그인했을 때 받은 토큰으로 창 없이 같은 계정으로 들어옴. 안 되면 평소 로그인 화면
+     google 함수는 signInWithPopup 결과를 돌려줘야 함(그래야 토큰을 다른 앱에 넘김)
+     JPLogin.guard(user, () => signOut(auth))   // 로그인된 사용자마다 부름. JP ONE에서 '로그아웃'하면 다른 앱도 같이 나감
+     JPLogin.logoutAll()                        // JP ONE 로그아웃 때
    학부모용 화면(주차 쿠폰 학부모 페이지)과 주차 관리자 화면에는 쓰지 않음
    ===================================================================== */
 (function () {
@@ -94,6 +100,33 @@
 
   let host = null, root = null, o = {}, mode = "google", busy = false;
 
+  /* 구글 로그인 이어받기: 같은 주소(cooldesign81.github.io)의 자라다 앱끼리 한 시간짜리 구글 토큰을 나눠 씀 */
+  const SSO = "jp.sso", OUT = "jp.sso.out", HINT = "jp.sso.email";
+  const ls = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} }, del(k) { try { localStorage.removeItem(k); } catch {} } };
+  const tokenOf = r => r?.credential?.accessToken || r?._tokenResponse?.oauthAccessToken || "";
+  function save(r) {
+    const em = String(r?.user?.email || "").toLowerCase(), t = tokenOf(r);
+    if (em) ls.set(HINT, em);
+    if (em && t) ls.set(SSO, JSON.stringify({ t, em, exp: Date.now() + 50 * 60e3 }));
+  }
+  function token(email) {
+    try { const x = JSON.parse(ls.get(SSO) || "null"); if (!x || x.exp < Date.now()) return ""; if (email && x.em !== String(email).toLowerCase()) return ""; return x.t; } catch { return ""; }
+  }
+  const hint = () => ls.get(HINT) || "";
+  function logoutAll() { ls.set(OUT, String(Date.now())); ls.del(SSO); }
+  let guardFn = null;
+  // JP ONE에서 로그아웃한 뒤에 남은 다른 앱 로그인은 끊음. 열려 있는 탭도 바로
+  function guard(user, signOutFn) {
+    // 원 공용 계정(비밀번호)은 데스크에서 여러 사람이 쓰므로 같이 로그아웃하지 않음
+    if (!(user?.providerData || []).some(p => p && p.providerId === "google.com")) { guardFn = null; return true; }
+    guardFn = signOutFn;
+    const out = +(ls.get(OUT) || 0), last = Date.parse(user?.metadata?.lastSignInTime || "") || 0;
+    if (out && last && out > last + 5000) { try { signOutFn(); } catch {} return false; }
+    return true;
+  }
+  window.addEventListener("storage", e => { if (e.key === OUT && e.newValue && guardFn) { try { guardFn(); } catch {} } });
+  let ssoTried = false;
+
   function render() {
     const a = APPS[o.app] || { name: o.title || "자라다", icon: "", desc: "" };
     const name = o.title || a.name, desc = o.desc || a.desc;
@@ -108,7 +141,7 @@
     else body = `${hasCommon ? `<div class="chips" role="group" aria-label="로그인 방법">
           <button type="button" data-a="mode" data-m="google" aria-pressed="${mode === "google"}">구글 계정</button>
           <button type="button" data-a="mode" data-m="common" aria-pressed="${mode === "common"}">${esc(o.commonLabel || "원 공용 계정")}</button></div>` : ""}
-        ${mode === "google" ? `<button type="button" class="g" data-a="google" ${busy ? "disabled" : ""}>${G_LOGO}구글로 로그인</button>
+        ${mode === "google" ? `<button type="button" class="g" data-a="google" ${busy ? "disabled" : ""}>${G_LOGO}${hint() && o.app !== "jpone" ? `구글로 계속 <small style="font-weight:500;color:#767676">${esc(hint())}</small>` : "구글로 로그인"}</button>
           <p class="note">${esc(o.note || (o.app === "jpone" ? "한 번 로그인하면 다른 자라다 앱도 바로 열려요." : "JP ONE에 로그인돼 있으면 바로 열려요."))}</p>`
         : `<form autocomplete="on" novalidate>
           <label for="em">이메일</label><input id="em" name="email" type="email" autocomplete="username" required value="${esc(o.commonEmail || "")}">
@@ -154,6 +187,14 @@
   }
   function show(opts) {
     o = { ...opts }; mode = opts.mode || "google"; busy = false;
+    if (typeof opts.google === "function") { const g = opts.google; o.google = async () => { const r = await g(); save(r); return r; }; }
+    if (typeof opts.onSwitch === "function") { const g = opts.onSwitch; o.onSwitch = async () => { const r = await g(); save(r); return r; }; }
+    // 이어받기: 토큰이 있으면 화면 대신 '들어가는 중'을 보여주고 조용히 로그인 (한 화면에서 한 번만 시도)
+    const t = !ssoTried && !opts.denied && typeof opts.sso === "function" ? token() : "";
+    if (t) {
+      ssoTried = true; o.loading = true; o.loadingText = "JP ONE 계정으로 들어가는 중…";
+      Promise.resolve().then(() => opts.sso(t)).catch(() => { ls.del(SSO); if (host && host.isConnected && o.loading) { o.loading = false; render(); } });
+    }
     if (!host || !host.isConnected) {
       host = document.createElement("jp-login");
       host.setAttribute("role", "dialog"); host.setAttribute("aria-label", "로그인");
@@ -171,5 +212,5 @@
     hide() { JPLogin.hide(); }
   };
   function hide() { if (host) { host.remove(); host = null; root = null; } document.documentElement.style.overflow = ""; }
-  window.JPLogin = { show, hide, update: p => ctl.update(p), get open() { return !!host; }, errText, version: 1 };
+  window.JPLogin = { show, hide, update: p => ctl.update(p), get open() { return !!host; }, errText, save, token, hint, guard, logoutAll, version: 2 };
 })();

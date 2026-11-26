@@ -1083,7 +1083,7 @@
 <input type="file" id="revPick" accept=".xlsx,.xls,.csv" multiple hidden>
 <div class="tip hidden" id="tip" role="tooltip"></div>
 
-<script src="shared/jp-login.js?v=1"></script>
+<script src="shared/jp-login.js?v=2"></script>
 <script type="module">
 /* =====================================================================
    자라다 JP ONE — 스크립트
@@ -1611,11 +1611,12 @@ function showLogin(denied){
   $("app").classList.add("hidden");
   if (window.JPLogin && !DEMO) {
     const google = sel => fb.A.signInWithPopup(fb.auth, (() => { const p = new fb.A.GoogleAuthProvider(); if (sel) p.setCustomParameters({ prompt:"select_account" }); return p; })()).then(r => { linkStash(r); return r; });
-    const wrap = fn => async (...a) => { try { await fn(...a); } catch (e) { const m = loginMsg(e.code); if (!m) throw e; throw Object.assign(new Error(m), { code:e.code, userMessage:m }); } };
+    const wrap = fn => async (...a) => { try { return await fn(...a); } catch (e) { const m = loginMsg(e.code); if (!m) throw e; throw Object.assign(new Error(m), { code:e.code, userMessage:m }); } };
     JPLogin.show({ app:"jpone", lead:"선생님은 본인 구글 계정으로 로그인해 주세요.",
       google: wrap(() => google(false)),
       common: wrap((em, pw) => fb.A.signInWithEmailAndPassword(fb.auth, em, pw)), commonLabel:"원 공용 계정",
-      denied: denied || null, onSwitch: wrap(() => google(true)) });
+      denied: denied || null, onSwitch: wrap(() => google(true)),
+      sso: t => fb.A.signInWithCredential(fb.auth, fb.A.GoogleAuthProvider.credential(null, t)) });
     return;
   }
   $("login").classList.remove("hidden");
@@ -2125,9 +2126,10 @@ const linkKeys = () => {
 };
 const linkable = () => !!state.user && (DEMO || !!state.user.providerData?.some(p => p.providerId === "google.com"));
 function linkStash(r){
+  try { window.JPLogin?.save?.(r); } catch {}
   try { const c = fb.A.GoogleAuthProvider.credentialFromResult(r); if (c?.accessToken) ses.set(LINK_TOK, JSON.stringify({ t:c.accessToken, exp: Date.now() + 50 * 60e3, em:(r.user?.email || "").toLowerCase() })); } catch {}
 }
-const linkTok = () => { try { const x = JSON.parse(ses.get(LINK_TOK) || "null"); return x && x.exp > Date.now() && x.em === myEmail().toLowerCase() ? x.t : ""; } catch { return ""; } };
+const linkTok = () => { try { const x = JSON.parse(ses.get(LINK_TOK) || "null"); if (x && x.exp > Date.now() && x.em === myEmail().toLowerCase()) return x.t; } catch {} return window.JPLogin?.token?.(myEmail()) || ""; };
 const linkRerender = () => { if (state.tab === "home" || state.tab === "notice") renderView({ keepFocus:true }); };
 // 앱 하나에 로그인(이미 돼 있으면 그대로). tok 이 있으면 창 없이, interactive 면 구글 창
 async function linkSignIn(key, interactive){
@@ -6256,6 +6258,7 @@ if (!DEMO) {
     catch (err) { $("loginErr").textContent = loginMsg(err.code); }
   });
   $("logoutBtn").addEventListener("click", async () => {
+    try { window.JPLogin?.logoutAll?.(); } catch {}   // 다른 자라다 앱도 같이 로그아웃
     for (const x of Object.values(extApps)) { try { await fb.A.signOut(x.auth); } catch {} }   // 매출·JP People 연결도 같이 끊음
     for (const k in extApps) delete extApps[k];
     gcalLogout();
