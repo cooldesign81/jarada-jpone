@@ -1616,7 +1616,7 @@ function showLogin(denied){
       google: wrap(() => google(false)),
       common: wrap((em, pw) => fb.A.signInWithEmailAndPassword(fb.auth, em, pw)), commonLabel:"원 공용 계정",
       denied: denied || null, onSwitch: wrap(() => google(true)),
-      sso: t => fb.A.signInWithCredential(fb.auth, fb.A.GoogleAuthProvider.credential(null, t)) });
+      sso: (t, i) => fb.A.signInWithCredential(fb.auth, fb.A.GoogleAuthProvider.credential(i || null, t)) });
     return;
   }
   $("login").classList.remove("hidden");
@@ -2118,7 +2118,7 @@ function todoRow(t, compact){
 const LINK_TOK = "portal.linkTok";
 const link = { pyeongchon:{ status:"off" }, banpo:{ status:"off" }, daechi:{ status:"off" }, mat:{ status:"off" }, people:{ status:"off" } };
 const LINK_NAME = { pyeongchon:"스케줄 매니저(평촌)", banpo:"스케줄 매니저(반포)", daechi:"스케줄 매니저(대치)", mat:"재료 요청", people:"JP People" };
-const linkUnsub = {};
+const linkUnsub = {}, linkSilentErr = {};
 // 나에게 필요한 연결: 내 원들의 스케줄 매니저 + 재료 요청 + JP People. 원 공용 계정(비밀번호)은 연결하지 않음
 const linkKeys = () => {
   const bs = state.isAdmin ? BRANCH_KEYS : (state.myBranches || []).filter(b => BRANCH_KEYS.includes(b));
@@ -2127,8 +2127,9 @@ const linkKeys = () => {
 const linkable = () => !!state.user && (DEMO || !!state.user.providerData?.some(p => p.providerId === "google.com"));
 function linkStash(r){
   try { window.JPLogin?.save?.(r); } catch {}
-  try { const c = fb.A.GoogleAuthProvider.credentialFromResult(r); if (c?.accessToken) ses.set(LINK_TOK, JSON.stringify({ t:c.accessToken, exp: Date.now() + 50 * 60e3, em:(r.user?.email || "").toLowerCase() })); } catch {}
+  try { const c = fb.A.GoogleAuthProvider.credentialFromResult(r); if (c?.accessToken) ses.set(LINK_TOK, JSON.stringify({ t:c.accessToken, id:c.idToken || "", exp: Date.now() + 50 * 60e3, em:(r.user?.email || "").toLowerCase() })); } catch {}
 }
+const linkIdTok = () => { try { const x = JSON.parse(ses.get(LINK_TOK) || "null"); return x && x.exp > Date.now() && x.em === myEmail().toLowerCase() ? x.id || "" : ""; } catch { return ""; } };
 const linkTok = () => { try { const x = JSON.parse(ses.get(LINK_TOK) || "null"); if (x && x.exp > Date.now() && x.em === myEmail().toLowerCase()) return x.t; } catch {} return window.JPLogin?.token?.(myEmail()) || ""; };
 const linkRerender = () => { if (state.tab === "home" || state.tab === "notice") renderView({ keepFocus:true }); };
 // 앱 하나에 로그인(이미 돼 있으면 그대로). tok 이 있으면 창 없이, interactive 면 구글 창
@@ -2137,7 +2138,11 @@ async function linkSignIn(key, interactive){
   if (x.auth.currentUser && (x.auth.currentUser.email || "").toLowerCase() !== me) await fb.A.signOut(x.auth);   // 다른 계정이면 끊고 다시
   if (x.auth.currentUser) return x;
   const tok = linkTok();
-  if (tok) { try { await fb.A.signInWithCredential(x.auth, fb.A.GoogleAuthProvider.credential(null, tok)); return x; } catch (e) { console.warn("조용한 연결 실패", key, e.code || e); } }
+  if (tok) {
+    // ID 토큰 + 접근 토큰을 같이 넘김. 다른 프로젝트가 JP ONE 클라이언트 ID를 허용 목록에 넣어 두면 ID 토큰으로 통과
+    try { await fb.A.signInWithCredential(x.auth, fb.A.GoogleAuthProvider.credential(linkIdTok() || null, tok)); return x; }
+    catch (e) { console.warn("조용한 연결 실패", key, e.code || e); linkSilentErr[key] = e.code || String(e.message || e); }
+  }
   if (!interactive) return null;
   const p = new fb.A.GoogleAuthProvider(); p.setCustomParameters({ login_hint: myEmail() });
   const r = await fb.A.signInWithPopup(x.auth, p); linkStash(r);
@@ -2150,7 +2155,7 @@ async function linkOne(key, interactive){
   try {
     link[key] = { ...link[key], status:"loading" };
     const x = await linkSignIn(key, interactive);
-    if (!x) { link[key] = { status:"off" }; return; }
+    if (!x) { link[key] = { status:"off", msg: linkSilentErr[key] ? `자동 연결 실패 (${linkSilentErr[key]})` : "" }; return; }
     await LINK_LOAD[key === "mat" ? "mat" : key === "people" ? "people" : "sched"](key, x);
   } catch (e) { console.warn("앱 연결", key, e); link[key] = { status:"error", msg: LINK_ERR(e) }; }
 }
@@ -2165,17 +2170,19 @@ function linkAll(){
   const todo = linkKeys().filter(k => link[k].status !== "ok");
   if (!todo.length) return;
   if (DEMO) { (async () => { for (const k of todo) await linkOne(k, false); linkRerender(); toast("앱을 모두 연결했어요."); })(); return; }
-  const first = todo[0], x = extApps[first];
-  if (!x) { toast("연결 준비 중이에요. 잠깐 뒤 다시 눌러 주세요."); linkBoot(); return; }
+  const first = todo[0], x = extApps[first], fresh = !!linkTok();
+  if (fresh && !x) { toast("연결 준비 중이에요. 잠깐 뒤 다시 눌러 주세요."); linkBoot(); return; }
   const p = new fb.A.GoogleAuthProvider(); p.setCustomParameters({ login_hint: myEmail() });
-  const popup = fb.A.signInWithPopup(x.auth, p);   // ← 클릭 안에서 바로 호출
-  link[first] = { status:"loading" }; linkRerender();
+  // 토큰이 없으면: JP ONE 계정 확인 창 1번 → 받은 토큰으로 모든 앱 조용히 연결
+  // 토큰이 있는데도 자동 연결이 안 된 앱이면: 그 앱 로그인 창을 직접 (← 둘 다 클릭 안에서 바로 호출해야 팝업이 안 막힘)
+  const popup = fresh ? fb.A.signInWithPopup(x.auth, p) : fb.A.reauthenticateWithPopup(fb.auth.currentUser, p);
+  const target = fresh ? x.auth : null;
+  todo.forEach(k => { link[k] = { status:"loading" }; }); linkRerender();
   popup.then(async r => {
-    if ((r.user?.email || "").toLowerCase() !== myEmail().toLowerCase()) { await fb.A.signOut(x.auth); throw Object.assign(new Error("JP ONE과 같은 구글 계정으로 연결해 주세요."), { code:"link/other-account" }); }
+    if ((r.user?.email || "").toLowerCase() !== myEmail().toLowerCase()) { if (target) await fb.A.signOut(target); throw Object.assign(new Error("JP ONE과 같은 구글 계정으로 연결해 주세요."), { code:"link/other-account" }); }
     linkStash(r);
-    await linkOne(first, false); linkRerender();
-    for (const k of todo.slice(1)) { await linkOne(k, false); linkRerender(); }
-  }).catch(e => { link[first] = { status:"error", msg: LINK_ERR(e) }; })
+    for (const k of todo) { await linkOne(k, false); linkRerender(); }
+  }).catch(e => { todo.forEach(k => { if (link[k].status === "loading") link[k] = { status:"error", msg: LINK_ERR(e) }; }); })
     .finally(() => {
       linkRerender();
       const left = linkKeys().filter(k => link[k].status !== "ok");
@@ -2450,7 +2457,7 @@ function progressHTML(){
 function linkStatusHTML(){
   if (!linkable()) return "";
   const ks = linkKeys(), ok = ks.filter(k => link[k].status === "ok"), busy = ks.some(k => link[k].status === "loading");
-  return `<span class="lstat">${ks.map(k => `<span class="${link[k].status}" title="${esc(LINK_NAME[k])}${link[k].msg ? " — " + esc(link[k].msg) : ""}">${link[k].status === "ok" ? "✓" : link[k].status === "error" ? "!" : "·"} ${esc(LINK_NAME[k].replace("스케줄 매니저", "스케줄"))}</span>`).join("")}
+  return `<span class="lstat">${ks.map(k => `<span class="${link[k].status}${link[k].msg ? " why" : ""}" title="${esc(LINK_NAME[k])}${link[k].msg ? " — " + esc(link[k].msg) : ""}">${link[k].status === "ok" ? "✓" : link[k].status === "error" ? "!" : "·"} ${esc(LINK_NAME[k].replace("스케줄 매니저", "스케줄"))}</span>`).join("")}
     ${ok.length < ks.length && !busy ? `<button type="button" class="linkish" data-act="link-all">앱 연결하기</button>` : busy ? `<span class="hnote" style="margin:0">연결 중…</span>` : ""}</span>`;
 }
 function homeHTML(){

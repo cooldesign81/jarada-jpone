@@ -104,11 +104,13 @@
   const SSO = "jp.sso", OUT = "jp.sso.out", HINT = "jp.sso.email";
   const ls = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} }, del(k) { try { localStorage.removeItem(k); } catch {} } };
   const tokenOf = r => r?.credential?.accessToken || r?._tokenResponse?.oauthAccessToken || "";
+  const idTokenOf = r => r?.credential?.idToken || r?._tokenResponse?.oauthIdToken || "";
   function save(r) {
     const em = String(r?.user?.email || "").toLowerCase(), t = tokenOf(r);
     if (em) ls.set(HINT, em);
-    if (em && t) ls.set(SSO, JSON.stringify({ t, em, exp: Date.now() + 50 * 60e3 }));
+    if (em && t) ls.set(SSO, JSON.stringify({ t, id: idTokenOf(r), em, exp: Date.now() + 50 * 60e3 }));
   }
+  function idToken(email) { try { const x = JSON.parse(ls.get(SSO) || "null"); return x && x.exp > Date.now() && (!email || x.em === String(email).toLowerCase()) ? x.id || "" : ""; } catch { return ""; } }
   function token(email) {
     try { const x = JSON.parse(ls.get(SSO) || "null"); if (!x || x.exp < Date.now()) return ""; if (email && x.em !== String(email).toLowerCase()) return ""; return x.t; } catch { return ""; }
   }
@@ -193,7 +195,7 @@
     const t = !ssoTried && !opts.denied && typeof opts.sso === "function" ? token() : "";
     if (t) {
       ssoTried = true; o.loading = true; o.loadingText = "JP ONE 계정으로 들어가는 중…";
-      Promise.resolve().then(() => opts.sso(t)).catch(() => { ls.del(SSO); if (host && host.isConnected && o.loading) { o.loading = false; render(); } });
+      Promise.resolve().then(() => opts.sso(t, idToken())).catch(() => { ls.del(SSO); if (host && host.isConnected && o.loading) { o.loading = false; render(); } });
     }
     if (!host || !host.isConnected) {
       host = document.createElement("jp-login");
@@ -212,5 +214,5 @@
     hide() { JPLogin.hide(); }
   };
   function hide() { if (host) { host.remove(); host = null; root = null; } document.documentElement.style.overflow = ""; }
-  window.JPLogin = { show, hide, update: p => ctl.update(p), get open() { return !!host; }, errText, save, token, hint, guard, logoutAll, version: 2 };
+  window.JPLogin = { show, hide, update: p => ctl.update(p), get open() { return !!host; }, errText, save, token, idToken, hint, guard, logoutAll, version: 2 };
 })();
