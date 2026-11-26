@@ -157,6 +157,21 @@
   .notice-card .list li{align-items:center}
   .wide-cal{margin-bottom:16px}
   /* ───────── 홈 카드 ───────── */
+  .slot2{border:1px solid var(--line);border-radius:var(--r-btn);margin-bottom:6px;overflow:hidden}
+  .slot2 .sh{display:flex;gap:8px;align-items:baseline;background:var(--slot-navy);color:#fff;padding:5px 10px;font-size:13px}
+  .slot2 .sh .n{margin-left:auto;font-variant-numeric:tabular-nums}.slot2 .sh small{opacity:.7}
+  .slot2.now .sh{background:var(--brand-orange)}.slot2.past{opacity:.6}
+  .slot2 .sb{padding:6px 10px;font-size:13px;line-height:1.9}
+  .mtag{display:inline-block;font-size:11px;font-weight:700;border-radius:4px;padding:0 6px;color:#fff;margin-right:3px;line-height:1.7;background:#8A8A8A}
+  .mtag.abs{background:#D1495B}.mtag.mk{background:#3B9AD9}.mtag.new{background:#7B4FC9}.mtag.smp{background:#E08A1E}.mtag.away{background:#9E9E9E}
+  .htable td.chg{white-space:normal;text-align:left;min-width:120px}
+  .pill2{margin-left:auto;flex:none;font-size:11px;font-weight:700;color:var(--c);border:1px solid var(--c);border-radius:10px;padding:0 8px;white-space:nowrap}
+  .hlist li .pill2{align-self:center}
+  .lstat{display:inline-flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:12px;color:var(--text-sub)}
+  .lstat .ok{color:#1F7A4D}.lstat .error{color:#B3261E}
+  .chip.lv{border-color:#0E8A7B;background:#EAF7F4}.chip.lv.submitted{border-style:dashed}
+  .ev .k.lv,.cal-legend i.lv{background:#0E8A7B;color:#fff}
+
   .htop{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:16px;margin-bottom:16px;align-items:stretch}
   .htop > .card{margin:0}
   .cal-day.cal-day-hide{display:none}
@@ -1576,14 +1591,14 @@ function loginMsg(code){
   if (code === "auth/unauthorized-domain") return "이 주소가 Firebase 승인 도메인에 없어요. 콘솔에서 도메인을 추가해 주세요.";
   return "로그인하지 못했어요. (" + code + ")";
 }
-function stopWatching(){ unsubs.forEach(u => u && u()); unsubs = []; }
+function stopWatching(){ unsubs.forEach(u => u && u()); unsubs = []; if (typeof linkStop === "function") linkStop(); }
 /* 로그인 화면: 공통 부품(shared/jp-login.js, 좌우 나눔)을 씀. 못 불러오면 예전 화면(#login)으로 */
 function showLogin(denied){
   $("boot")?.remove();
   stopWatching();
   $("app").classList.add("hidden");
   if (window.JPLogin && !DEMO) {
-    const google = sel => fb.A.signInWithPopup(fb.auth, (() => { const p = new fb.A.GoogleAuthProvider(); if (sel) p.setCustomParameters({ prompt:"select_account" }); return p; })());
+    const google = sel => fb.A.signInWithPopup(fb.auth, (() => { const p = new fb.A.GoogleAuthProvider(); if (sel) p.setCustomParameters({ prompt:"select_account" }); return p; })()).then(r => { linkStash(r); return r; });
     const wrap = fn => async (...a) => { try { await fn(...a); } catch (e) { const m = loginMsg(e.code); if (!m) throw e; throw Object.assign(new Error(m), { code:e.code, userMessage:m }); } };
     JPLogin.show({ app:"jpone", lead:"선생님은 본인 구글 계정으로 로그인해 주세요.",
       google: wrap(() => google(false)),
@@ -1682,6 +1697,7 @@ async function enter(user){
   }
   ext.pay = { status:"off" }; ext.people = { status:"off" };
   if (state.isAdmin) { extConnect("pay", false); extConnect("people", false); setTimeout(() => counselSync(false), 1500); }
+  setTimeout(linkBoot, 600);   // 스케줄 매니저 · 재료 요청 · JP People 연결 (홈 카드)
 }
 function onData(name){
   state.loaded[name] = true;
@@ -2080,6 +2096,173 @@ function todoRow(t, compact){
 }
 
 /* ── 홈 ── */
+/* ========= 앱 연결: 스케줄 매니저(원별) · 재료 요청 · JP People =========
+   각 앱은 따로 된 Firebase 프로젝트라 따로 로그인해야 읽을 수 있음. JP ONE에 구글로 로그인할 때 받은 구글 토큰으로
+   다른 앱에도 같은 계정으로 조용히 로그인(한 시간 안). 그게 안 되면 '앱 연결' 버튼 → 구글 창 한 번 → 나머지는 자동.
+   한 번 연결되면 그 앱 로그인은 이 브라우저에 남아서 다음부터는 바로 읽음. 각 앱의 보안 규칙(본인 권한)대로만 읽힘 */
+const LINK_TOK = "portal.linkTok";
+const link = { pyeongchon:{ status:"off" }, banpo:{ status:"off" }, daechi:{ status:"off" }, mat:{ status:"off" }, people:{ status:"off" } };
+const LINK_NAME = { pyeongchon:"스케줄 매니저(평촌)", banpo:"스케줄 매니저(반포)", daechi:"스케줄 매니저(대치)", mat:"재료 요청", people:"JP People" };
+const linkUnsub = {};
+// 나에게 필요한 연결: 내 원들의 스케줄 매니저 + 재료 요청 + JP People. 원 공용 계정(비밀번호)은 연결하지 않음
+const linkKeys = () => {
+  const bs = state.isAdmin ? BRANCH_KEYS : (state.myBranches || []).filter(b => BRANCH_KEYS.includes(b));
+  return [...bs, "mat", "people"];
+};
+const linkable = () => !!state.user && (DEMO || !!state.user.providerData?.some(p => p.providerId === "google.com"));
+function linkStash(r){
+  try { const c = fb.A.GoogleAuthProvider.credentialFromResult(r); if (c?.accessToken) ses.set(LINK_TOK, JSON.stringify({ t:c.accessToken, exp: Date.now() + 50 * 60e3, em:(r.user?.email || "").toLowerCase() })); } catch {}
+}
+const linkTok = () => { try { const x = JSON.parse(ses.get(LINK_TOK) || "null"); return x && x.exp > Date.now() && x.em === myEmail().toLowerCase() ? x.t : ""; } catch { return ""; } };
+const linkRerender = () => { if (state.tab === "home" || state.tab === "notice") renderView({ keepFocus:true }); };
+// 앱 하나에 로그인(이미 돼 있으면 그대로). tok 이 있으면 창 없이, interactive 면 구글 창
+async function linkSignIn(key, interactive){
+  const x = await extInit(key), me = myEmail().toLowerCase();
+  if (x.auth.currentUser && (x.auth.currentUser.email || "").toLowerCase() !== me) await fb.A.signOut(x.auth);   // 다른 계정이면 끊고 다시
+  if (x.auth.currentUser) return x;
+  const tok = linkTok();
+  if (tok) { try { await fb.A.signInWithCredential(x.auth, fb.A.GoogleAuthProvider.credential(null, tok)); return x; } catch (e) { console.warn("조용한 연결 실패", key, e.code || e); } }
+  if (!interactive) return null;
+  const p = new fb.A.GoogleAuthProvider(); p.setCustomParameters({ login_hint: myEmail() });
+  const r = await fb.A.signInWithPopup(x.auth, p); linkStash(r);
+  if ((r.user?.email || "").toLowerCase() !== me) { await fb.A.signOut(x.auth); throw Object.assign(new Error("JP ONE과 같은 구글 계정으로 연결해 주세요."), { code:"link/other-account" }); }
+  return x;
+}
+const LINK_ERR = e => e?.code === "permission-denied" ? "이 앱에 내 계정 권한이 없어요" : e?.code === "auth/popup-blocked" ? "팝업이 막혔어요. 다시 눌러 주세요" : e?.code === "auth/popup-closed-by-user" ? "로그인 창을 닫았어요" : e?.message || "연결하지 못했어요";
+async function linkOne(key, interactive){
+  if (DEMO) { link[key] = { status:"ok", data: demoLink(key), at: Date.now() }; return; }
+  try {
+    link[key] = { ...link[key], status:"loading" };
+    const x = await linkSignIn(key, interactive);
+    if (!x) { link[key] = { status:"off" }; return; }
+    await LINK_LOAD[key === "mat" ? "mat" : key === "people" ? "people" : "sched"](key, x);
+  } catch (e) { console.warn("앱 연결", key, e); link[key] = { status:"error", msg: LINK_ERR(e) }; }
+}
+// 로그인 직후 · 새로고침 때: 이미 연결된 앱은 바로 읽고, 아니면 조용히 시도
+async function linkBoot(){
+  if (!linkable()) return;
+  for (const k of linkKeys()) await linkOne(k, false);
+  linkRerender();
+}
+// '앱 연결' 버튼: 첫 앱은 구글 창, 그 토큰으로 나머지는 자동
+async function linkAll(){
+  const todo = linkKeys().filter(k => link[k].status !== "ok");
+  for (const k of todo) { await linkOne(k, !linkTok()); linkRerender(); }
+  const bad = todo.filter(k => link[k].status !== "ok");
+  toast(bad.length ? `${bad.map(k => LINK_NAME[k]).join(", ")} 연결이 안 됐어요. ${link[bad[0]].msg || ""}` : "앱을 모두 연결했어요.");
+}
+function linkStop(){ for (const k of Object.keys(linkUnsub)) { try { linkUnsub[k](); } catch {} delete linkUnsub[k]; } for (const k of Object.keys(link)) link[k] = { status:"off" }; }
+
+const LINK_LOAD = {
+  // 스케줄 매니저: 오늘·내일 수업 요약(daySummary/{날짜}). 원 화면(관리자 계정)이 계산해서 저장해 둔 것을 실시간으로 받음
+  async sched(key, x){
+    const F = fb.F, d0 = todayISO(), d1 = addDays(d0, 1);
+    linkUnsub[key]?.();
+    const days = {};
+    const subs = [d0, d1].map(d => F.onSnapshot(F.doc(x.db, "daySummary", d), s => { days[d] = s.exists() ? s.data() : null; link[key] = { status:"ok", data:{ days }, at: Date.now() }; linkRerender(); },
+      e => { link[key] = { status:"error", msg: LINK_ERR(e) }; linkRerender(); }));
+    linkUnsub[key] = () => subs.forEach(u => u());
+    link[key] = { status:"ok", data:{ days }, at: Date.now() };
+  },
+  // 재료 요청: 내 요청(최근 60일) + 관리자는 내 원의 대기 요청 수
+  async mat(key, x){
+    const F = fb.F, me = myEmail().toLowerCase();
+    const snap = await F.getDocs(F.query(F.collection(x.db, "requests"), F.where("status", "in", ["요청", "장바구니", "주문완료", "반려"])));
+    const all = []; snap.forEach(d => { const r = d.data(); if (!r.deleted) all.push({ id:d.id, name:r.name || "", spec:r.spec || "", qty:r.qty ?? "", status:r.status, branch: branchOfCenter(r.branch || ""), by:(r.by || "").toLowerCase(), at: r.createdAt?.toMillis ? r.createdAt.toMillis() : 0, rej:r.rejNote || "" }); });
+    let done = [];
+    try { const s2 = await F.getDocs(F.query(F.collection(x.db, "requests"), F.where("by", "==", me))); s2.forEach(d => { const r = d.data(); if (!r.deleted && ["검수완료", "배송완료"].includes(r.status)) done.push({ id:d.id, name:r.name || "", spec:r.spec || "", qty:r.qty ?? "", status:"검수완료", branch: branchOfCenter(r.branch || ""), by:me, at: r.createdAt?.toMillis ? r.createdAt.toMillis() : 0 }); }); } catch {}
+    done = done.sort((a, b) => b.at - a.at).slice(0, 5);
+    link[key] = { status:"ok", data:{ open: all, done }, at: Date.now() };
+  },
+  // JP People: 내 휴가 신청 + (원장·실장·인사) 내 원 휴가자 → 관리자 캘린더
+  async people(key, x){
+    const F = fb.F, uid = x.auth.currentUser.uid;
+    const role = await F.getDoc(F.doc(x.db, "roles", uid));
+    if (!role.exists()) { link[key] = { status:"error", msg:"JP People에 한 번 로그인해서 내 계정을 만들어 주세요" }; return; }
+    const R = role.data(), from = addDays(todayISO(), -31);
+    const orgBranch = {};
+    try { const os = await F.getDocs(F.collection(x.db, "orgs")); os.forEach(d => { orgBranch[d.id] = branchOfCenter(d.data().name || ""); }); } catch {}
+    const conv = (d) => { const v = d.data(); return { id:d.id, name:v.employeeName || "", type:v.type, start:v.startDate, end:v.endDate, days:v.days, status:v.status,
+      branches:[...new Set((v.orgIds || [v.orgId]).map(o => orgBranch[o]).filter(Boolean))], note:v.decisionNote || "" }; };
+    const mine = [];
+    if (R.employeeId) { const s = await F.getDocs(F.query(F.collection(x.db, "leaveRequests"), F.where("employeeId", "==", R.employeeId))); s.forEach(d => mine.push(conv(d))); }
+    let team = [];
+    try {
+      const q = ["super", "hr"].includes(R.level) ? F.query(F.collection(x.db, "leaveRequests"), F.where("endDate", ">=", from))
+        : ["admin", "principal", "manager", "lead"].includes(R.level) && R.orgId ? F.query(F.collection(x.db, "leaveRequests"), F.where("orgIds", "array-contains", R.orgId)) : null;
+      if (q) { const s = await F.getDocs(q); s.forEach(d => team.push(conv(d))); }
+    } catch (e) { console.warn("휴가자 목록", e.code || e); }
+    team = team.filter(l => l.end >= from && ["approved", "submitted"].includes(l.status));
+    link[key] = { status:"ok", data:{ mine: mine.filter(l => l.status !== "cancelled").sort((a, b) => b.start.localeCompare(a.start)), team, level:R.level }, at: Date.now() };
+  }
+};
+
+/* ── 연결된 데이터 꺼내 쓰기 ── */
+const normName = s => String(s || "").replace(/\s|선생님|쌤|T$/g, "").toLowerCase();
+const isMyTeacherName = t => { const a = normName(t), b = normName(state.member?.name || ""); return !!a && !!b && (a === b || a.includes(b) || b.includes(a)); };
+const schedDay = (b, d = todayISO()) => link[b]?.status === "ok" ? link[b].data.days[d] ?? null : undefined;   // undefined = 연결 안 됨, null = 요약 없음
+const schedLinked = bs => bs.some(b => link[b]?.status === "ok");
+function mySlots(d = todayISO()){
+  const out = [];
+  for (const b of linkKeys().filter(k => BRANCH_KEYS.includes(k))) { const s = schedDay(b, d); if (s) for (const r of s.slots || []) if (isMyTeacherName(r.teacher)) out.push({ ...r, b }); }
+  return out.sort((a, c) => a.time.localeCompare(c.time));
+}
+const markKind = m => ["absent", "sickLeave", "noshow"].includes(m.s) ? "abs" : m.t === "makeup" ? "mk" : m.t === "newStudent" ? "new" : m.t === "sample" ? "smp" : ["moveOut", "leave", "withdrawn", "substituteOut"].includes(m.t) ? "away" : "etc";
+const slotCount = L => { const M = L.flatMap(r => r.marks || []); const c = k => M.filter(m => markKind(m) === k).length;
+  return { classes:L.length, students:L.reduce((t, r) => t + (r.present || 0), 0), abs:c("abs"), mk:c("mk"), nw:c("new"), smp:c("smp"), away:c("away") }; };
+const markTag = m => `<span class="mtag ${markKind(m)}">${esc(m.l || "")}</span>${esc(m.n || "")}`;
+const nowHM = () => { const d = new Date(); return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`; };
+// 연결 안내 칸
+function linkBox(keys, what){
+  const ks = keys.filter(k => linkKeys().includes(k));
+  if (!linkable()) return `<div class="hsoon"><p>원 공용 계정은 다른 앱과 연결하지 않아요. 선생님 본인 구글 계정으로 로그인하면 ${what}이(가) 여기 나와요.</p></div>`;
+  const err = ks.map(k => link[k]).find(l => l.status === "error"), loading = ks.some(k => link[k].status === "loading");
+  return `<div class="hsoon"><p>${loading ? "연결하는 중이에요…" : err ? `<b>${esc(err.msg)}</b>` : `${ks.map(k => LINK_NAME[k]).join(" · ")}과(와) 연결하면 ${what}이(가) 여기 나와요.`}</p>
+    ${loading ? "" : `<button type="button" class="btn btn-ghost btn-sm" data-act="link-all">앱 연결하기</button>`}</div>`;
+}
+const LV_TYPE = { annual:"연차", half_am:"오전 반차", half_pm:"오후 반차", sick:"병가", family:"경조사", official:"공가", childcare:"육아", other:"기타 휴가" };
+const LV_ST = { submitted:["승인 대기","#A86B00"], approved:["승인","#1F7A4D"], rejected:["반려","#B3261E"], cancelled:["취소","#9A9A9A"] };
+// 관리자 캘린더: 그날 휴가자 (승인 + 승인 대기)
+function leavesOn(day){
+  if (!anyMgr() || link.people?.status !== "ok") return [];
+  return (link.people.data.team || []).filter(l => l.start <= day && l.end >= day && (state.isAdmin || l.branches.some(isMgr)) && (state.branch === "all" || l.branches.includes(state.branch)));
+}
+const MAT_ST = { 요청:["요청","#767676"], 장바구니:["결제 대기","#A86B00"], 주문완료:["주문 완료","#2563A6"], 검수완료:["도착","#1F7A4D"], 반려:["반려","#B3261E"] };
+
+/* 데모: 미리보기 계정용 예시 */
+function demoLink(key){
+  const d0 = todayISO(), me = state.member?.name || "김민수";
+  if (BRANCH_KEYS.includes(key)) {
+    const T = key === "pyeongchon" ? [me, "허재홍", "이시형"] : key === "banpo" ? ["한지민", "허재홍"] : ["박지은", "서지호"];
+    const slots = [];
+    ["13:30", "15:10", "16:50", "18:30"].forEach((t, i) => T.forEach((tc, j) => {
+      const marks = [];
+      if ((i + j) % 3 === 1) marks.push({ n:["이도윤","김지호","정우진","오서윤"][(i + j) % 4], t:"", s:"absent", l:"결석" });
+      if ((i + j) % 4 === 2) marks.push({ n:["박서준","윤도현","한시우"][(i + j) % 3], t:"makeup", s:"", l:"보강", add:true });
+      if (i === 1 && j === 0) marks.push({ n:"최하준", t:"newStudent", s:"", l:"신규", add:true });
+      if (i === 2 && j === 1) marks.push({ n:"강예준", t:"sample", s:"", l:"샘플", add:true });
+      if (i === 3 && j === 0) marks.push({ n:"정우진", t:"", s:"sickLeave", l:"병결" });
+      const total = 6 + ((i + j) % 3), present = total - marks.filter(m => ["absent","sickLeave"].includes(m.s)).length;
+      slots.push({ time:t, room:`${j + 1}번`, teacher:tc, total, present, marks });
+    }));
+    const sum = { date:d0, slots, updatedAt: Date.now() - 6 * 60e3 };
+    return { days: { [d0]: sum, [addDays(d0, 1)]: { ...sum, date:addDays(d0, 1) } } };
+  }
+  if (key === "mat") return { open: [
+    { id:"r1", name:"물감 세트 24색", spec:"신한", qty:3, status:"주문완료", branch:"pyeongchon", by:myEmail().toLowerCase(), at:Date.now() - 2 * 864e5 },
+    { id:"r2", name:"붓 12호", spec:"", qty:10, status:"장바구니", branch:"pyeongchon", by:myEmail().toLowerCase(), at:Date.now() - 864e5 },
+    { id:"r3", name:"도화지 8절", spec:"200매", qty:2, status:"요청", branch:"pyeongchon", by:myEmail().toLowerCase(), at:Date.now() - 3600e3 },
+    { id:"r4", name:"점토 1kg", spec:"", qty:5, status:"요청", branch:"banpo", by:"other@x", at:Date.now() },
+    { id:"r5", name:"색종이", spec:"", qty:20, status:"장바구니", branch:"daechi", by:"other@x", at:Date.now() } ],
+    done: [{ id:"r6", name:"크레파스", spec:"", qty:4, status:"검수완료", branch:"pyeongchon", by:myEmail().toLowerCase(), at:Date.now() - 5 * 864e5 }] };
+  if (key === "people") return { mine: [{ id:"l1", name:me, type:"annual", start:addDays(d0, 9), end:addDays(d0, 9), days:1, status:"submitted", branches:["pyeongchon"] },
+      { id:"l2", name:me, type:"half_pm", start:addDays(d0, -12), end:addDays(d0, -12), days:0.5, status:"approved", branches:["pyeongchon"] }],
+    team: [{ id:"t1", name:"이시형", type:"annual", start:d0, end:d0, days:1, status:"approved", branches:["pyeongchon"] },
+      { id:"t2", name:"한지민", type:"half_am", start:addDays(d0, 2), end:addDays(d0, 2), days:0.5, status:"submitted", branches:["banpo"] },
+      { id:"t3", name:"박지은", type:"annual", start:addDays(d0, 1), end:addDays(d0, 2), days:2, status:"approved", branches:["daechi"] }], level:"principal" };
+  return null;
+}
+
 /* ========= 홈: 맨 위(공지 + 오늘 진행률/바로가기) · 이번 주 캘린더 · 그 아래는 사람마다 블럭처럼 고르는 카드 =========
    교사 = T 카드, 관리자(대표·원장·부원장·실장) = M 카드 + T 카드(수업도 하니까).
    배치(순서·폭)는 portalHome/{내 이메일}에 저장 → 다른 기기에서도 같음. 규칙 게시 전이면 이 기기에만 기억 */
@@ -2122,9 +2305,20 @@ const HC = {
   /* ── 교사 ── */
   T1: { t:"오늘 요약", f(){ const x = myToday(), late = myTasks().filter(whLate).length, rev = myTasks().filter(t => t.status === "revise").length,
       ms7 = myTasks().filter(t => t.missionId && WH_OPEN.includes(t.status) && t.due && t.due <= addDays(todayISO(), 7)).length, ack = state.manuals.filter(needAck).length;
-    return { body: tiles([[x.all.n - x.all.d, "오늘 남은 일"], [`${x.rt.d}/${x.rt.n}`, "오늘 루틴"], [late, "지연", late ? RED : ""], [rev, "보완 요청", rev ? RED : ""], [ms7, "미션 7일 내 마감", ms7 ? AMB : ""], [ack, "확인 안 한 필독", ack ? AMB : ""]])
-      + `<p class="hnote">수업 · 등원 · 결석 · 보강 숫자는 스케줄 매니저를 연결하면 여기 함께 나와요.</p>` }; } },
-  T2: { t:"오늘 내 수업", f(){ return { body: soonBox("스케줄 매니저와 연결하면 오늘 내 수업이 시간 순서대로 나오고, 결석 · 보강 · 신규 학생이 그 시간 칸에 표시돼요. <b>연결 준비 중이에요.</b>", "스케줄 매니저") }; } },
+    const bs = linkKeys().filter(k => BRANCH_KEYS.includes(k)), sc = schedLinked(bs) ? slotCount(mySlots()) : null;
+    return { body: (sc ? tiles([[sc.classes + "반", "오늘 수업"], [sc.students, "등원 예정"], [sc.abs, "결석·병결", sc.abs ? RED : ""], [sc.mk, "보강", sc.mk ? "#2563A6" : ""], [sc.nw + sc.smp, "신규·샘플", sc.nw + sc.smp ? "#7B4FC9" : ""]]) + `<div style="height:8px"></div>` : "") + tiles([[x.all.n - x.all.d, "오늘 남은 일"], [`${x.rt.d}/${x.rt.n}`, "오늘 루틴"], [late, "지연", late ? RED : ""], [rev, "보완 요청", rev ? RED : ""], [ms7, "미션 7일 내 마감", ms7 ? AMB : ""], [ack, "확인 안 한 필독", ack ? AMB : ""]])
+      + (sc ? "" : `<p class="hnote">수업 · 등원 · 결석 · 보강 숫자는 스케줄 매니저를 연결하면 여기 함께 나와요.${linkable() ? ` <button type="button" class="linkish" data-act="link-all">앱 연결하기</button>` : ""}</p>`) }; } },
+  T2: { t:"오늘 내 수업", f(){ const bs = linkKeys().filter(k => BRANCH_KEYS.includes(k));
+      if (!schedLinked(bs)) return { body: linkBox(bs, "오늘 내 수업") };
+      const L = mySlots(), now = nowHM(), sums = bs.map(b => schedDay(b)).filter(Boolean);
+      if (!sums.length) return { body:`<div class="hsoon"><p>오늘 수업 요약이 아직 없어요. 원 데스크(원 공용 계정)에서 스케줄 매니저를 열어 두면 자동으로 만들어져요.</p><a class="btn btn-ghost btn-sm" href="${esc(APP_URL("스케줄 매니저"))}" target="_blank" rel="noopener">스케줄 매니저 열기</a></div>` };
+      if (!L.length) return { body:`<p class="empty">오늘 내 수업이 없어요.${state.member?.name ? "" : " (직원 계정에 내 이름이 있어야 내 반을 찾을 수 있어요)"}</p><p class="hnote">스케줄 매니저의 선생님 이름과 직원 계정 이름(${esc(state.member?.name || "-")})이 같아야 내 반으로 찾아요.</p>` };
+      const cur = L.filter(r => r.time <= now).pop()?.time;
+      const upd = Math.max(...sums.map(x => x.updatedAt || 0));
+      return { sub:`${L.length}반 · ${L.reduce((t, r) => t + (r.present || 0), 0)}명`, body: L.map(r => `<div class="slot2 ${r.time === cur ? "now" : r.time < now ? "past" : ""}">
+          <div class="sh"><b>${esc(r.time)}</b><span>${esc(r.room)}${bs.length > 1 ? ` · ${esc(SHORT[r.b] || "")}` : ""}${r.time === cur ? " · 지금" : ""}</span><span class="n">${r.present}명${r.total !== r.present ? `<small> / ${r.total}</small>` : ""}</span></div>
+          <div class="sb">${(r.marks || []).length ? r.marks.map(markTag).join(" ") : `<span class="hnote" style="margin:0">변동 없음</span>`}</div></div>`).join("")
+        + `<p class="hnote">${upd ? `스케줄 매니저 ${new Date(upd).toLocaleTimeString("ko-KR", { hour:"2-digit", minute:"2-digit" })} 기준 · ` : ""}바뀌면 바로 반영돼요.</p>` }; } },
   T8: { t:"내 업무", f(){ const L = myTasks().filter(t => !t.routineId && !t.missionId && WH_OPEN.includes(t.status)).sort((a, b) => (b.status === "revise") - (a.status === "revise") || whSort(a, b));
     return { sub:`${L.length}개 남음`, act: branchOptions("todos").length ? `<button type="button" class="btn btn-ghost btn-sm" data-act="wh-new">${anyMgr() ? "업무 배정" : "추가"}</button>` : "",
       body: L.length ? `<ul class="wh-list">${L.slice(0, 6).map(t => whRow(t, { who:false })).join("")}</ul>${L.length > 6 ? `<button class="more" type="button" data-act="go-wh" data-v="mine">${L.length - 6}개 더 보기</button>` : ""}` : `<p class="empty">남은 업무가 없어요.</p>` }; } },
@@ -2135,26 +2329,35 @@ const HC = {
     return { sub: L.length ? `${L.length}개` : "", body: L.length ? `<ul class="wh-list">${L.slice(0, 5).map(t => whRow(t, { who:false })).join("")}</ul>` : `<p class="empty">진행 중인 미션이 없어요.</p>` }; } },
   T12: { t:"최근 공지", f(){ const L = sortNotices(state.notices.filter(visible)).slice(0, 5);
     return { body: L.length ? `<ul class="nmini">${L.map(n => `<li><button type="button" class="nlink" data-act="home-notice" data-id="${esc(n.id)}"><span class="date">${mdOfMs(n.at)}</span><span class="title">${n.pinned ? `<span class="pin">고정</span>` : ""}${esc(n.title)}</span>${isNew(n) ? `<span class="newb">새 글</span>` : ""}</button></li>`).join("")}</ul>` : `<p class="empty">아직 공지가 없어요.</p>` }; } },
-  T15: { t:"내 재료 요청", f(){ return { body: soonBox("내가 요청한 재료가 요청 → 주문됨 → 도착 순서로 여기 나와요. <b>재료 요청 앱과 연결 준비 중이에요.</b>", "재료 요청") }; } },
-  T16: { t:"내 휴가 · 서류", f(){ return { body: soonBox("휴가 신청 승인 상태와 갱신할 서류가 여기 나와요. <b>JP People과 연결 준비 중이에요.</b>", "JP People") }; } },
+  T15: { t:"내 재료 요청", f(){ if (link.mat.status !== "ok") return { body: linkBox(["mat"], "내 재료 요청") };
+      const me = myEmail().toLowerCase(), L = [...link.mat.data.open.filter(r => r.by === me).sort((a, b) => b.at - a.at), ...link.mat.data.done];
+      return { sub: L.length ? `${L.length}건` : "", act:`<a class="btn btn-ghost btn-sm" href="${esc(APP_URL("재료 요청"))}" target="_blank" rel="noopener">요청하기</a>`,
+        body: L.length ? `<ul class="hlist">${L.slice(0, 8).map(r => { const [l, c] = MAT_ST[r.status] || [r.status, "#767676"]; return `<li><b>${esc(r.name)}</b><span class="hnote" style="margin:0">${esc([r.spec, r.qty ? r.qty + "개" : ""].filter(Boolean).join(" · "))}</span><span class="pill2" style="--c:${c}">${esc(l)}</span></li>`; }).join("")}</ul>` : `<p class="empty">진행 중인 재료 요청이 없어요.</p>` }; } },
+  T16: { t:"내 휴가", f(){ if (link.people.status !== "ok") return { body: linkBox(["people"], "내 휴가 신청 상태") };
+      const L = link.people.data.mine.filter(l => l.end >= addDays(todayISO(), -30)).slice(0, 6);
+      return { act:`<a class="btn btn-ghost btn-sm" href="${esc(APP_URL("JP People"))}" target="_blank" rel="noopener">휴가 신청</a>`,
+        body: L.length ? `<ul class="hlist">${L.map(l => { const [s, c] = LV_ST[l.status] || [l.status, "#767676"]; return `<li><b>${esc(LV_TYPE[l.type] || "휴가")}</b><span class="hnote" style="margin:0">${md(l.start)}${l.end !== l.start ? " ~ " + md(l.end) : ""} · ${l.days}일</span><span class="pill2" style="--c:${c}">${esc(s)}</span></li>`; }).join("")}</ul>` : `<p class="empty">최근 휴가 신청이 없어요.</p>` }; } },
   T17: { t:"오늘 진행률", f(){ return { body: progressHTML() }; } },
   /* ── 관리자 ── */
   M1: { t:"우리 원 오늘", f(){ const today = todayISO(), V = mgrVisTasks(), bs = visBranches().filter(isMgr);
       const rt = V.filter(t => t.routineId && t.due === today), kp = k => bs.reduce((a, b) => a + (state.kpi[b]?.lists?.[k]?.length || 0), 0);
       const n = { due: V.filter(t => !t.routineId && t.due === today && WH_OPEN.includes(t.status)).length, sub: V.filter(t => t.status === "submitted").length, late: V.filter(whLate).length, rev: V.filter(t => t.status === "revise").length };
-    return { body: tiles([[n.due, "오늘 마감 업무"], [n.sub, "확인 대기", n.sub ? AMB : ""], [n.late, "지연", n.late ? RED : ""], [n.rev, "보완 요청", n.rev ? RED : ""], [`${rt.filter(doneish).length}/${rt.length}`, "오늘 루틴"], [kp("unpaid"), "3주 이상 미납", kp("unpaid") ? RED : ""], [kp("sampleWait"), "샘플 후 미등록"]])
-      + `<p class="hnote">등원 · 결석 · 보강 · 신규 숫자는 스케줄 매니저를 연결하면 여기 함께 나와요.</p>` }; } },
+      const sb = bs.filter(b => BRANCH_KEYS.includes(b)), sums = sb.map(b => schedDay(b)).filter(Boolean), sc = sums.length ? slotCount(sums.flatMap(x => x.slots || [])) : null;
+    return { body: (sc ? tiles([[sc.students, "등원 예정"], [sc.abs, "결석·병결", sc.abs ? RED : ""], [sc.mk, "보강", sc.mk ? "#2563A6" : ""], [sc.nw, "신규", sc.nw ? "#7B4FC9" : ""], [sc.smp, "샘플", sc.smp ? AMB : ""], [sc.away, "휴원·반이동 등"]]) + `<div style="height:8px"></div>` : "") + tiles([[n.due, "오늘 마감 업무"], [n.sub, "확인 대기", n.sub ? AMB : ""], [n.late, "지연", n.late ? RED : ""], [n.rev, "보완 요청", n.rev ? RED : ""], [`${rt.filter(doneish).length}/${rt.length}`, "오늘 루틴"], [kp("unpaid"), "3주 이상 미납", kp("unpaid") ? RED : ""], [kp("sampleWait"), "샘플 후 미등록"]])
+      + (sc ? "" : `<p class="hnote">등원 · 결석 · 보강 · 신규 숫자는 스케줄 매니저를 연결하면 여기 함께 나와요.${linkable() ? ` <button type="button" class="linkish" data-act="link-all">앱 연결하기</button>` : ""}</p>`) }; } },
   M2: { t:"선생님별 오늘", f(){ const today = todayISO(), V = mgrVisTasks(), bs = visBranches().filter(isMgr), seen = new Set(), rows = [];
       for (const b of bs) for (const p of whPeople(b)) { if (p.email === myEmail() || seen.has(p.email)) continue; seen.add(p.email);
         const L = V.filter(t => t.assignee === p.email), rt = L.filter(t => t.routineId && t.due === today);
-        rows.push({ p, b, due: L.filter(t => !t.routineId && t.due === today && WH_OPEN.includes(t.status)).length, late: L.filter(whLate).length, sub: L.filter(t => t.status === "submitted").length,
+        const sd = schedDay(b), my = sd ? (sd.slots || []).filter(r => { const a = normName(r.teacher), c = normName(p.name); return a && c && (a === c || a.includes(c) || c.includes(a)); }) : null;
+        rows.push({ sc: my ? slotCount(my) : null, p, b, due: L.filter(t => !t.routineId && t.due === today && WH_OPEN.includes(t.status)).length, late: L.filter(whLate).length, sub: L.filter(t => t.status === "submitted").length,
           rev: L.filter(t => t.status === "revise").length, rt, ms: L.filter(t => t.missionId && WH_OPEN.includes(t.status)).length, miss: L.filter(whMissed).length }); }
       rows.sort((a, c) => (c.late + c.rev) - (a.late + a.rev) || a.p.name.localeCompare(c.p.name));
+      const anySc = rows.some(r => r.sc);
       const cell = (v, c) => v ? `<b style="color:${c || "var(--ink)"}">${v}</b>` : `<span class="z">0</span>`;
-    return { body: rows.length ? `<div class="hscroll"><table class="htable"><thead><tr><th>선생님</th>${bs.length > 1 ? "<th>원</th>" : ""}<th>오늘 업무</th><th>지연</th><th>보완</th><th>확인 대기</th><th>오늘 루틴</th><th>놓친 루틴</th><th>미션</th></tr></thead><tbody>
-        ${rows.map(r => `<tr><td><b>${esc(r.p.name)}</b></td>${bs.length > 1 ? `<td>${esc(SHORT[r.b] || "")}</td>` : ""}<td>${cell(r.due)}</td><td>${cell(r.late, RED)}</td><td>${cell(r.rev, RED)}</td><td>${cell(r.sub, AMB)}</td>
+    return { body: rows.length ? `<div class="hscroll"><table class="htable"><thead><tr><th>선생님</th>${bs.length > 1 ? "<th>원</th>" : ""}${anySc ? "<th>수업</th><th>학생</th><th>변동</th>" : ""}<th>오늘 업무</th><th>지연</th><th>보완</th><th>확인 대기</th><th>오늘 루틴</th><th>놓친 루틴</th><th>미션</th></tr></thead><tbody>
+        ${rows.map(r => `<tr><td><b>${esc(r.p.name)}</b></td>${bs.length > 1 ? `<td>${esc(SHORT[r.b] || "")}</td>` : ""}${anySc ? (r.sc ? `<td>${r.sc.classes || `<span class="z">0</span>`}</td><td>${r.sc.students || `<span class="z">0</span>`}</td><td class="chg">${[["abs", r.sc.abs, "결석"], ["mk", r.sc.mk, "보강"], ["new", r.sc.nw, "신규"], ["smp", r.sc.smp, "샘플"]].filter(x => x[1]).map(([k, v, l]) => `<span class="mtag ${k}" title="${l}">${l} ${v}</span>`).join("") || `<span class="z">-</span>`}</td>` : `<td><span class="z">-</span></td><td><span class="z">-</span></td><td><span class="z">-</span></td>`) : ""}<td>${cell(r.due)}</td><td>${cell(r.late, RED)}</td><td>${cell(r.rev, RED)}</td><td>${cell(r.sub, AMB)}</td>
           <td>${r.rt.length ? `${r.rt.filter(doneish).length}/${r.rt.length}${r.rt.every(doneish) ? " ✓" : ""}` : `<span class="z">-</span>`}</td><td>${cell(r.miss, RED)}</td><td>${cell(r.ms)}</td></tr>`).join("")}</tbody></table></div>
-        <p class="hnote">수업 · 학생 변동 · 관찰일지 칸은 스케줄 매니저 · 자비스와 연결하면 추가돼요.</p>` : `<p class="empty">직원 계정에 등록된 선생님이 없어요.</p>` }; } },
+        <p class="hnote">${anySc ? "수업 · 학생 · 변동은 스케줄 매니저 기준(선생님 이름으로 찾음)이에요. 관찰일지는 자비스 연결 후 추가돼요." : `수업 · 학생 변동 칸은 스케줄 매니저를 연결하면 추가돼요.${linkable() ? ` <button type="button" class="linkish" data-act="link-all">앱 연결하기</button>` : ""}`}</p>` : `<p class="empty">직원 계정에 등록된 선생님이 없어요.</p>` }; } },
   M4: { t:"지연 업무 · 놓친 루틴", f(){ const V = mgrVisTasks(), L = [...V.filter(whLate), ...V.filter(whMissed)].sort((a, b) => (a.due || "").localeCompare(b.due || ""));
     return { sub: L.length ? `${L.length}건` : "", body: L.length ? `<ul class="wh-list">${L.slice(0, 6).map(t => whRow(t)).join("")}</ul>${L.length > 6 ? `<button class="more" type="button" data-act="go-wh" data-v="board" data-f="late">${L.length - 6}건 더 보기</button>` : ""}` : `<p class="empty">지연된 업무가 없어요. 👍</p>` }; } },
   M5: { t:"오늘의 체크 포인트", f(){ return { body: checkListHTML() }; } },
@@ -2176,7 +2379,11 @@ const HC = {
         return `<button type="button" class="hmis" data-act="home-mission" data-id="${esc(m.id)}"><span class="wh-t"><span class="tagk">${esc(mTypeLabel(m.type))}</span><b>${esc(m.title)}</b><span class="hnote">${m.due ? dueLabel(m.due) : ""}</span></span>
           <span class="pbar"><i style="width:${T.length ? sub / T.length * 100 : 0}%"></i></span><span class="hnote">제출 ${sub}/${T.length}${yet.length ? ` · 미제출 ${esc(yet.slice(0, 4).map(t => t.assigneeName || "").join(", "))}${yet.length > 4 ? " 외" : ""}` : ""}</span></button>`; }).join("")
         : `<p class="empty">진행 중인 미션이 없어요.</p>` }; } },
-  M11: { t:"재료 요청 대기", f(){ return { body: soonBox("승인 · 주문을 기다리는 재료 요청 수가 여기 나와요. <b>재료 요청 앱과 연결 준비 중이에요.</b>", "재료 요청") }; } },
+  M11: { t:"재료 요청 대기", f(){ if (link.mat.status !== "ok") return { body: linkBox(["mat"], "재료 요청 대기 수") };
+      const bs = visBranches().filter(b => state.isAdmin || isMgr(b)), L = link.mat.data.open.filter(r => bs.includes(r.branch));
+      const row = (st, l) => { const n = L.filter(r => r.status === st); return `<li><b>${l}</b>${bs.length > 1 ? `<span class="hnote" style="margin:0">${bs.map(b => `${SHORT[b]} ${n.filter(r => r.branch === b).length}`).join(" · ")}</span>` : ""}<span class="pill2" style="--c:${(MAT_ST[st] || [])[1]}">${n.length}건</span></li>`; };
+      return { act:`<a class="btn btn-ghost btn-sm" href="${esc(APP_URL("재료 요청"))}" target="_blank" rel="noopener">열기</a>`,
+        body:`<ul class="hlist">${row("요청", "새 요청")}${row("장바구니", "결제 대기")}${row("주문완료", "도착 대기")}${row("반려", "반려")}</ul>` }; } },
   M15: { t:"이번 달 업무 성적표", f(){ const mk = todayISO().slice(0, 7), today = todayISO(), V = mgrVisTasks().filter(t => t.due && t.due.startsWith(mk));
       const A = V.filter(t => !t.routineId && t.due < today), done = A.filter(doneish), onTime = done.filter(t => isoMs(t.doneAt || t.submittedAt) <= t.due);
       const R = V.filter(t => t.routineId && t.due < today), rd = R.filter(doneish).length, pct = (a, b) => b ? Math.round(a / b * 100) + "%" : "-";
@@ -2193,6 +2400,12 @@ function progressHTML(){
       <p class="hnote">업무 ${x.task.d}/${x.task.n} · 루틴 ${x.rt.d}/${x.rt.n} · 미션 ${x.ms.d}/${x.ms.n}${pct === 100 ? " · 오늘 다 끝냈어요 🎉" : ""}</p>
       <p class="hnote">오늘 마감 · 지연 업무와 오늘 끝낸 일 기준 (제출하면 끝낸 걸로 셈)</p>`
     : `<p class="empty">오늘 마감인 일이 없어요.</p>`;
+}
+function linkStatusHTML(){
+  if (!linkable()) return "";
+  const ks = linkKeys(), ok = ks.filter(k => link[k].status === "ok"), busy = ks.some(k => link[k].status === "loading");
+  return `<span class="lstat">${ks.map(k => `<span class="${link[k].status}" title="${esc(LINK_NAME[k])}${link[k].msg ? " — " + esc(link[k].msg) : ""}">${link[k].status === "ok" ? "✓" : link[k].status === "error" ? "!" : "·"} ${esc(LINK_NAME[k].replace("스케줄 매니저", "스케줄"))}</span>`).join("")}
+    ${ok.length < ks.length && !busy ? `<button type="button" class="linkish" data-act="link-all">앱 연결하기</button>` : busy ? `<span class="hnote" style="margin:0">연결 중…</span>` : ""}</span>`;
 }
 function homeHTML(){
   const k = homeKind(), cards = homeCards(), edit = !!state.homeEdit, lib = homeLib(), hidden = lib.filter(id => !cards.some(c => c.id === id));
@@ -2213,7 +2426,7 @@ function homeHTML(){
   <div class="hbar">${edit
     ? `<b>홈 편집 중</b><span class="hnote">카드를 끌어서 옮기거나 ↑↓로 순서를, 칸 수로 폭을 바꿔요. 배치는 나에게만 적용돼요.</span>
        <span class="sp"></span><button type="button" class="btn btn-ghost btn-sm" data-act="hc-reset">기본 배치로</button><button type="button" class="btn btn-primary btn-sm" data-act="hc-edit">완료</button>`
-    : `<span class="sp"></span><button type="button" class="btn btn-ghost btn-sm" data-act="hc-edit">홈 편집</button>`}</div>
+    : `${linkStatusHTML()}<span class="sp"></span><button type="button" class="btn btn-ghost btn-sm" data-act="hc-edit">홈 편집</button>`}</div>
   ${edit && hidden.length ? `<div class="hadd"><span class="hnote">카드 추가</span>${hidden.map(id => `<button type="button" class="hadd-b" data-act="hc-add" data-id="${id}"><b>＋ ${HC[id].t}</b><small>${HC_NOTE[id] || ""}${id.startsWith("T") && k === "m" ? " · 교사 카드" : ""}</small></button>`).join("")}</div>` : ""}
   <div class="hgrid ${edit ? "editing" : ""}">${cards.length ? cards.map(card).join("") : `<p class="empty">카드가 없어요. '홈 편집'에서 카드를 추가해 보세요.</p>`}</div>`;
 }
@@ -2389,17 +2602,17 @@ function calHTML(mode){
           const rd = rt.reduce((a, g) => a + g.done, 0), rn = rt.reduce((a, g) => a + g.n, 0);
           return [...one.map(g => ({ grp:g, title:grpChipTxt(g) })), ...(rn ? [{ rt:true, title:`루틴 ${rd}/${rn}`, late: key < today && rd < rn }] : [])]; })()
         : [...tk.one.map(t => ({ task:t, title:t.title })), ...(tk.rt.length ? [{ rt:tk.rt, title:`루틴 ${tk.rt.filter(t => t.status === "done").length}/${tk.rt.length}` }] : [])],
-      evs = [...tEvs, ...bds.map(b => ({ bd:true, title:`${b.name} 생일` })), ...eventsOn(key)],
+      evs = [...tEvs, ...leavesOn(key).map(l => ({ lv:l, title:`${l.name} ${LV_TYPE[l.type] || "휴가"}${l.status === "submitted" ? "(대기)" : ""}` })), ...bds.map(b => ({ bd:true, title:`${b.name} 생일` })), ...eventsOn(key)],
       mine = gcalOn(key), n = evs.length + mine.length, dow = d.getDay(), hol = holidayOn(key);
     const numTxt = wk && (i === 0 || d.getDate() === 1) ? `${d.getMonth()+1}/${d.getDate()}` : d.getDate();
     const cls = ["day", !wk && d.getMonth() !== m && "out", dow === 0 && "sun", dow === 6 && "sat", hol && "hol", key === today && "today", key === sel && "sel"].filter(Boolean).join(" ");
     cells.push(`<button type="button" class="${cls}" data-act="cal-day" data-day="${key}" data-fk="day-${key}"
         aria-label="${d.getMonth()+1}월 ${d.getDate()}일${hol ? `, ${hol}` : ""}${n ? `, 일정 ${n}개` : ""}" aria-pressed="${key === sel}">
       <span class="num">${numTxt}</span>${hol ? `<span class="hn">${esc(hol)}</span>` : ""}
-      ${evs.slice(0, maxChips).map(e => e.grp ? `<span class="chip task ${e.grp.st}">${e.grp.st === "done" ? "✓ " : e.grp.st === "late" ? "! " : ""}${esc(e.title)}</span>` : e.rt && team ? `<span class="chip task rt ${e.late ? "late" : ""}">${esc(e.title)}</span>` : e.task ? `<span class="chip task ${e.task.status}">${e.task.status === "done" ? "✓ " : ""}${esc(e.title)}</span>` : e.rt ? `<span class="chip task rt">${esc(e.title)}</span>` : e.bd ? `<span class="chip bd">${esc(e.title)}</span>` : `<span class="chip" style="border-color:${CAL_KIND[e.kind]?.color}">${esc(e.title)}</span>`).join("")}
+      ${evs.slice(0, maxChips).map(e => e.grp ? `<span class="chip task ${e.grp.st}">${e.grp.st === "done" ? "✓ " : e.grp.st === "late" ? "! " : ""}${esc(e.title)}</span>` : e.rt && team ? `<span class="chip task rt ${e.late ? "late" : ""}">${esc(e.title)}</span>` : e.task ? `<span class="chip task ${e.task.status}">${e.task.status === "done" ? "✓ " : ""}${esc(e.title)}</span>` : e.rt ? `<span class="chip task rt">${esc(e.title)}</span>` : e.lv ? `<span class="chip lv ${e.lv.status}">🌴 ${esc(e.title)}</span>` : e.bd ? `<span class="chip bd">${esc(e.title)}</span>` : `<span class="chip" style="border-color:${CAL_KIND[e.kind]?.color}">${esc(e.title)}</span>`).join("")}
       ${mine.slice(0, Math.max(0, maxChips - evs.length)).map(e => `<span class="chip mine">${e.allDay ? "" : `<b>${e.time}</b> `}${esc(e.title)}</span>`).join("")}
       ${n > maxChips ? `<span class="more-n">+${n - maxChips}</span>` : ""}
-      ${n ? `<span class="dots">${evs.slice(0,3).map(e => e.task || e.rt || e.grp ? `<i class="task"></i>` : `<i style="background:${e.bd ? "#1F7A4D" : CAL_KIND[e.kind]?.color}"></i>`).join("")}${mine.slice(0, Math.max(0, 3 - evs.length)).map(() => `<i class="mine"></i>`).join("")}</span>` : ""}
+      ${n ? `<span class="dots">${evs.slice(0,3).map(e => e.task || e.rt || e.grp ? `<i class="task"></i>` : `<i style="background:${e.bd ? "#1F7A4D" : e.lv ? "#0E8A7B" : CAL_KIND[e.kind]?.color}"></i>`).join("")}${mine.slice(0, Math.max(0, 3 - evs.length)).map(() => `<i class="mine"></i>`).join("")}</span>` : ""}
     </button>`);
   }
   const selTk = team ? { one:[], rt:[] } : myTasksOn(sel), selTasks = [...selTk.one, ...selTk.rt], selGrp = team ? taskGroups(teamTasksOn(sel)) : [];
@@ -2422,7 +2635,7 @@ function calHTML(mode){
         ${wk ? `<button type="button" data-act="go" data-tab="notice">전체 캘린더</button>` : ""}
       </div>
     </div>
-    <div class="cal-legend">${Object.values(CAL_KIND).map(k => `<span><i style="background:${k.color}"></i>${k.label}</span>`).join("")}<span><i class="bd"></i>생일</span><span><i class="task"></i>${team ? "원 업무 (관리자만 보여요)" : "내 업무 (나만 보여요)"}</span>${gcal.status === "on" ? `<span><i class="mine"></i>내 구글 일정 (나만 보여요)</span>` : ""}</div>
+    <div class="cal-legend">${Object.values(CAL_KIND).map(k => `<span><i style="background:${k.color}"></i>${k.label}</span>`).join("")}<span><i class="bd"></i>생일</span>${anyMgr() && link.people?.status === "ok" ? `<span><i class="lv"></i>휴가 (JP People)</span>` : ""}<span><i class="task"></i>${team ? "원 업무 (관리자만 보여요)" : "내 업무 (나만 보여요)"}</span>${gcal.status === "on" ? `<span><i class="mine"></i>내 구글 일정 (나만 보여요)</span>` : ""}</div>
     ${gcal.err ? `<p class="gc-err">${esc(gcal.err)}</p>` : ""}
     ${team && !wk ? teamMonthSum() : ""}
     <div class="cal ${wk ? "wk" : "month"}">
@@ -2441,6 +2654,7 @@ function calHTML(mode){
           <span class="w">${esc(SHORT[t.branch] || "")}</span>
           ${t.routineId ? "" : `<a class="icon-btn" href="${esc(taskGcalUrl(t))}" target="_blank" rel="noopener" title="내 구글 캘린더에 이 업무 넣기">구글 캘린더</a>`}
           <button type="button" class="icon-btn" data-act="wh-open" data-id="${esc(t.id)}">열기</button></div>`).join("")}
+      ${leavesOn(sel).map(l => `<div class="ev"><span class="k lv">휴가</span><span class="t">${esc(l.name)} · ${esc(LV_TYPE[l.type] || "휴가")}<small>${md(l.start)}${l.end !== l.start ? " ~ " + md(l.end) : ""} · ${l.days}일 · ${esc((LV_ST[l.status] || [l.status])[0])} (JP People)</small></span><span class="w">${esc(l.branches.map(b => SHORT[b]).join("·"))}</span></div>`).join("")}
       ${selBd.map(b => `<div class="ev"><span class="k bd">생일</span><span class="t">${esc(b.name)} 선생님 생일</span>
           <span class="w">${esc(state.birthdays.filter(x => x.empId === b.empId).map(x => SHORT[x.branch]).join(" · "))}</span></div>`).join("")}
       ${selEvs.length ? selEvs.map(e => `<div class="ev">
@@ -2456,7 +2670,7 @@ function calHTML(mode){
           <span class="w">${esc(e.cal)}</span>
           ${e.link ? `<a class="icon-btn" href="${esc(e.link)}" target="_blank" rel="noopener">구글에서 보기</a>` : ""}
         </div>`).join("")}
-      ${selEvs.length || selMine.length || selHol || selBd.length || selTasks.length || selGrp.length ? "" : `<p class="cal-none">이날은 일정이 없어요.</p>`}
+      ${selEvs.length || selMine.length || selHol || selBd.length || selTasks.length || selGrp.length || leavesOn(sel).length ? "" : `<p class="cal-none">이날은 일정이 없어요.</p>`}
     </div>`;
 }
 
@@ -4139,6 +4353,7 @@ $("view").addEventListener("click", e => {
     case "notice-new": noticeForm(null); break;
     case "notice-edit": { const nt = state.notices.find(x => x.id === id); if (nt && canEditPost(nt)) noticeForm(nt); break; }
     case "notice-open": state.openNotice = id; goTab("home"); break;
+    case "link-all": linkAll(); break;
     case "hc-edit": case "hc-reset": case "hc-add": case "hc-rm": case "hc-w": case "hc-mv": homeAct(act, el); break;
     case "home-notice": state.openNotice = id; renderView(); { const n = $("view").querySelector(`.notice-card [data-fk="n-${id}"]`); n?.scrollIntoView({ block:"nearest", behavior:"smooth" }); n?.focus({ preventScroll:true }); } break;
     case "home-mission": state.mhOpen = id; state.mhView = "list"; goTab("mission"); break;
@@ -5989,7 +6204,7 @@ if (!DEMO) {
   });
   $("googleBtn").addEventListener("click", async () => {
     $("loginErr").textContent = "";
-    try { await fb.A.signInWithPopup(fb.auth, new fb.A.GoogleAuthProvider()); }
+    try { linkStash(await fb.A.signInWithPopup(fb.auth, new fb.A.GoogleAuthProvider())); }
     catch (err) { $("loginErr").textContent = loginMsg(err.code); }
   });
   $("logoutBtn").addEventListener("click", async () => {
