@@ -2228,7 +2228,7 @@ const LINK_LOAD = {
     const orgBranch = {};
     try { const os = await F.getDocs(F.collection(x.db, "orgs")); os.forEach(d => { orgBranch[d.id] = branchOfCenter(d.data().name || ""); }); } catch {}
     const conv = (d) => { const v = d.data(); return { id:d.id, name:v.employeeName || "", type:v.type, start:v.startDate, end:v.endDate, days:v.days, status:v.status,
-      branches:[...new Set((v.orgIds || [v.orgId]).map(o => orgBranch[o]).filter(Boolean))], note:v.decisionNote || "" }; };
+      branches:[...new Set((v.orgIds || [v.orgId]).map(o => orgBranch[o]).filter(Boolean))], note:v.decisionNote || "", company: v.source === "company" }; };
     const mine = [];
     if (R.employeeId) { const s = await F.getDocs(F.query(F.collection(x.db, "leaveRequests"), F.where("employeeId", "==", R.employeeId))); s.forEach(d => mine.push(conv(d))); }
     let team = [];
@@ -2237,8 +2237,9 @@ const LINK_LOAD = {
         : ["admin", "principal", "manager", "lead"].includes(R.level) && R.orgId ? F.query(F.collection(x.db, "leaveRequests"), F.where("orgIds", "array-contains", R.orgId)) : null;
       if (q) { const s = await F.getDocs(q); s.forEach(d => team.push(conv(d))); }
     } catch (e) { console.warn("휴가자 목록", e.code || e); }
-    team = team.filter(l => l.end >= from && ["approved", "submitted"].includes(l.status));
-    link[key] = { status:"ok", data:{ mine: mine.filter(l => l.status !== "cancelled").sort((a, b) => b.start.localeCompare(a.start)), team, level:R.level }, at: Date.now() };
+    // 회사 지정 휴가(전 직원 연차 일괄 차감)는 사람마다 띄우지 않음 — 차감 계산은 JP People이 함. 개인이 쓴 휴가만
+    team = team.filter(l => l.end >= from && ["approved", "submitted"].includes(l.status) && !l.company);
+    link[key] = { status:"ok", data:{ mine: mine.filter(l => l.status !== "cancelled" && !l.company).sort((a, b) => b.start.localeCompare(a.start)), team, level:R.level }, at: Date.now() };
   }
 };
 
