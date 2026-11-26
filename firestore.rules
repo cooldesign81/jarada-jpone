@@ -212,6 +212,15 @@ service cloud.firestore {
         && request.resource.data.ids is list && request.resource.data.ids.size() <= 500;
       allow delete: if isMember() && mail == email();
     }
+    // 홈 카드 배치: 문서 ID = 본인 이메일, 본인만 (t = 교사 카드, m = 관리자 카드 순서·폭)
+    match /portalHome/{mail} {
+      allow read: if isMember() && resource.data.owner == email();
+      allow create, update: if isMember() && mail == email() && request.resource.data.owner == email()
+        && request.resource.data.keys().hasOnly(['owner', 't', 'm', 'at'])
+        && (request.resource.data.t == null || (request.resource.data.t is list && request.resource.data.t.size() <= 40))
+        && (request.resource.data.m == null || (request.resource.data.m is list && request.resource.data.m.size() <= 40));
+      allow delete: if isMember() && mail == email();
+    }
     // 상담 현황: 대표 화면이 스케줄 매니저에서 최근 30일 교사별 상담 수만 세어 저장(내용·학생 이름 없음). 문서 ID = 원
     match /portalCounsel/{branch} {
       allow read: if isMember() && (isAdmin() || isWideStaff() || isMyBranch(resource.data.branch));

@@ -156,6 +156,45 @@
   .notice-card .list .title{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
   .notice-card .list li{align-items:center}
   .wide-cal{margin-bottom:16px}
+  /* ───────── 홈 카드 ───────── */
+  .htop{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:16px;margin-bottom:16px;align-items:stretch}
+  .htop > .card{margin:0}
+  .cal-day.cal-day-hide{display:none}
+  .hbar{display:flex;align-items:center;gap:8px;margin:0 0 8px;flex-wrap:wrap}.hbar .sp{flex:1}
+  .hgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:start;margin-bottom:16px}
+  .hgrid .hc{grid-column:span var(--w);margin:0;min-width:0}
+  .hgrid.editing .hc{outline:2px dashed #C9C9C9;outline-offset:-2px;cursor:grab}
+  .hgrid.editing .hc.drag{opacity:.4}.hgrid.editing .hc.over{outline-color:var(--brand-orange);box-shadow:0 0 0 3px rgba(222,134,25,.25)}
+  .hc-tools{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:-4px 0 10px;padding-bottom:8px;border-bottom:1px solid var(--line);font-size:12px}
+  .hc-tools .hc-grip{color:var(--text-sub);margin-right:auto}
+  .hc-tools > button{border:1px solid var(--line);background:#fff;border-radius:4px;min-width:28px;height:26px;cursor:pointer}
+  .hc-tools > button:disabled{opacity:.35;cursor:default}
+  .hc-tools .seg button{font-size:12px;padding:3px 8px;background:#fff;cursor:pointer}
+  .hadd{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 12px;padding:12px;background:#fff;border:1px dashed #C9C9C9;border-radius:var(--r-card)}
+  .hadd-b{display:flex;flex-direction:column;align-items:flex-start;gap:2px;border:1px solid var(--line);background:#FAFAFA;border-radius:var(--r-btn);padding:6px 10px;cursor:pointer;font:inherit;text-align:left}
+  .hadd-b b{font-size:13px;color:var(--ink)}.hadd-b small{font-size:11px;color:var(--text-sub)}.hadd-b:hover{border-color:var(--ink)}
+  .htiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:8px}
+  .htiles > div{border:1px solid var(--line);border-radius:var(--r-btn);padding:8px 10px;min-width:0}
+  .htiles b{display:block;font-size:22px;color:var(--ink);line-height:1.2}.htiles span{font-size:12px;color:var(--text-sub)}
+  .hnote{font-size:12px;color:var(--text-sub);margin:8px 0 0;line-height:1.5}
+  .hsoon{border:1px dashed #D5D5D5;border-radius:var(--r-btn);padding:14px;background:#FAFAFA;display:flex;flex-direction:column;gap:10px;align-items:flex-start}
+  .hsoon p{margin:0;font-size:13px;line-height:1.6;color:var(--text)}
+  .hprog{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px}
+  .hprog b{font-size:30px;color:var(--ink)}.hprog b small{font-size:16px;color:var(--text-sub);font-weight:600}.hprog > span{font-size:15px;font-weight:700;color:#1F7A4D}
+  .pbar{display:block;height:8px;background:#EEE;border-radius:4px;overflow:hidden}.pbar i{display:block;height:100%;background:#1F7A4D}.pbar.big{height:12px;border-radius:6px}
+  .hsc{display:grid;grid-template-columns:1fr 1fr;gap:8px}.hsc .btn{justify-content:flex-start}
+  .hscroll{overflow-x:auto}
+  .htable{border-collapse:collapse;width:100%;font-size:13px;font-variant-numeric:tabular-nums}
+  .htable th,.htable td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:center;white-space:nowrap}
+  .htable th{font-size:12px;color:var(--text-sub);font-weight:600}.htable th:first-child,.htable td:first-child{text-align:left}.htable .z{color:#C4C4C4}
+  .hlist{list-style:none;margin:0;padding:0}.hlist li{display:flex;gap:8px;align-items:baseline;padding:6px 0;border-top:1px solid var(--line)}.hlist li:first-child{border-top:0}
+  .hlist .hnote{margin:0 0 0 auto}
+  .hmis{display:flex;flex-direction:column;gap:6px;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--line);padding:10px 0;cursor:pointer;font:inherit}
+  .hmis:first-of-type{border-top:0;padding-top:0}.hmis .wh-t{display:flex;gap:6px;align-items:center}.hmis .wh-t .hnote{margin:0 0 0 auto}.hmis .hnote{margin:0}
+  .hmis:hover b{text-decoration:underline;text-underline-offset:3px}
+  .newb.warn{background:#FFF3D6;color:#A86B00}
+  @media (max-width:768px){ .htop{grid-template-columns:minmax(0,1fr)} .hgrid{grid-template-columns:minmax(0,1fr)} .hgrid .hc{grid-column:auto} .hsc{grid-template-columns:1fr} }
+
   .nscroll{max-height:460px;overflow:auto;margin-right:-8px;padding-right:8px}
   .notice-card .ni-h .tt{font-size:14px}
   .cal.month .day{min-height:150px}
@@ -1059,8 +1098,8 @@ const BRANCH_KEYS = ["pyeongchon","banpo","daechi"];
 const SHORT = { pyeongchon:"평촌", banpo:"반포", daechi:"대치" };
 
 /* Firestore 컬렉션 이름 */
-const COLL = { notices:"portalNotices", events:"portalEvents", todos:"portalTodos", files:"portalFiles", bookmarks:"portalBookmarks", bmGroups:"portalBmGroups", kpi:"portalKpi", kpiPriv:"portalKpiPrivate", folders:"portalFolders", members:"portalMembers", birthdays:"portalBirthdays", teachers:"portalTeachers", manuals:"portalManuals", counsel:"portalCounsel", revenue:"portalRevenue", manCats:"portalManCats", tasks:"portalTasks", routines:"portalRoutines", missions:"portalMissions", evals:"portalEvals", nasJobs:"portalNasJobs", nasStatus:"portalNasStatus", plans:"portalPlans", favs:"portalFavs", acks:"portalAcks", requests:"portalRequests" };
-const COLL_LABEL = { notices:"공지", events:"일정", todos:"할 일", files:"자료", bookmarks:"북마크", bmGroups:"북마크 구분", kpi:"대시보드", kpiPriv:"대시보드(금액)", folders:"자료실 폴더", members:"직원 계정", birthdays:"생일", teachers:"선생님 입사월", manuals:"업무매뉴얼", counsel:"상담 현황", revenue:"과거 매출", manCats:"매뉴얼 분류", tasks:"워크허브 업무", routines:"루틴", missions:"미션", evals:"미션 평가", nasJobs:"NAS 작업", nasStatus:"NAS 커넥터 상태", plans:"월간 계획", favs:"즐겨찾기", acks:"필독 확인", requests:"수정 요청" };
+const COLL = { notices:"portalNotices", events:"portalEvents", todos:"portalTodos", files:"portalFiles", bookmarks:"portalBookmarks", bmGroups:"portalBmGroups", kpi:"portalKpi", kpiPriv:"portalKpiPrivate", folders:"portalFolders", members:"portalMembers", birthdays:"portalBirthdays", teachers:"portalTeachers", manuals:"portalManuals", counsel:"portalCounsel", revenue:"portalRevenue", manCats:"portalManCats", tasks:"portalTasks", routines:"portalRoutines", missions:"portalMissions", evals:"portalEvals", nasJobs:"portalNasJobs", nasStatus:"portalNasStatus", plans:"portalPlans", favs:"portalFavs", acks:"portalAcks", requests:"portalRequests", home:"portalHome" };
+const COLL_LABEL = { notices:"공지", events:"일정", todos:"할 일", files:"자료", bookmarks:"북마크", bmGroups:"북마크 구분", kpi:"대시보드", kpiPriv:"대시보드(금액)", folders:"자료실 폴더", members:"직원 계정", birthdays:"생일", teachers:"선생님 입사월", manuals:"업무매뉴얼", counsel:"상담 현황", revenue:"과거 매출", manCats:"매뉴얼 분류", tasks:"워크허브 업무", routines:"루틴", missions:"미션", evals:"미션 평가", nasJobs:"NAS 작업", nasStatus:"NAS 커넥터 상태", plans:"월간 계획", favs:"즐겨찾기", acks:"필독 확인", requests:"수정 요청", home:"홈 배치" };
 /* 북마크 구분선 색 */
 const LINE_COLORS = [["#222222","검정"],["#DE8619","주황"],["#C98100","황토"],["#D1495B","빨강"],["#8B5CF6","보라"],["#2563A6","파랑"],["#1F7A4D","초록"],["#767676","회색"]];
 
@@ -1629,6 +1668,8 @@ async function enter(user){
   unsubs.push(DB.watch("acks", l => { state.acks = l; onData("acks"); }, { where: staffAll ? [] : [["email", "==", me]] }));
   unsubs.push(DB.watch("requests", l => { state.requests = l; onData("requests"); }, { where: staffAll ? [] : [["createdBy", "==", me]] }));
   unsubs.push(DB.watch("favs", l => { state.favs = l[0]?.ids || []; onData("favs"); }, { where: [["owner", "==", me]] }));
+  // 홈 카드 배치(사람마다). 규칙 게시 전이면 읽기가 막혀도 이 기기 기억으로 동작
+  unsubs.push(DB.watch("home", l => { const d = l[0]; if (d) { state.home = { t: d.t || undefined, m: d.m || undefined }; store.set(homeKey(), JSON.stringify(state.home)); } onData("home"); }, { where: [["owner", "==", me]] }));
   // 미션 평가: 대표는 전부, 관리자는 자기 원 전부(확정 전 포함), 교사는 자기 것 중 공개된 것만 (보안 규칙과 같은 조건으로 요청)
   state.evals = {}; const evParts = {};
   const evSet = (k, list) => { evParts[k] = list; state.evals = Object.fromEntries(Object.values(evParts).flat().map(x => [x.id, x])); onData("evals"); };
@@ -1647,7 +1688,7 @@ function onData(name){
   if (name === "manCats") state.loaded.manCats = true;
   if (name === "tasks" || name === "routines") { state.loaded[name] = true; clearTimeout(onData.gt); onData.gt = setTimeout(genRoutineTasks, 800); }
   if (name === "birthdays" || name === "teachers") { state.loaded[name] = true; if (bdPending && state.loaded.birthdays && state.loaded.teachers) { const x = bdPending; bdPending = null; syncPeople(x); } }
-  const uses = { notice:["notices","events","plans","birthdays","kpi","kpiPriv"], todo:["tasks","routines","members"], mission:["tasks","missions","evals","members","nasStatus"], files:["files","folders","manuals","favs","requests"], manual:["manuals","manCats","files","acks","favs","requests"], home:["notices","events","tasks","kpi","birthdays","manuals","acks","files","requests"], bm:["bookmarks","bmGroups"], kpi:["kpi","kpiPriv","teachers","counsel","revenue"] }[state.tab] || [];
+  const uses = { notice:["notices","events","plans","birthdays","kpi","kpiPriv"], todo:["tasks","routines","members"], mission:["tasks","missions","evals","members","nasStatus"], files:["files","folders","manuals","favs","requests"], manual:["manuals","manCats","files","acks","favs","requests"], home:["notices","events","tasks","kpi","birthdays","manuals","acks","files","requests","missions","routines","members","evals","home"], bm:["bookmarks","bmGroups"], kpi:["kpi","kpiPriv","teachers","counsel","revenue"] }[state.tab] || [];
   if (uses.includes(name)) renderView({ keepFocus: true });
 }
 
@@ -1910,7 +1951,7 @@ $("branchSel").addEventListener("change", e => {
 $("tabs").addEventListener("click", e => {
   const t = e.target.closest("[data-tab]")?.dataset.tab; if (t) goTab(t, false);
 });
-function goTab(t, scroll = true){ state.tab = t; store.set("portal.tab", t); renderTabs(); renderView(); if (scroll) window.scrollTo(0, 0); }
+function goTab(t, scroll = true){ if (t !== "home") state.homeEdit = false; state.tab = t; store.set("portal.tab", t); renderTabs(); renderView(); if (scroll) window.scrollTo(0, 0); }
 
 const narrow = () => matchMedia("(max-width:900px)").matches;
 function setBtn(open){
@@ -2038,44 +2079,175 @@ function todoRow(t, compact){
 }
 
 /* ── 홈 ── */
-function homeHTML(){
-  const bs = visBranches(), real = bs.every(b => state.kpi[b]);
-  const cnt = k => bs.reduce((t, b) => t + (state.kpi[b] ? state.kpi[b].cur[k] : SAMPLE[b][k]?.[0] || 0), 0);
-  const myOpen = state.tasks.filter(t => visible(t) && whMine(t) && WH_OPEN.includes(t.status)).sort((a, b) => (b.status === "revise") - (a.status === "revise") || whSort(a, b));
-  const reviewN = state.tasks.filter(t => visible(t) && t.status === "submitted" && isMgr(t.branch) && (t.assignee !== myEmail() || state.isAdmin)).length;
-  const lateN = state.tasks.filter(t => visible(t) && isMgr(t.branch) && whLate(t)).length;
-  const canTodo = branchOptions("todos").length > 0;
-
-  return `
-  <div class="top-row">
-    <div>
-      <p class="kpi-meta">${real ? esc(bs.map(b => `${state.branch === "all" ? SHORT[b] + " " : ""}${md(state.kpi[b].base)}`).join(", ")) + " 명단 기준" : esc(state.branch === "all" ? "원별" : BRANCHES[state.branch]) + " 샘플 숫자"}, 화살표는 지난달 같은 날까지와 비교${real ? "" : `<span class="sample">명단을 올리면 실제 숫자로 바뀌어요</span>`}
-        <button type="button" class="linkish" data-act="go" data-tab="kpi">자세히</button></p>
-      <div class="kpis">${METRICS.map(kpiCard).join("")}</div>
-    </div>
-    <section class="card notice-card">${noticeListHTML()}</section>
-  </div>
-
-  ${kbHomeHTML()}
-  <section class="card wide-cal">${calHTML("weeks")}</section>
-
-  <div class="grid2">
-    <section class="card">
-      <h2>오늘의 체크 포인트</h2>
-      ${checkListHTML()}
-    </section>
-    <section class="card">
-      <div class="card-h"><h2>내 업무<span class="sub">${myOpen.length}개 남음</span></h2>
-        ${canTodo ? `<button type="button" class="btn btn-ghost btn-sm" data-act="wh-new">${anyMgr() ? "업무 배정" : "내 업무 추가"}</button>` : ""}</div>
-      ${anyMgr() && (reviewN || lateN) ? `<p class="wh-alert">${reviewN ? `<button type="button" class="linkish" data-act="go-wh" data-v="review">확인 대기 ${reviewN}건</button>` : ""}${lateN ? `<button type="button" class="linkish" data-act="go-wh" data-v="board" data-f="late">지연 ${lateN}건</button>` : ""}</p>` : ""}
-      ${myOpen.length ? `<ul class="wh-list">${myOpen.slice(0, 6).map(t => whRow(t, { who:false })).join("")}</ul>`
-        : `<p class="empty">남은 업무가 없어요.</p>`}
-      <button class="more" type="button" data-act="go" data-tab="todo">워크허브로 가기</button>
-    </section>
-  </div>`;
+/* ========= 홈: 맨 위(공지 + 오늘 진행률/바로가기) · 이번 주 캘린더 · 그 아래는 사람마다 블럭처럼 고르는 카드 =========
+   교사 = T 카드, 관리자(대표·원장·부원장·실장) = M 카드 + T 카드(수업도 하니까).
+   배치(순서·폭)는 portalHome/{내 이메일}에 저장 → 다른 기기에서도 같음. 규칙 게시 전이면 이 기기에만 기억 */
+const APP_URL = n => (APP_GROUPS.flatMap(g => g.apps).find(a => a.name === n) || {}).url || "#";
+const HOME_DEF = {
+  t: [["T1",3],["T2",2],["T8",1],["T9",1],["T10",1],["T12",1],["T15",1],["T16",2]],
+  m: [["M1",3],["M2",2],["M4",1],["M5",1],["M7",1],["M8",1],["M10",2],["M11",1]]
+};
+const homeKind = () => anyMgr() ? "m" : "t";
+const homeKey = () => "portal.home." + myEmail().toLowerCase();
+function homeCards(){
+  const k = homeKind(), lib = homeLib(), saved = state.home?.[k] || (() => { try { return JSON.parse(store.get(homeKey()) || "null")?.[k]; } catch { return null; } })();
+  const list = Array.isArray(saved) ? saved : HOME_DEF[k].map(([id, w]) => ({ id, w }));
+  return list.filter(c => lib.includes(c.id)).map(c => ({ id:c.id, w: [1,2,3].includes(c.w) ? c.w : 1 }));
+}
+const homeLib = () => homeKind() === "m" ? [...M_IDS, ...T_IDS] : T_IDS.filter(id => id !== "T17");
+async function homeSave(cards){
+  const k = homeKind(), all = { ...(state.home || {}), [k]: cards };
+  state.home = all; store.set(homeKey(), JSON.stringify(all)); renderView({ keepFocus:true });
+  try { await DB.set("home", myEmail(), { owner: myEmail(), t: all.t || null, m: all.m || null, at: Date.now() }); }
+  catch (e) { if (!homeSave.warned) { homeSave.warned = true; console.warn("홈 배치는 이 기기에만 저장돼요", e.code || e); } }
 }
 
-/* ── 캘린더 (mode: "month" 월간 / "weeks" 이번 주 + 다음 주) ── */
+/* 오늘 숫자들 */
+const isoMs = ms => ms ? isoOf(new Date(ms)) : "";
+const myTasks = () => state.tasks.filter(t => visible(t) && whMine(t) && t.status !== "canceled");
+const doneish = t => t.status === "done" || t.status === "submitted";
+function myToday(){
+  const today = todayISO();
+  const L = myTasks().filter(t => t.due === today || whLate(t) || (doneish(t) && isoMs(t.doneAt || t.submittedAt) === today && (!t.due || t.due <= today)));
+  const part = f => { const x = L.filter(f); return { n:x.length, d:x.filter(doneish).length }; };
+  return { L, all: part(() => true), task: part(t => !t.routineId && !t.missionId), rt: part(t => !!t.routineId), ms: part(t => !!t.missionId) };
+}
+const mgrVisTasks = () => state.tasks.filter(t => visible(t) && isMgr(t.branch) && t.status !== "canceled");
+const tiles = arr => `<div class="htiles">${arr.map(([v, l, c]) => `<div><b class="num" ${c ? `style="color:${c}"` : ""}>${v}</b><span>${l}</span></div>`).join("")}</div>`;
+const soonBox = (msg, app) => `<div class="hsoon"><p>${msg}</p>${app ? `<a class="btn btn-ghost btn-sm" href="${esc(APP_URL(app))}" target="_blank" rel="noopener">${esc(app)} 열기</a>` : ""}</div>`;
+const RED = "#B3261E", AMB = "#A86B00", GRN = "#1F7A4D";
+
+const HC = {
+  /* ── 교사 ── */
+  T1: { t:"오늘 요약", f(){ const x = myToday(), late = myTasks().filter(whLate).length, rev = myTasks().filter(t => t.status === "revise").length,
+      ms7 = myTasks().filter(t => t.missionId && WH_OPEN.includes(t.status) && t.due && t.due <= addDays(todayISO(), 7)).length, ack = state.manuals.filter(needAck).length;
+    return { body: tiles([[x.all.n - x.all.d, "오늘 남은 일"], [`${x.rt.d}/${x.rt.n}`, "오늘 루틴"], [late, "지연", late ? RED : ""], [rev, "보완 요청", rev ? RED : ""], [ms7, "미션 7일 내 마감", ms7 ? AMB : ""], [ack, "확인 안 한 필독", ack ? AMB : ""]])
+      + `<p class="hnote">수업 · 등원 · 결석 · 보강 숫자는 스케줄 매니저를 연결하면 여기 함께 나와요.</p>` }; } },
+  T2: { t:"오늘 내 수업", f(){ return { body: soonBox("스케줄 매니저와 연결하면 오늘 내 수업이 시간 순서대로 나오고, 결석 · 보강 · 신규 학생이 그 시간 칸에 표시돼요. <b>연결 준비 중이에요.</b>", "스케줄 매니저") }; } },
+  T8: { t:"내 업무", f(){ const L = myTasks().filter(t => !t.routineId && !t.missionId && WH_OPEN.includes(t.status)).sort((a, b) => (b.status === "revise") - (a.status === "revise") || whSort(a, b));
+    return { sub:`${L.length}개 남음`, act: branchOptions("todos").length ? `<button type="button" class="btn btn-ghost btn-sm" data-act="wh-new">${anyMgr() ? "업무 배정" : "추가"}</button>` : "",
+      body: L.length ? `<ul class="wh-list">${L.slice(0, 6).map(t => whRow(t, { who:false })).join("")}</ul>${L.length > 6 ? `<button class="more" type="button" data-act="go-wh" data-v="mine">${L.length - 6}개 더 보기</button>` : ""}` : `<p class="empty">남은 업무가 없어요.</p>` }; } },
+  T9: { t:"오늘 루틴", f(){ const today = todayISO(), L = myTasks().filter(t => t.routineId && t.due === today), miss = myTasks().filter(whMissed).length;
+    return { sub: L.length ? `${L.filter(doneish).length}/${L.length}` : "", body: (L.length ? `<ul class="wh-list">${L.map(t => whRow(t, { who:false })).join("")}</ul>` : `<p class="empty">오늘 루틴이 없어요.</p>`)
+      + (miss ? `<button class="more" type="button" data-act="go-wh" data-v="mine">놓친 루틴 ${miss}개 보기</button>` : "") }; } },
+  T10: { t:"내 미션", f(){ const L = myTasks().filter(t => t.missionId && WH_OPEN.includes(t.status)).sort(whSort);
+    return { sub: L.length ? `${L.length}개` : "", body: L.length ? `<ul class="wh-list">${L.slice(0, 5).map(t => whRow(t, { who:false })).join("")}</ul>` : `<p class="empty">진행 중인 미션이 없어요.</p>` }; } },
+  T12: { t:"최근 공지", f(){ const L = sortNotices(state.notices.filter(visible)).slice(0, 5);
+    return { body: L.length ? `<ul class="nmini">${L.map(n => `<li><button type="button" class="nlink" data-act="home-notice" data-id="${esc(n.id)}"><span class="date">${mdOfMs(n.at)}</span><span class="title">${n.pinned ? `<span class="pin">고정</span>` : ""}${esc(n.title)}</span>${isNew(n) ? `<span class="newb">새 글</span>` : ""}</button></li>`).join("")}</ul>` : `<p class="empty">아직 공지가 없어요.</p>` }; } },
+  T15: { t:"내 재료 요청", f(){ return { body: soonBox("내가 요청한 재료가 요청 → 주문됨 → 도착 순서로 여기 나와요. <b>재료 요청 앱과 연결 준비 중이에요.</b>", "재료 요청") }; } },
+  T16: { t:"내 휴가 · 서류", f(){ return { body: soonBox("휴가 신청 승인 상태와 갱신할 서류가 여기 나와요. <b>JP People과 연결 준비 중이에요.</b>", "JP People") }; } },
+  T17: { t:"오늘 진행률", f(){ return { body: progressHTML() }; } },
+  /* ── 관리자 ── */
+  M1: { t:"우리 원 오늘", f(){ const today = todayISO(), V = mgrVisTasks(), bs = visBranches().filter(isMgr);
+      const rt = V.filter(t => t.routineId && t.due === today), kp = k => bs.reduce((a, b) => a + (state.kpi[b]?.lists?.[k]?.length || 0), 0);
+      const n = { due: V.filter(t => !t.routineId && t.due === today && WH_OPEN.includes(t.status)).length, sub: V.filter(t => t.status === "submitted").length, late: V.filter(whLate).length, rev: V.filter(t => t.status === "revise").length };
+    return { body: tiles([[n.due, "오늘 마감 업무"], [n.sub, "확인 대기", n.sub ? AMB : ""], [n.late, "지연", n.late ? RED : ""], [n.rev, "보완 요청", n.rev ? RED : ""], [`${rt.filter(doneish).length}/${rt.length}`, "오늘 루틴"], [kp("unpaid"), "3주 이상 미납", kp("unpaid") ? RED : ""], [kp("sampleWait"), "샘플 후 미등록"]])
+      + `<p class="hnote">등원 · 결석 · 보강 · 신규 숫자는 스케줄 매니저를 연결하면 여기 함께 나와요.</p>` }; } },
+  M2: { t:"선생님별 오늘", f(){ const today = todayISO(), V = mgrVisTasks(), bs = visBranches().filter(isMgr), seen = new Set(), rows = [];
+      for (const b of bs) for (const p of whPeople(b)) { if (p.email === myEmail() || seen.has(p.email)) continue; seen.add(p.email);
+        const L = V.filter(t => t.assignee === p.email), rt = L.filter(t => t.routineId && t.due === today);
+        rows.push({ p, b, due: L.filter(t => !t.routineId && t.due === today && WH_OPEN.includes(t.status)).length, late: L.filter(whLate).length, sub: L.filter(t => t.status === "submitted").length,
+          rev: L.filter(t => t.status === "revise").length, rt, ms: L.filter(t => t.missionId && WH_OPEN.includes(t.status)).length, miss: L.filter(whMissed).length }); }
+      rows.sort((a, c) => (c.late + c.rev) - (a.late + a.rev) || a.p.name.localeCompare(c.p.name));
+      const cell = (v, c) => v ? `<b style="color:${c || "var(--ink)"}">${v}</b>` : `<span class="z">0</span>`;
+    return { body: rows.length ? `<div class="hscroll"><table class="htable"><thead><tr><th>선생님</th>${bs.length > 1 ? "<th>원</th>" : ""}<th>오늘 업무</th><th>지연</th><th>보완</th><th>확인 대기</th><th>오늘 루틴</th><th>놓친 루틴</th><th>미션</th></tr></thead><tbody>
+        ${rows.map(r => `<tr><td><b>${esc(r.p.name)}</b></td>${bs.length > 1 ? `<td>${esc(SHORT[r.b] || "")}</td>` : ""}<td>${cell(r.due)}</td><td>${cell(r.late, RED)}</td><td>${cell(r.rev, RED)}</td><td>${cell(r.sub, AMB)}</td>
+          <td>${r.rt.length ? `${r.rt.filter(doneish).length}/${r.rt.length}${r.rt.every(doneish) ? " ✓" : ""}` : `<span class="z">-</span>`}</td><td>${cell(r.miss, RED)}</td><td>${cell(r.ms)}</td></tr>`).join("")}</tbody></table></div>
+        <p class="hnote">수업 · 학생 변동 · 관찰일지 칸은 스케줄 매니저 · 자비스와 연결하면 추가돼요.</p>` : `<p class="empty">직원 계정에 등록된 선생님이 없어요.</p>` }; } },
+  M4: { t:"지연 업무 · 놓친 루틴", f(){ const V = mgrVisTasks(), L = [...V.filter(whLate), ...V.filter(whMissed)].sort((a, b) => (a.due || "").localeCompare(b.due || ""));
+    return { sub: L.length ? `${L.length}건` : "", body: L.length ? `<ul class="wh-list">${L.slice(0, 6).map(t => whRow(t)).join("")}</ul>${L.length > 6 ? `<button class="more" type="button" data-act="go-wh" data-v="board" data-f="late">${L.length - 6}건 더 보기</button>` : ""}` : `<p class="empty">지연된 업무가 없어요. 👍</p>` }; } },
+  M5: { t:"오늘의 체크 포인트", f(){ return { body: checkListHTML() }; } },
+  M6: { t:"대시보드 숫자", f(){ return { act:`<button type="button" class="btn btn-ghost btn-sm" data-act="go" data-tab="kpi">자세히</button>`, body:`<div class="kpis">${METRICS.map(kpiCard).join("")}</div>` }; } },
+  M7: { t:"필독 확인 안 한 선생님", f(){
+      if (!isCurator() && !isApprover()) return { body:`<p class="empty">자료 담당자 · 승인자에게만 보여요.</p>` };
+      const L = state.manuals.filter(m => m.pinned && (m.status || "published") === "published" && visible(m)).map(m => {
+        const v = m.ackVer || 1, done = new Set((state.acks || []).filter(a => a.manualId === m.id && a.version >= v).map(a => a.email));
+        const yet = state.members.filter(x => x.active !== false && (m.branch === "all" || memBranches(x).includes(m.branch)) && !done.has(x.id));
+        return { m, yet }; }).filter(x => x.yet.length);
+    return { body: L.length ? `<ul class="nmini">${L.slice(0, 6).map(({ m, yet }) => `<li><button type="button" class="nlink" data-act="man-acks" data-id="${esc(m.id)}"><span class="title">${esc(m.title)}</span><span class="newb warn">${yet.length}명</span></button><p class="hnote" style="margin:0 0 8px">${esc(yet.slice(0, 6).map(x => x.name || x.id).join(", "))}${yet.length > 6 ? ` 외 ${yet.length - 6}명` : ""}</p></li>`).join("")}</ul>` : `<p class="empty">필독 매뉴얼을 모두 확인했어요.</p>` }; } },
+  M8: { t:"샘플 후속", f(){ const bs = visBranches(), L = bs.flatMap(b => (state.kpi[b]?.lists?.sampleWait || []).map(x => ({ ...x, b }))).sort((a, c) => String(c.reg || "").localeCompare(String(a.reg || "")));
+    return { sub: L.length ? `${L.length}명` : "", body: L.length ? `<ul class="hlist">${L.slice(0, 8).map(x => `<li>${bs.length > 1 ? `<span class="tagb">${SHORT[x.b]}</span>` : ""}<b>${esc(x.name)}</b><span class="hnote">${x.reg ? md(x.reg) + " 샘플" : ""}</span></li>`).join("")}</ul>
+        ${L.length > 8 ? `<p class="hnote">외 ${L.length - 8}명 · 대시보드에서 전체 보기</p>` : ""}${branchOptions("todos").length ? `<button type="button" class="more" data-act="todo-new" data-title="샘플 후 미등록 ${L.length}명 연락">연락 업무로 만들기</button>` : ""}`
+      : `<p class="empty">샘플 후 3일 넘게 미등록인 원생이 없어요.</p>` }; } },
+  M10: { t:"미션 진행", f(){ const L = state.missions.filter(m => visible(m) && m.status !== "closed").sort((a, b) => (a.due || "9").localeCompare(b.due || "9"));
+    return { act: anyMgr() ? `<button type="button" class="btn btn-ghost btn-sm" data-act="mh-new">미션 만들기</button>` : "",
+      body: L.length ? L.slice(0, 5).map(m => { const T = mTasks(m.id).filter(t => isMgr(t.branch) || state.isAdmin), sub = T.filter(t => (t.versions || []).length).length, yet = T.filter(t => !(t.versions || []).length);
+        return `<button type="button" class="hmis" data-act="home-mission" data-id="${esc(m.id)}"><span class="wh-t"><span class="tagk">${esc(mTypeLabel(m.type))}</span><b>${esc(m.title)}</b><span class="hnote">${m.due ? dueLabel(m.due) : ""}</span></span>
+          <span class="pbar"><i style="width:${T.length ? sub / T.length * 100 : 0}%"></i></span><span class="hnote">제출 ${sub}/${T.length}${yet.length ? ` · 미제출 ${esc(yet.slice(0, 4).map(t => t.assigneeName || "").join(", "))}${yet.length > 4 ? " 외" : ""}` : ""}</span></button>`; }).join("")
+        : `<p class="empty">진행 중인 미션이 없어요.</p>` }; } },
+  M11: { t:"재료 요청 대기", f(){ return { body: soonBox("승인 · 주문을 기다리는 재료 요청 수가 여기 나와요. <b>재료 요청 앱과 연결 준비 중이에요.</b>", "재료 요청") }; } },
+  M15: { t:"이번 달 업무 성적표", f(){ const mk = todayISO().slice(0, 7), today = todayISO(), V = mgrVisTasks().filter(t => t.due && t.due.startsWith(mk));
+      const A = V.filter(t => !t.routineId && t.due < today), done = A.filter(doneish), onTime = done.filter(t => isoMs(t.doneAt || t.submittedAt) <= t.due);
+      const R = V.filter(t => t.routineId && t.due < today), rd = R.filter(doneish).length, pct = (a, b) => b ? Math.round(a / b * 100) + "%" : "-";
+    return { body: tiles([[pct(done.length, A.length), "마감 지난 업무 완료"], [pct(onTime.length, done.length), "기한 안에 끝냄"], [pct(rd, R.length), "루틴 수행"]]) + `<p class="hnote">${+mk.slice(5)}월 · 어제까지 마감인 업무 기준</p>` }; } }
+};
+const T_IDS = ["T1","T2","T8","T9","T10","T12","T15","T16","T17"], M_IDS = ["M1","M2","M4","M5","M6","M7","M8","M10","M11","M15"];
+const HC_NOTE = { T1:"할 일 · 루틴 · 지연 숫자", T2:"시간대별 수업과 학생 변동", T8:"남은 업무", T9:"오늘 루틴", T10:"진행 중인 미션", T12:"최근 공지 5개", T15:"요청 → 주문 → 도착", T16:"휴가 승인 · 서류", T17:"오늘 할 일 완료 막대",
+  M1:"원 전체 오늘 숫자", M2:"선생님 한 명이 한 줄", M4:"누가 무엇을 놓쳤나", M5:"미납 · 샘플 후 미등록", M6:"재원 · 신규 · 퇴원 숫자", M7:"필독 매뉴얼 미확인자", M8:"샘플 후 미등록 원생", M10:"미션별 제출 현황", M11:"재료 요청 대기", M15:"완료율 · 루틴 수행률" };
+
+function progressHTML(){
+  const x = myToday(), pct = x.all.n ? Math.round(x.all.d / x.all.n * 100) : 0;
+  return x.all.n ? `<div class="hprog"><b class="num">${x.all.d}<small> / ${x.all.n}</small></b><span class="num">${pct}%</span></div>
+      <div class="pbar big"><i style="width:${pct}%"></i></div>
+      <p class="hnote">업무 ${x.task.d}/${x.task.n} · 루틴 ${x.rt.d}/${x.rt.n} · 미션 ${x.ms.d}/${x.ms.n}${pct === 100 ? " · 오늘 다 끝냈어요 🎉" : ""}</p>
+      <p class="hnote">오늘 마감 · 지연 업무와 오늘 끝낸 일 기준 (제출하면 끝낸 걸로 셈)</p>`
+    : `<p class="empty">오늘 마감인 일이 없어요.</p>`;
+}
+function shortcutHTML(){
+  const B = [[anyMgr(), "wh-new", "업무 배정"], [anyMgr(), "wh-routine-new", "루틴 만들기"], [anyMgr(), "mh-new", "미션 만들기"], [canPost() && branchOptions("notices").length > 0, "notice-new", "공지 쓰기"],
+    [branchOptions("events").length > 0, "event-new", "일정 추가"], [isCurator(), "man-new", "매뉴얼 쓰기"]].filter(b => b[0]);
+  const V = mgrVisTasks(), sub = V.filter(t => t.status === "submitted").length, late = V.filter(whLate).length;
+  return `<div class="card-h"><h2>바로가기</h2></div><div class="hsc">${B.map(([, a, l]) => `<button type="button" class="btn btn-ghost" data-act="${a}">＋ ${l}</button>`).join("")}</div>
+    ${sub || late ? `<p class="wh-alert">${sub ? `<button type="button" class="linkish" data-act="go-wh" data-v="review">확인 대기 ${sub}건</button>` : ""}${late ? `<button type="button" class="linkish" data-act="go-wh" data-v="board" data-f="late">지연 ${late}건</button>` : ""}</p>` : ""}`;
+}
+function homeHTML(){
+  const k = homeKind(), cards = homeCards(), edit = !!state.homeEdit, lib = homeLib(), hidden = lib.filter(id => !cards.some(c => c.id === id));
+  const card = ({ id, w }, i) => { let r; try { r = HC[id].f(); } catch (e) { console.error(id, e); r = { body:`<p class="empty">불러오지 못했어요.</p>` }; }
+    return `<section class="card hc" data-hc="${id}" style="--w:${w}" ${edit ? `draggable="true"` : ""}>
+      ${edit ? `<div class="hc-tools"><span class="hc-grip" title="끌어서 옮기기" aria-hidden="true">⠿</span>
+        <span class="seg" role="group" aria-label="폭">${[1,2,3].map(n => `<button type="button" data-act="hc-w" data-id="${id}" data-w="${n}" aria-pressed="${w === n}">${n === 3 ? "한 줄" : n + "칸"}</button>`).join("")}</span>
+        <button type="button" data-act="hc-mv" data-id="${id}" data-d="-1" aria-label="앞으로" ${i === 0 ? "disabled" : ""}>↑</button><button type="button" data-act="hc-mv" data-id="${id}" data-d="1" aria-label="뒤로" ${i === cards.length - 1 ? "disabled" : ""}>↓</button>
+        <button type="button" data-act="hc-rm" data-id="${id}" aria-label="빼기">✕</button></div>` : ""}
+      <div class="card-h"><h2>${HC[id].t}${r.sub ? `<span class="sub">${r.sub}</span>` : ""}</h2>${edit ? "" : r.act || ""}</div>${r.body}</section>`; };
+  return `
+  <div class="htop ${k}">
+    <section class="card notice-card">${noticeListHTML()}</section>
+    <section class="card">${k === "m" ? shortcutHTML() : `<div class="card-h"><h2>오늘 진행률</h2></div>${progressHTML()}`}</section>
+  </div>
+  <section class="card wide-cal">${calHTML("week")}</section>
+  ${kbHomeHTML()}
+  <div class="hbar">${edit
+    ? `<b>홈 편집 중</b><span class="hnote">카드를 끌어서 옮기거나 ↑↓로 순서를, 칸 수로 폭을 바꿔요. 배치는 나에게만 적용돼요.</span>
+       <span class="sp"></span><button type="button" class="btn btn-ghost btn-sm" data-act="hc-reset">기본 배치로</button><button type="button" class="btn btn-primary btn-sm" data-act="hc-edit">완료</button>`
+    : `<span class="sp"></span><button type="button" class="btn btn-ghost btn-sm" data-act="hc-edit">홈 편집</button>`}</div>
+  ${edit && hidden.length ? `<div class="hadd"><span class="hnote">카드 추가</span>${hidden.map(id => `<button type="button" class="hadd-b" data-act="hc-add" data-id="${id}"><b>＋ ${HC[id].t}</b><small>${HC_NOTE[id] || ""}${id.startsWith("T") && k === "m" ? " · 교사 카드" : ""}</small></button>`).join("")}</div>` : ""}
+  <div class="hgrid ${edit ? "editing" : ""}">${cards.length ? cards.map(card).join("") : `<p class="empty">카드가 없어요. '홈 편집'에서 카드를 추가해 보세요.</p>`}</div>`;
+}
+function homeAct(act, el){
+  const id = el.dataset.id, cards = homeCards(), i = cards.findIndex(c => c.id === id);
+  if (act === "hc-edit") { state.homeEdit = !state.homeEdit; renderView(); return; }
+  if (act === "hc-reset") { const k = homeKind(); homeSave(HOME_DEF[k].map(([id, w]) => ({ id, w }))); return; }
+  if (act === "hc-add") { homeSave([...cards, { id, w: 1 }]); return; }
+  if (i < 0) return;
+  if (act === "hc-rm") cards.splice(i, 1);
+  else if (act === "hc-w") cards[i].w = +el.dataset.w;
+  else if (act === "hc-mv") { const j = i + +el.dataset.d; if (j < 0 || j >= cards.length) return; [cards[i], cards[j]] = [cards[j], cards[i]]; }
+  homeSave(cards);
+}
+// 편집 중 카드 끌어서 옮기기 (놓은 카드 앞으로 들어감)
+function homeDragInit(){
+  const V = $("view"); let from = null;
+  V.addEventListener("dragstart", e => { const c = e.target.closest?.(".hgrid.editing .hc"); if (!c) return; from = c.dataset.hc; c.classList.add("drag"); e.dataTransfer.effectAllowed = "move"; try { e.dataTransfer.setData("text/plain", from); } catch {} });
+  V.addEventListener("dragend", () => { from = null; V.querySelectorAll(".hc.drag,.hc.over").forEach(x => x.classList.remove("drag", "over")); });
+  V.addEventListener("dragover", e => { if (!from) return; const c = e.target.closest(".hgrid.editing .hc"); if (!c) return; e.preventDefault(); V.querySelectorAll(".hc.over").forEach(x => x !== c && x.classList.remove("over")); if (c.dataset.hc !== from) c.classList.add("over"); });
+  V.addEventListener("drop", e => { if (!from) return; const c = e.target.closest(".hgrid.editing .hc"); if (!c) return; e.preventDefault();
+    const cards = homeCards(), a = cards.findIndex(x => x.id === from); let b = cards.findIndex(x => x.id === c.dataset.hc); if (a < 0 || b < 0 || a === b) return;
+    const [m] = cards.splice(a, 1); b = cards.findIndex(x => x.id === c.dataset.hc); cards.splice(a < b + 1 && a <= b ? b + 1 : b, 0, m); from = null; homeSave(cards); });
+}
+
+homeDragInit();
+
+/* ── 캘린더 (mode: "month" 월간 / "weeks" 이번 주 + 다음 주 / "week" 이번 주만) ── */
 function occurs(e, day){
   if (e.repeat === "weekly"){
     if (day < e.date || (e.until && day > e.until)) return false;
@@ -2211,9 +2383,9 @@ function taskGcalUrl(t){
   return "https://calendar.google.com/calendar/render?" + q.toString();
 }
 function calHTML(mode){
-  const { y, m, sel } = state.cal, wk = mode === "weeks", now = new Date(), today = todayISO();
+  const { y, m, sel } = state.cal, wk = mode === "weeks" || mode === "week", now = new Date(), today = todayISO();
   let start, weeks;
-  if (wk) { start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay()); weeks = 2; }
+  if (wk) { start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay()); weeks = mode === "week" ? 1 : 2; }
   else { const first = new Date(y, m, 1); start = new Date(y, m, 1 - first.getDay()); weeks = Math.ceil((first.getDay() + new Date(y, m + 1, 0).getDate()) / 7); }
   const maxChips = wk ? 3 : 7, cells = [], team = calTeam();
   for (let i = 0; i < weeks * 7; i++){
@@ -2245,7 +2417,7 @@ function calHTML(mode){
   const arrow = d => `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="${d}"/></svg>`;
   return `
     <div class="cal-head">
-      <h2>${wk ? "이번 주와 다음 주 일정" : `${y}년 ${m + 1}월`}</h2>
+      <h2>${mode === "week" ? "이번 주 일정" : wk ? "이번 주와 다음 주 일정" : `${y}년 ${m + 1}월`}</h2>
       <div class="cal-nav">
         ${wk ? "" : `<button type="button" data-act="cal-prev" data-fk="cal-prev" aria-label="이전 달">${arrow("m15 6-6 6 6 6")}</button>
           <button type="button" data-act="cal-today" data-fk="cal-today">오늘</button>
@@ -2263,7 +2435,7 @@ function calHTML(mode){
       ${WD.map((w,i) => `<div class="dow ${i===0?"sun":i===6?"sat":""}">${w}</div>`).join("")}
       ${cells.join("")}
     </div>
-    <div class="cal-day">
+    <div class="cal-day ${mode === "week" && !state.calDayOpen ? "cal-day-hide" : ""}">
       <h3>${selTitle}${sel === today ? " (오늘)" : ""}</h3>
       ${selHol ? `<div class="ev"><span class="k hol">공휴일</span><span class="t">${esc(selHol)}</span></div>` : ""}
       ${selGrp.map(g => `<div class="ev grp"><span class="k task">${g.rt ? "루틴" : g.mission ? "미션" : "업무"}</span>
@@ -3957,7 +4129,7 @@ $("view").addEventListener("click", e => {
   switch (act){
     case "go": goTab(el.dataset.tab); break;
     case "cal-team": store.set(calTeamKey(), el.dataset.v); renderView({ keepFocus:true }); break;
-    case "cal-day": { const d = parse(el.dataset.day); state.cal = { y:d.getFullYear(), m:d.getMonth(), sel:el.dataset.day }; renderView(); $("view").querySelector(`[data-fk="day-${el.dataset.day}"]`)?.focus(); break; }
+    case "cal-day": { state.calDayOpen = true; const d = parse(el.dataset.day); state.cal = { y:d.getFullYear(), m:d.getMonth(), sel:el.dataset.day }; renderView(); $("view").querySelector(`[data-fk="day-${el.dataset.day}"]`)?.focus(); break; }
     case "cal-prev": case "cal-next": {
       const d = new Date(state.cal.y, state.cal.m + (act === "cal-next" ? 1 : -1), 1), now = new Date();
       state.cal = { y:d.getFullYear(), m:d.getMonth(), sel: d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() ? todayISO() : isoOf(d) };
@@ -3973,6 +4145,9 @@ $("view").addEventListener("click", e => {
     case "notice-new": noticeForm(null); break;
     case "notice-edit": { const nt = state.notices.find(x => x.id === id); if (nt && canEditPost(nt)) noticeForm(nt); break; }
     case "notice-open": state.openNotice = id; goTab("home"); break;
+    case "hc-edit": case "hc-reset": case "hc-add": case "hc-rm": case "hc-w": case "hc-mv": homeAct(act, el); break;
+    case "home-notice": state.openNotice = id; renderView(); { const n = $("view").querySelector(`.notice-card [data-fk="n-${id}"]`); n?.scrollIntoView({ block:"nearest", behavior:"smooth" }); n?.focus({ preventScroll:true }); } break;
+    case "home-mission": state.mhOpen = id; state.mhView = "list"; goTab("mission"); break;
     case "notice-toggle": state.openNotice = state.openNotice === id ? null : id; renderView(); $("view").querySelector(`[data-fk="n-${id}"]`)?.focus(); break;
     case "todo-new": case "wh-new": taskForm(null, { title: el.dataset.title || "" }); break;
     case "wh-open": case "mh-open-task": { const t = state.tasks.find(x => x.id === id); if (t) (t.missionId ? missionTaskDialog : taskDialog)(t); break; }
@@ -4343,7 +4518,7 @@ function renderMemList(){
    문서 ID에 예전 이메일이 들어간 것(직원 계정·즐겨찾기 등)은 새 ID로 옮김. 이름·내용은 그대로.
    항상 찾아보기(미리보기) → 확인 → 적용 (지침 2-2). 다른 앱 출입 명단은 끝난 뒤 '앱에 명단 보내기'로 맞춤
    ===================================================================== */
-const MOVE_SKIP = ["kpi", "kpiPriv", "counsel", "revenue", "nasStatus"];   // 원별 숫자 자료: 개인 이메일 없음
+const MOVE_SKIP = ["kpi", "kpiPriv", "counsel", "revenue", "nasStatus", "home"];   // 원별 숫자 자료: 개인 이메일 없음
 function swapEmail(v, from, to){
   if (typeof v === "string") return v.toLowerCase() === from ? to : v;
   if (Array.isArray(v)) return v.map(x => swapEmail(x, from, to));
