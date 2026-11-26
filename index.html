@@ -165,6 +165,7 @@
   .mtag{display:inline-block;font-size:11px;font-weight:700;border-radius:4px;padding:0 6px;color:#fff;margin-right:3px;line-height:1.7;background:#8A8A8A}
   .mtag.abs{background:#D1495B}.mtag.mk{background:#3B9AD9}.mtag.new{background:#7B4FC9}.mtag.smp{background:#E08A1E}.mtag.away{background:#9E9E9E}
   .mem-jv{width:110px;font:inherit;font-size:12px;padding:3px 6px;border:1px solid var(--line);border-radius:4px}
+  .hpick{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px}.hpick .hnote{flex-basis:100%}
   .htable td.chg{white-space:normal;text-align:left;min-width:120px}
   .pill2{margin-left:auto;flex:none;font-size:11px;font-weight:700;color:var(--c);border:1px solid var(--c);border-radius:10px;padding:0 8px;white-space:nowrap}
   .hlist li .pill2{align-self:center}
@@ -2237,7 +2238,18 @@ const LINK_LOAD = {
 
 /* ── 연결된 데이터 꺼내 쓰기 ── */
 const normName = s => String(s || "").replace(/\s|선생님|쌤|T$/g, "").toLowerCase();
-const isMyTeacherName = t => { const a = normName(t), b = normName(state.member?.name || ""); return !!a && !!b && (a === b || a.includes(b) || b.includes(a)); };
+// 스케줄 매니저 시간표의 선생님 이름 = 내 이름? (직원 계정의 '스케줄 이름' → 이 기기에서 고른 이름 → 직원 계정 이름 순)
+const schedNameKey = () => "portal.schedName." + myEmail().toLowerCase();
+const mySchedNames = () => [state.member?.scheduleName, store.get(schedNameKey()), state.member?.name].map(normName).filter(Boolean);
+const isMyTeacherName = t => { const a = normName(t); if (!a) return false; const N = mySchedNames(); const exact = N.slice(0, 2).filter(Boolean);
+  return N.some((b, i) => a === b || (i === N.length - 1 && !exact.length && (a.includes(b) || b.includes(a)))); };
+// 오늘 요약에 나온 선생님 이름들 (내 이름 고르기용)
+const schedTeachers = () => [...new Set(linkKeys().filter(k => BRANCH_KEYS.includes(k)).flatMap(b => (schedDay(b)?.slots || []).map(r => r.teacher)).filter(Boolean))].sort((a, b) => a.localeCompare(b, "ko"));
+function pickMyNameHTML(){
+  const T = schedTeachers(); if (!T.length) return "";
+  return `<div class="hpick"><p class="hnote" style="margin:0 0 6px">스케줄 매니저 시간표에서 <b>내 이름</b>을 골라 주세요. (이 기기에 기억돼요${state.isAdmin ? "" : " · 대표가 직원 계정에 '스케줄 이름'을 넣어 두면 모든 기기에서 맞춰져요"})</p>
+    ${T.map(t => `<button type="button" class="hadd-b" data-act="sched-me" data-v="${esc(t)}"><b>${esc(t)}</b></button>`).join("")}</div>`;
+}
 const schedDay = (b, d = todayISO()) => link[b]?.status === "ok" ? link[b].data.days[d] ?? null : undefined;   // undefined = 연결 안 됨, null = 요약 없음
 const schedLinked = bs => bs.some(b => link[b]?.status === "ok");
 // 스케줄 숫자가 안 나올 때 이유: 연결 안 됨 / 연결 오류 / 연결됐지만 오늘 요약 문서가 아직 없음
@@ -2354,14 +2366,14 @@ const HC = {
   /* ── 교사 ── */
   T1: { t:"오늘 요약", f(){ const x = myToday(), late = myTasks().filter(whLate).length, rev = myTasks().filter(t => t.status === "revise").length,
       ms7 = myTasks().filter(t => t.missionId && WH_OPEN.includes(t.status) && t.due && t.due <= addDays(todayISO(), 7)).length, ack = state.manuals.filter(needAck).length;
-    const bs = linkKeys().filter(k => BRANCH_KEYS.includes(k)), sc = bs.some(b => schedDay(b)) ? slotCount(mySlots()) : null;
+    const bs = linkKeys().filter(k => BRANCH_KEYS.includes(k)), mine = mySlots(), sc = bs.some(b => schedDay(b)) && mine.length ? slotCount(mine) : null;
     return { body: (sc ? tiles([[sc.classes + "반", "오늘 수업"], [sc.students, "등원 예정"], [sc.abs, "결석·병결", sc.abs ? RED : ""], [sc.mk, "보강", sc.mk ? "#2563A6" : ""], [sc.nw + sc.smp, "신규·샘플", sc.nw + sc.smp ? "#7B4FC9" : ""]]) + `<div style="height:8px"></div>` : "") + tiles([[x.all.n - x.all.d, "오늘 남은 일"], [`${x.rt.d}/${x.rt.n}`, "오늘 루틴"], [late, "지연", late ? RED : ""], [rev, "보완 요청", rev ? RED : ""], [ms7, "미션 7일 내 마감", ms7 ? AMB : ""], [ack, "확인 안 한 필독", ack ? AMB : ""]])
-      + (sc ? "" : `<p class="hnote">${schedHint(bs, "수업 · 등원 · 결석 · 보강 숫자")}</p>`) }; } },
+      + (sc ? "" : bs.some(b => schedDay(b)) ? `<p class="hnote">오늘 시간표에서 내 반을 찾지 못해 수업 숫자는 빠졌어요. '오늘 내 수업' 카드에서 내 이름을 골라 주세요.</p>` : `<p class="hnote">${schedHint(bs, "수업 · 등원 · 결석 · 보강 숫자")}</p>`) }; } },
   T2: { t:"오늘 내 수업", f(){ const bs = linkKeys().filter(k => BRANCH_KEYS.includes(k));
       if (!schedLinked(bs)) return { body: linkBox(bs, "오늘 내 수업") };
       const L = mySlots(), now = nowHM(), sums = bs.map(b => schedDay(b)).filter(Boolean);
       if (!sums.length) return { body:`<div class="hsoon"><p>오늘 수업 요약이 아직 없어요. 원 데스크(원 공용 계정)에서 스케줄 매니저를 열어 두면 자동으로 만들어져요.</p><a class="btn btn-ghost btn-sm" href="${esc(APP_URL("스케줄 매니저"))}" target="_blank" rel="noopener">스케줄 매니저 열기</a></div>` };
-      if (!L.length) return { body:`<p class="empty">오늘 내 수업이 없어요.${state.member?.name ? "" : " (직원 계정에 내 이름이 있어야 내 반을 찾을 수 있어요)"}</p><p class="hnote">스케줄 매니저의 선생님 이름과 직원 계정 이름(${esc(state.member?.name || "-")})이 같아야 내 반으로 찾아요.</p>` };
+      if (!L.length) return { body:`<p class="empty">오늘 시간표에서 내 반을 찾지 못했어요.</p>${pickMyNameHTML()}` };
       const cur = L.filter(r => r.time <= now).pop()?.time;
       const upd = Math.max(...sums.map(x => x.updatedAt || 0));
       return { sub:`${L.length}반 · ${L.reduce((t, r) => t + (r.present || 0), 0)}명`, body: L.map(r => `<div class="slot2 ${r.time === cur ? "now" : r.time < now ? "past" : ""}">
@@ -2407,7 +2419,8 @@ const HC = {
   M2: { t:"선생님별 오늘", f(){ const today = todayISO(), V = mgrVisTasks(), bs = visBranches().filter(isMgr), seen = new Set(), rows = [];
       for (const b of bs) for (const p of whPeople(b)) { if (p.email === myEmail() || seen.has(p.email)) continue; seen.add(p.email);
         const L = V.filter(t => t.assignee === p.email), rt = L.filter(t => t.routineId && t.due === today);
-        const sd = schedDay(b), my = sd ? (sd.slots || []).filter(r => { const a = normName(r.teacher), c = normName(p.name); return a && c && (a === c || a.includes(c) || c.includes(a)); }) : null;
+        const mem = state.members.find(m => m.id === p.email), sn = normName(mem?.scheduleName || "");
+        const sd = schedDay(b), my = sd ? (sd.slots || []).filter(r => { const a = normName(r.teacher), c = normName(p.name); return a && (sn ? a === sn : c && (a === c || a.includes(c) || c.includes(a))); }) : null;
         const jid = (state.members.find(m => m.id === p.email)?.jarvisId || "").trim(), jv = jid ? jarvisOf(jid) : null;
         rows.push({ jv: jv ? { up: my ? my.filter(r => jv.some(u => u.time === r.time)).length : jv.length, n: my ? my.filter(r => r.time <= nowHM() || jv.some(u => u.time === r.time)).length : null } : null, sc: my ? slotCount(my) : null, p, b, due: L.filter(t => !t.routineId && t.due === today && WH_OPEN.includes(t.status)).length, late: L.filter(whLate).length, sub: L.filter(t => t.status === "submitted").length,
           rev: L.filter(t => t.status === "revise").length, rt, ms: L.filter(t => t.missionId && WH_OPEN.includes(t.status)).length, miss: L.filter(whMissed).length }); }
@@ -4416,6 +4429,7 @@ $("view").addEventListener("click", e => {
     case "notice-edit": { const nt = state.notices.find(x => x.id === id); if (nt && canEditPost(nt)) noticeForm(nt); break; }
     case "notice-open": state.openNotice = id; goTab("home"); break;
     case "link-all": linkAll(); break;
+    case "sched-me": store.set(schedNameKey(), el.dataset.v); toast(`'${el.dataset.v}' 반을 내 수업으로 볼게요.`); renderView({ keepFocus:true }); break;
     case "hc-edit": case "hc-reset": case "hc-add": case "hc-rm": case "hc-w": case "hc-h": case "hc-mv": homeAct(act, el); break;
     case "home-notice": state.openNotice = id; renderView(); { const n = $("view").querySelector(`.notice-card [data-fk="n-${id}"]`); n?.scrollIntoView({ block:"nearest", behavior:"smooth" }); n?.focus({ preventScroll:true }); } break;
     case "home-mission": state.mhOpen = id; state.mhView = "list"; goTab("mission"); break;
@@ -4760,6 +4774,7 @@ function membersDialog(){
         $("dlgErr").textContent = "";
         await memUpdate(id, { branches: row });
       }
+      if (t.dataset.memSn !== undefined) { await memUpdate(t.dataset.memSn, { scheduleName: t.value.trim() }); toast("스케줄 이름을 저장했어요."); }
       if (t.dataset.memJv !== undefined) { await memUpdate(t.dataset.memJv, { jarvisId: t.value.trim() }); toast("자비스 아이디를 저장했어요."); }
       if (t.dataset.memActive) await memUpdate(t.dataset.memActive, { active: t.checked });
       if (t.dataset.memMgr) await memUpdate(t.dataset.memMgr, { manager: t.checked });
@@ -4772,7 +4787,7 @@ function renderMemList(){
   const box = $("memList"); if (!box) return;
   const first = m => { const bs = memBranches(m); return isAllThree(bs) ? -1 : BRANCH_KEYS.indexOf(bs[0]); };
   const list = [...state.members].sort((a,b) => first(a) - first(b) || (a.name || "").localeCompare(b.name || ""));
-  box.innerHTML = list.length ? `<table class="mtable"><thead><tr><th>이름</th><th>구글 이메일</th><th>원</th><th>관리자</th><th title="자료실 검토·게시, 매뉴얼 작성">자료 담당</th><th title="공식 매뉴얼 승인·개정">매뉴얼 승인</th><th title="자비스(관찰일지) 로그인 아이디 — JP ONE 홈 '관찰일지' 카드가 이 아이디로 올린 반을 찾아요">자비스 아이디</th><th>로그인</th><th></th></tr></thead><tbody>
+  box.innerHTML = list.length ? `<table class="mtable"><thead><tr><th>이름</th><th>구글 이메일</th><th>원</th><th>관리자</th><th title="자료실 검토·게시, 매뉴얼 작성">자료 담당</th><th title="공식 매뉴얼 승인·개정">매뉴얼 승인</th><th title="스케줄 매니저 시간표에 적힌 이 선생님 이름 (직원 계정 이름과 다를 때만)">스케줄 이름</th><th title="자비스(관찰일지) 로그인 아이디 — JP ONE 홈 '관찰일지' 카드가 이 아이디로 올린 반을 찾아요">자비스 아이디</th><th>로그인</th><th></th></tr></thead><tbody>
     ${list.map(m => `<tr class="${m.active === false ? "off" : ""}">
       <td>${esc(m.name || "")}${m.source === "people" ? "<small>JP People</small>" : ""}</td>
       <td class="em">${esc(m.id)}</td>
@@ -4780,6 +4795,7 @@ function renderMemList(){
       <td><input type="checkbox" data-mem-mgr="${esc(m.id)}" ${m.manager ? "checked" : ""} aria-label="${esc(m.name)} 워크허브 관리자" title="워크허브에서 자기 원 업무를 배정하고 확인해요"></td>
       <td><input type="checkbox" data-mem-cur="${esc(m.id)}" ${(m.curator ?? !!m.manager) ? "checked" : ""} aria-label="${esc(m.name)} 자료 담당자" title="자료실 자료를 검토·게시하고 매뉴얼을 써서 승인 요청해요"></td>
       <td><input type="checkbox" data-mem-apr="${esc(m.id)}" ${m.approver ? "checked" : ""} aria-label="${esc(m.name)} 매뉴얼 승인자" title="공식 매뉴얼을 승인·개정해요"></td>
+      <td><input type="text" class="mem-jv" data-mem-sn="${esc(m.id)}" value="${esc(m.scheduleName || "")}" maxlength="20" placeholder="${esc(m.name || "-")}" aria-label="${esc(m.name)} 스케줄 이름"></td>
       <td><input type="text" class="mem-jv" data-mem-jv="${esc(m.id)}" value="${esc(m.jarvisId || "")}" maxlength="40" placeholder="-" aria-label="${esc(m.name)} 자비스 아이디"></td>
       <td><input type="checkbox" data-mem-active="${esc(m.id)}" ${m.active !== false ? "checked" : ""} aria-label="${esc(m.name)} 로그인 허용"></td>
       <td class="mem-acts"><button type="button" class="icon-btn" data-mem-move="${esc(m.id)}" title="구글 계정이 바뀐 사람: 예전 계정의 기록을 새 계정으로 옮겨요">계정 바꾸기</button><button type="button" class="icon-btn" data-mem-del="${esc(m.id)}">삭제</button></td></tr>`).join("")}</tbody></table>`
