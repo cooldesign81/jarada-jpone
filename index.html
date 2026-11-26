@@ -2168,7 +2168,7 @@ async function linkBoot(){
 // '앱 연결' 버튼: 누르자마자 구글 창을 엶 (앞에 기다리는 게 있으면 브라우저가 팝업을 막음). 그 토큰으로 나머지는 조용히
 function linkAll(){
   const todo = linkKeys().filter(k => link[k].status !== "ok");
-  if (!todo.length) return;
+  if (!todo.length) { toast("앱은 모두 연결돼 있어요. 숫자가 비어 있으면 카드 아래 안내를 봐 주세요."); return; }
   if (DEMO) { (async () => { for (const k of todo) await linkOne(k, false); linkRerender(); toast("앱을 모두 연결했어요."); })(); return; }
   const first = todo[0], x = extApps[first], fresh = !!linkTok();
   if (fresh && !x) { toast("연결 준비 중이에요. 잠깐 뒤 다시 눌러 주세요."); linkBoot(); return; }
@@ -2240,6 +2240,13 @@ const normName = s => String(s || "").replace(/\s|선생님|쌤|T$/g, "").toLowe
 const isMyTeacherName = t => { const a = normName(t), b = normName(state.member?.name || ""); return !!a && !!b && (a === b || a.includes(b) || b.includes(a)); };
 const schedDay = (b, d = todayISO()) => link[b]?.status === "ok" ? link[b].data.days[d] ?? null : undefined;   // undefined = 연결 안 됨, null = 요약 없음
 const schedLinked = bs => bs.some(b => link[b]?.status === "ok");
+// 스케줄 숫자가 안 나올 때 이유: 연결 안 됨 / 연결 오류 / 연결됐지만 오늘 요약 문서가 아직 없음
+function schedHint(bs, what){
+  const ok = bs.filter(b => link[b]?.status === "ok"), err = bs.find(b => link[b]?.status === "error");
+  if (!ok.length) return `${err ? `${esc(LINK_NAME[err])}: ${esc(link[err].msg || "연결 오류")}. ` : `${what}는 스케줄 매니저를 연결하면 나와요.`}${linkable() ? ` <button type="button" class="linkish" data-act="link-all">앱 연결하기</button>` : ""}`;
+  const none = ok.filter(b => !schedDay(b)).map(b => SHORT[b]);
+  return none.length ? `스케줄 매니저는 연결됐어요(✓). 그런데 ${none.join("·")}의 오늘 수업 요약이 아직 없어요 — 스케줄 매니저 규칙(daySummary)을 게시하고, 원 데스크(공용 계정)에서 스케줄 매니저를 한 번 새로고침하면 몇 초 뒤 채워져요.` : "";
+}
 function mySlots(d = todayISO()){
   const out = [];
   for (const b of linkKeys().filter(k => BRANCH_KEYS.includes(k))) { const s = schedDay(b, d); if (s) for (const r of s.slots || []) if (isMyTeacherName(r.teacher)) out.push({ ...r, b }); }
@@ -2347,9 +2354,9 @@ const HC = {
   /* ── 교사 ── */
   T1: { t:"오늘 요약", f(){ const x = myToday(), late = myTasks().filter(whLate).length, rev = myTasks().filter(t => t.status === "revise").length,
       ms7 = myTasks().filter(t => t.missionId && WH_OPEN.includes(t.status) && t.due && t.due <= addDays(todayISO(), 7)).length, ack = state.manuals.filter(needAck).length;
-    const bs = linkKeys().filter(k => BRANCH_KEYS.includes(k)), sc = schedLinked(bs) ? slotCount(mySlots()) : null;
+    const bs = linkKeys().filter(k => BRANCH_KEYS.includes(k)), sc = bs.some(b => schedDay(b)) ? slotCount(mySlots()) : null;
     return { body: (sc ? tiles([[sc.classes + "반", "오늘 수업"], [sc.students, "등원 예정"], [sc.abs, "결석·병결", sc.abs ? RED : ""], [sc.mk, "보강", sc.mk ? "#2563A6" : ""], [sc.nw + sc.smp, "신규·샘플", sc.nw + sc.smp ? "#7B4FC9" : ""]]) + `<div style="height:8px"></div>` : "") + tiles([[x.all.n - x.all.d, "오늘 남은 일"], [`${x.rt.d}/${x.rt.n}`, "오늘 루틴"], [late, "지연", late ? RED : ""], [rev, "보완 요청", rev ? RED : ""], [ms7, "미션 7일 내 마감", ms7 ? AMB : ""], [ack, "확인 안 한 필독", ack ? AMB : ""]])
-      + (sc ? "" : `<p class="hnote">수업 · 등원 · 결석 · 보강 숫자는 스케줄 매니저를 연결하면 여기 함께 나와요.${linkable() ? ` <button type="button" class="linkish" data-act="link-all">앱 연결하기</button>` : ""}</p>`) }; } },
+      + (sc ? "" : `<p class="hnote">${schedHint(bs, "수업 · 등원 · 결석 · 보강 숫자")}</p>`) }; } },
   T2: { t:"오늘 내 수업", f(){ const bs = linkKeys().filter(k => BRANCH_KEYS.includes(k));
       if (!schedLinked(bs)) return { body: linkBox(bs, "오늘 내 수업") };
       const L = mySlots(), now = nowHM(), sums = bs.map(b => schedDay(b)).filter(Boolean);
@@ -2396,7 +2403,7 @@ const HC = {
       const n = { due: V.filter(t => !t.routineId && t.due === today && WH_OPEN.includes(t.status)).length, sub: V.filter(t => t.status === "submitted").length, late: V.filter(whLate).length, rev: V.filter(t => t.status === "revise").length };
       const sb = bs.filter(b => BRANCH_KEYS.includes(b)), sums = sb.map(b => schedDay(b)).filter(Boolean), sc = sums.length ? slotCount(sums.flatMap(x => x.slots || [])) : null;
     return { body: (sc ? tiles([[sc.students, "등원 예정"], [sc.abs, "결석·병결", sc.abs ? RED : ""], [sc.mk, "보강", sc.mk ? "#2563A6" : ""], [sc.nw, "신규", sc.nw ? "#7B4FC9" : ""], [sc.smp, "샘플", sc.smp ? AMB : ""], [sc.away, "휴원·반이동 등"]]) + `<div style="height:8px"></div>` : "") + tiles([[n.due, "오늘 마감 업무"], [n.sub, "확인 대기", n.sub ? AMB : ""], [n.late, "지연", n.late ? RED : ""], [n.rev, "보완 요청", n.rev ? RED : ""], [`${rt.filter(doneish).length}/${rt.length}`, "오늘 루틴"], [kp("unpaid"), "3주 이상 미납", kp("unpaid") ? RED : ""], [kp("sampleWait"), "샘플 후 미등록"]])
-      + (sc ? "" : `<p class="hnote">등원 · 결석 · 보강 · 신규 숫자는 스케줄 매니저를 연결하면 여기 함께 나와요.${linkable() ? ` <button type="button" class="linkish" data-act="link-all">앱 연결하기</button>` : ""}</p>`) }; } },
+      + (sc ? "" : `<p class="hnote">${schedHint(sb, "등원 · 결석 · 보강 · 신규 숫자")}</p>`) }; } },
   M2: { t:"선생님별 오늘", f(){ const today = todayISO(), V = mgrVisTasks(), bs = visBranches().filter(isMgr), seen = new Set(), rows = [];
       for (const b of bs) for (const p of whPeople(b)) { if (p.email === myEmail() || seen.has(p.email)) continue; seen.add(p.email);
         const L = V.filter(t => t.assignee === p.email), rt = L.filter(t => t.routineId && t.due === today);
@@ -2410,7 +2417,7 @@ const HC = {
     return { body: rows.length ? `<div class="hscroll"><table class="htable"><thead><tr><th>선생님</th>${bs.length > 1 ? "<th>원</th>" : ""}${anySc ? "<th>수업</th><th>학생</th><th>변동</th>" : ""}${anyJv ? `<th title="자비스로 오늘 관찰일지를 올린 반 / 지금까지 수업한 반">일지</th>` : ""}<th>오늘 업무</th><th>지연</th><th>보완</th><th>확인 대기</th><th>오늘 루틴</th><th>놓친 루틴</th><th>미션</th></tr></thead><tbody>
         ${rows.map(r => `<tr><td><b>${esc(r.p.name)}</b></td>${bs.length > 1 ? `<td>${esc(SHORT[r.b] || "")}</td>` : ""}${anySc ? (r.sc ? `<td>${r.sc.classes || `<span class="z">0</span>`}</td><td>${r.sc.students || `<span class="z">0</span>`}</td><td class="chg">${[["abs", r.sc.abs, "결석"], ["mk", r.sc.mk, "보강"], ["new", r.sc.nw, "신규"], ["smp", r.sc.smp, "샘플"]].filter(x => x[1]).map(([k, v, l]) => `<span class="mtag ${k}" title="${l}">${l} ${v}</span>`).join("") || `<span class="z">-</span>`}</td>` : `<td><span class="z">-</span></td><td><span class="z">-</span></td><td><span class="z">-</span></td>`) : ""}${anyJv ? `<td>${r.jv ? (r.jv.n != null ? `<b style="color:${r.jv.up < r.jv.n ? RED : GRN}">${r.jv.up}/${r.jv.n}</b>` : `${r.jv.up}반`) : `<span class="z" title="직원 계정에 자비스 아이디 없음">-</span>`}</td>` : ""}<td>${cell(r.due)}</td><td>${cell(r.late, RED)}</td><td>${cell(r.rev, RED)}</td><td>${cell(r.sub, AMB)}</td>
           <td>${r.rt.length ? `${r.rt.filter(doneish).length}/${r.rt.length}${r.rt.every(doneish) ? " ✓" : ""}` : `<span class="z">-</span>`}</td><td>${cell(r.miss, RED)}</td><td>${cell(r.ms)}</td></tr>`).join("")}</tbody></table></div>
-        <p class="hnote">${anySc ? "수업 · 학생 · 변동은 스케줄 매니저 기준(선생님 이름으로 찾음)이에요. 일지 = 자비스로 올린 반 / 지금까지 수업한 반 (직원 계정의 자비스 아이디로 찾음)." : `수업 · 학생 변동 칸은 스케줄 매니저를 연결하면 추가돼요.${linkable() ? ` <button type="button" class="linkish" data-act="link-all">앱 연결하기</button>` : ""}`}</p>` : `<p class="empty">직원 계정에 등록된 선생님이 없어요.</p>` }; } },
+        <p class="hnote">${anySc ? "수업 · 학생 · 변동은 스케줄 매니저 기준(선생님 이름으로 찾음)이에요. 일지 = 자비스로 올린 반 / 지금까지 수업한 반 (직원 계정의 자비스 아이디로 찾음)." : schedHint(bs.filter(b => BRANCH_KEYS.includes(b)), "수업 · 학생 변동 칸")}</p>` : `<p class="empty">직원 계정에 등록된 선생님이 없어요.</p>` }; } },
   M4: { t:"지연 업무 · 놓친 루틴", f(){ const V = mgrVisTasks(), L = [...V.filter(whLate), ...V.filter(whMissed)].sort((a, b) => (a.due || "").localeCompare(b.due || ""));
     return { sub: L.length ? `${L.length}건` : "", body: L.length ? `<ul class="wh-list">${L.slice(0, 6).map(t => whRow(t)).join("")}</ul>${L.length > 6 ? `<button class="more" type="button" data-act="go-wh" data-v="board" data-f="late">${L.length - 6}건 더 보기</button>` : ""}` : `<p class="empty">지연된 업무가 없어요. 👍</p>` }; } },
   M5: { t:"오늘의 체크 포인트", f(){ return { body: checkListHTML() }; } },
