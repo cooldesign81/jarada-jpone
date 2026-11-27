@@ -3797,7 +3797,7 @@ function filesPageHTML(){
               ${imgs.length ? `<span class="fthumbs">${imgs.map(v => `<img src="${esc(DB.fileUrl(v))}" alt="" loading="lazy">`).join("")}${all.filter(v => isImgName(v.name)).length > imgs.length ? `<em>+${all.filter(v => isImgName(v.name)).length - imgs.length}</em>` : ""}</span>` : ""}
               <span class="fsub">${all.length > 1 ? `📎 첨부 ${all.length}개 · ${sizeLabel(all.reduce((a, v) => a + (v.size || 0), 0))} · ` : last ? `${esc(f.name || "")} · ${sizeLabel(f.size || last.size || 0)}${f.versions.length > 1 ? `, 버전 ${f.versions.length}개` : ""} · ` : att.length ? `${esc(att[0].name)} · ${sizeLabel(att[0].size || 0)} · ` : f.body ? "글 · " : ""}${esc(f.writer || "")}${state.branch === "all" && f.branch !== "all" ? ` · ${esc(SHORT[f.branch] || "")}` : ""}</span></td>
             <td class="c-date">${mdOfMs(f.updatedAt || f.at)}</td>
-            <td class="c-ed">${fStatus(f) === "published" ? favBtn("f:" + f.id, fileTitle(f)) : ""}${canEditFile(f) ? `<button type="button" class="mini" data-act="file-edit" data-id="${esc(f.id)}">수정</button><button type="button" class="mini danger" data-act="file-del" data-id="${esc(f.id)}">삭제</button>` : ""}</td>
+            <td class="c-ed">${fStatus(f) === "published" ? favBtn("f:" + f.id, fileTitle(f)) : ""}${canEditFile(f) ? `<button type="button" class="mini" data-act="file-edit" data-id="${esc(f.id)}">수정</button>${isCurator() ? `<button type="button" class="mini" data-act="file-move" data-id="${esc(f.id)}" title="다른 분류나 업무매뉴얼로 옮기기">옮기기</button>` : ""}<button type="button" class="mini danger" data-act="file-del" data-id="${esc(f.id)}">삭제</button>` : ""}</td>
           </tr>`; }).join("")}</tbody></table>`
       : `<p class="empty">${state.folder === "_review" ? "검토할 자료가 없어요." : state.folder === "_fav" ? "★를 눌러 자주 찾는 자료를 모아 두세요." : state.folder === "_mine" ? "아직 올린 자료가 없어요." : "이 분류에는 아직 자료가 없어요."}</p>`}
       <p class="fnote">직원이 올린 자료는 자료 담당자가 확인한 뒤 게시돼요. 게시는 공식 업무 기준으로 정했다는 뜻이 아니에요.</p>`}
@@ -3847,7 +3847,7 @@ function fileView(f){
         return `<li><span>${i === 0 ? "<b>최신</b> " : ""}${new Date(v.at).toLocaleDateString("ko-KR")} ${esc(v.by || "")}, ${sizeLabel(v.size || 0)}${v.note ? `<span class="vnote">${esc(v.note)}</span>` : ""}</span>
           ${u ? `<a href="${esc(u)}" download="${esc(f.name || "")}" target="_blank" rel="noopener">받기</a>` : `<span class="nofile">샘플</span>`}</li>`; }).join("")}</ul></details>` : ""}
       ${attHTML(f)}
-      ${st === "published" ? `<div class="kb-acts">${favBtn("f:" + f.id)}<button type="button" class="icon-btn" data-kb="req">수정 요청</button></div>` : ""}
+      ${st === "published" || cur ? `<div class="kb-acts">${st === "published" ? `${favBtn("f:" + f.id)}<button type="button" class="icon-btn" data-kb="req">수정 요청</button>` : ""}${cur ? `<button type="button" class="icon-btn" data-kb="move" title="다른 분류나 업무매뉴얼로 옮겨요">📂 위치 옮기기</button>` : ""}</div>` : ""}
       ${cur && st === "pending" ? `<div class="kb-review"><h3 class="vh">자료 담당자 확인</h3>
         <ul class="kb-q"><li>다른 직원에게 도움이 되나요?</li><li>이미 있는 자료와 겹치지 않나요?</li><li>개인정보·공유 권한에 문제가 없나요?</li></ul>
         ${isCase ? `<div class="kb-case"><b>아동 사례 확인</b> (모두 확인해야 게시돼요)
@@ -3869,6 +3869,7 @@ function fileView(f){
     const a = e.target.closest("[data-kb]")?.dataset.kb; if (!a) return;
     try {
       if (a === "req") { $("dlg").close(); reqForm("file", f.id, fileTitle(f)); }
+      if (a === "move") { $("dlg").close(); setTimeout(() => moveDialog("file", f), 0); return; }
       if (a === "publish") {
         if (isCase && [...body.querySelectorAll("input[name=caseOk]")].some(x => !x.checked)) return formErr("아동 사례 확인 네 가지를 모두 체크해 주세요.");
         await DB.update("files", f.id, { status: "published", reviewNote: "", publishedAt: Date.now(), publishedBy: writerName() });
@@ -3885,6 +3886,81 @@ function fileView(f){
     pick.onchange = () => { if (pick.files[0]) { $("dlg").close(); newVersionForm(f, pick.files[0]); } };
     pick.click();
   });
+}
+
+/* 위치 옮기기: 자료실 ↔ 업무매뉴얼, 또는 같은 곳의 다른 분류로.
+   자료실·매뉴얼을 헷갈려 올린 글을 자료 담당자(·매뉴얼 승인자)가 바로잡는다. 첨부 파일은 다시 올리지 않고 그대로 옮긴다 */
+function moveDialog(kind, it){
+  const isFile = kind === "file", cur = isCurator(), apr = isApprover();
+  const fl = folderList(), mc = manCatList();
+  const fOpts = fl.length ? fl.map(x => [x.id, (x.depth ? "　└ " : "") + x.name]) : [["", "분류 안 됨"]];
+  const mOpts = mc.length ? mc : [["", "분류 없음"]];
+  const canToMan = cur || apr, mBr = branchOptions("manuals");
+  const title = isFile ? fileTitle(it) : it.title;
+  openForm({
+    title: "위치 옮기기",
+    fields: `<p class="hint"><b>${esc(title)}</b> — 지금: ${isFile ? `자료실 › ${esc(folderName(it.folder) || "분류 안 됨")}` : `업무매뉴얼 › ${esc(manCatLabel(it.cat))}`}</p>
+      <div class="fld"><span>어디로</span><div class="man-type" role="radiogroup">
+        <label><input type="radio" name="to" value="file" ${isFile ? "checked" : ""}>자료실</label>
+        <label><input type="radio" name="to" value="manual" ${isFile ? "" : "checked"} ${canToMan ? "" : "disabled"}>업무매뉴얼</label></div></div>
+      <div data-to="file" ${isFile ? "" : "hidden"}>${fSelect("자료실 분류", "folder", fOpts, isFile && fl.some(x => x.id === it.folder) ? it.folder : fOpts[0][0])}</div>
+      <div data-to="manual" ${isFile ? "hidden" : ""}><div class="row2">${fSelect("매뉴얼 분류", "cat", mOpts, !isFile && mOpts.some(c => c[0] === it.cat) ? it.cat : mOpts[0][0])}
+        ${fSelect("범위", "mbranch", mBr.map(b => [b, scopeLabel(b)]), mBr.includes(it.branch) ? it.branch : mBr[0])}</div></div>
+      <p class="hint small" id="mvNote"></p>`,
+    saveLabel: "옮기기",
+    async onSave(form){
+      const to = form.querySelector("[name=to]:checked").value;
+      try {
+        if (to === "file" && isFile) { await DB.update("files", it.id, { folder: val(form, "folder") }); toast("분류를 옮겼어요."); }
+        else if (to === "manual" && !isFile) { await DB.update("manuals", it.id, { cat: val(form, "cat") }, true); toast("분류를 옮겼어요."); }
+        else if (to === "manual") await fileToManual(it, val(form, "cat"), val(form, "mbranch"));
+        else await manualToFile(it, val(form, "folder"));
+      } catch (err) { console.warn(err); return formErr("옮기지 못했어요. (" + (err.code || err.message || "") + ")"); }
+      renderView();
+    }
+  });
+  const f = $("dlgForm");
+  const sync = () => { const to = f.querySelector("[name=to]:checked").value;
+    f.querySelectorAll("[data-to]").forEach(x => x.hidden = x.dataset.to !== to);
+    $("mvNote").textContent = (to === "manual") === !isFile ? "같은 곳 안에서 분류만 바꿔요."
+      : to === "manual" ? (apr ? "매뉴얼로 바로 게시돼요. 본문·첨부 파일은 그대로 옮겨지고, 자료실에서는 빠져요." : "매뉴얼 승인 요청으로 올라가요(승인자가 게시). 본문·첨부 파일은 그대로 옮겨지고, 자료실에서는 빠져요.")
+      : `자료실에 ${cur ? "바로 게시돼요" : "검토 요청으로 올라가요(자료 담당자가 게시)"}. 본문과 파일(PDF·첨부)은 그대로 옮겨지고, 매뉴얼에서는 빠져요.${it.pinned ? " 필독 확인 기록은 자료실에서는 쓰지 않아요." : ""}`; };
+  f.addEventListener("change", e => { if (e.target.name === "to") sync(); });
+  sync();
+}
+async function fileToManual(f, cat, branch){
+  // 대표 파일: 예전 '본 파일'(versions의 마지막) + 첨부. 본문이 없고 PDF가 하나뿐이면 PDF 매뉴얼로
+  const last = f.versions?.length ? { ...f.versions.at(-1), name: f.name || f.versions.at(-1).name || "파일" } : null;
+  const files = [...(last ? [last] : []), ...(f.att || [])];
+  const pdfs = files.filter(v => /\.pdf$/i.test(v.name || ""));
+  const body = (f.body || "").trim(), asPdf = !body && pdfs.length === 1;
+  const st = isApprover() ? "published" : "pending";
+  const d = { title: fileTitle(f).slice(0, 100), summary: (f.desc || "").slice(0, 120), cat, branch, effective: todayISO(), owner: f.writer || writerName(),
+    pinned: false, related: [], changeNote: "자료실에서 옮김", type: asPdf ? "pdf" : "text", body: asPdf ? "" : body, html: "", file: asPdf ? pdfs[0] : null,
+    att: files.filter(v => !(asPdf && v === pdfs[0])), status: st, version: 1, ackVer: 1, editor: writerName(), movedFrom: { kind: "file", id: f.id, by: writerName(), at: Date.now() },
+    ...(st === "published" ? { approvedBy: writerName(), approvedAt: Date.now() } : {}) };
+  await DB.addWithId("manuals", f.id, d);
+  await DB.remove("files", f.id);      // 파일은 지우지 않는다(매뉴얼이 그대로 씀)
+  state.openManual = f.id; state.manCat = st === "published" ? "all" : "_work";
+  toast(st === "published" ? "업무매뉴얼로 옮겼어요." : "업무매뉴얼로 옮기고 승인을 요청했어요.");
+}
+async function manualToFile(m, folder){
+  const t = manType(m), att = [...(m.att || [])];
+  if (t === "pdf" && m.file) att.unshift({ ...m.file });
+  if (t === "html" && m.html) { // HTML 매뉴얼은 .html 파일로 만들어 첨부
+    const name = (m.title || "매뉴얼").replace(/[\\/:*?"<>|]/g, "_").slice(0, 60) + ".html";
+    const file = new File([m.html], name, { type: "text/html" });
+    att.unshift({ ...(await DB.putFile(m.id, file, () => {})), name, type: "text/html" });
+  }
+  const st = isCurator() ? "published" : "pending";
+  const d = { title: (m.title || "").slice(0, 80), desc: (m.summary || m.title || "").slice(0, 120), body: t === "text" ? m.body || "" : "", folder, kind: KIND_BY_CAT[folder] || "서식",
+    branch: m.branch || "all", level: "all", status: st, checks: { child: false, ext: false, source: "", share: false }, versions: [], att,
+    name: att[0]?.name || "", size: att.reduce((a, v) => a + (v.size || 0), 0), movedFrom: { kind: "manual", id: m.id, by: writerName(), at: Date.now() },
+    ...(st === "published" ? { publishedAt: Date.now(), publishedBy: writerName() } : {}) };
+  await DB.addWithId("files", m.id, d);
+  await DB.remove("manuals", m.id);
+  state.openManual = null;
+  toast(st === "published" ? "자료실로 옮겼어요." : "자료실로 옮기고 검토를 요청했어요.");
 }
 
 /* 자료 올리기 · 수정: 필수는 제목 · 분류 · 간단한 설명 · 본문 또는 파일 4가지. 작성자·날짜는 자동 */
@@ -4253,6 +4329,7 @@ function manReaderHTML(m){
   return `<section class="card man-read">
       <div class="man-top"><button type="button" class="linkish" data-act="man-close">← 목록</button><span class="sp"></span>
         ${st === "published" ? `${favBtn("m:" + m.id, m.title)}<button type="button" class="icon-btn" data-act="kb-req" data-kind="manual" data-id="${esc(m.id)}">수정 요청</button>` : ""}
+        ${apr || (cur && st !== "published") ? `<button type="button" class="icon-btn" data-act="man-move" data-id="${esc(m.id)}" title="다른 분류나 자료실로 옮겨요">📂 위치 옮기기</button>` : ""}
         ${cur || apr ? `<button type="button" class="icon-btn" data-act="man-edit" data-id="${esc(m.id)}">${st === "published" && !apr ? "개정안 쓰기" : "수정"}</button>` : ""}</div>
       ${apr && st === "pending" ? `<div class="kb-review"><b>승인 요청된 새 매뉴얼이에요.</b> ${esc(m.editor || m.writer || "")}, ${mdOfMs(m.updatedAt || m.at)}
         <div class="kb-acts"><button type="button" class="btn btn-primary btn-sm" data-act="man-approve" data-id="${esc(m.id)}">승인하고 게시</button><button type="button" class="btn btn-ghost btn-sm" data-act="man-reject" data-id="${esc(m.id)}">돌려보내기</button></div></div>` : ""}
@@ -4266,6 +4343,7 @@ function manReaderHTML(m){
       <dl class="man-info"><div><dt>시행일</dt><dd>${esc(m.effective || "-")}</dd></div><div><dt>담당자</dt><dd>${esc(m.owner || m.editor || m.writer || "-")}</dd></div>
         <div><dt>최근 개정</dt><dd>${new Date(m.updatedAt || m.at).toLocaleDateString("ko-KR")}${m.changeNote ? ` · ${esc(m.changeNote)}` : ""}${(m.history || []).length ? ` · <button type="button" class="linkish" data-act="man-hist" data-id="${esc(m.id)}">이전 버전 ${m.history.length}개</button>` : ""}</dd></div></dl>
       ${manViewHTML(m)}
+      ${attHTML(m)}
       ${rel.length ? `<div class="man-rel"><h3 class="vh">관련 서식·자료</h3><ul>${rel.map(f => `<li><button type="button" class="linkish" data-act="file-open" data-id="${esc(f.id)}">${esc(fileTitle(f))}</button><small>${esc(f.desc || "")}</small></li>`).join("")}</ul></div>` : ""}
       ${m.pinned && st === "published" ? `<div class="man-ack ${ack && ack.version >= (m.ackVer || 1) ? "done" : ""}">
         ${ack && ack.version >= (m.ackVer || 1) ? `<span>✓ ${new Date(ack.at).toLocaleDateString("ko-KR")}에 확인했어요.</span>`
@@ -4422,7 +4500,7 @@ function manualForm(m){
       }
       renderView();
     },
-    onDelete: m && (apr || (isCurator() && !published)) && (async () => { await DB.remove("manuals", m.id); if (m.file) DB.dropFiles([m.file]); state.openManual = null; toast("매뉴얼을 삭제했어요."); })
+    onDelete: m && (apr || (isCurator() && !published)) && (async () => { await DB.remove("manuals", m.id); const fz = [...(m.file ? [m.file] : []), ...(m.att || [])]; if (fz.length) DB.dropFiles(fz); state.openManual = null; toast("매뉴얼을 삭제했어요."); })
   });
   $("dlg").classList.add("wide");
   const body = $("dlgBody");
@@ -4521,6 +4599,7 @@ $("view").addEventListener("click", e => {
     case "pick": $("filePick").click(); break;
     case "file-open": fileView(state.files.find(x => x.id === id)); break;
     case "file-edit": { const f = state.files.find(x => x.id === id); if (f) fileForm(f); break; }
+    case "file-move": { const f = state.files.find(x => x.id === id); if (f) moveDialog("file", f); break; }
     case "file-new": fileForm(null); break;
     case "kb-kind": state.fKind = el.dataset.k; renderView(); break;
     case "kb-fav": favToggle(el.dataset.key); break;
@@ -4562,6 +4641,7 @@ $("view").addEventListener("click", e => {
     case "man-open": state.openManual = id; renderView(); scrollTo(0, 0); break;
     case "man-close": state.openManual = null; renderView(); break;
     case "man-edit": manualForm(state.manuals.find(x => x.id === id)); break;
+    case "man-move": { const m = state.manuals.find(x => x.id === id); if (m) moveDialog("manual", m); break; }
     case "man-hist": manualHistory(state.manuals.find(x => x.id === id)); break;
     case "mancat-new": case "mancat-edit": (async () => {
       // 분류가 아직 저장 안 됐으면(기본 4개) 먼저 만들고 엶. 실패하면 대개 Firestore 규칙이 아직 게시 안 된 것
