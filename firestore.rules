@@ -149,6 +149,12 @@ service cloud.firestore {
         && request.resource.data.active is bool && request.resource.data.name is string && request.resource.data.name.size() <= 20
         && request.resource.data.get('manager', false) is bool;
       allow delete: if isAdmin();
+      // 원장·부원장·실장(관리자): 자기가 맡은 원 선생님의 '스케줄 이름'·'자비스 아이디' 두 칸만 (로그인 허용·관리자·원 지정은 대표만)
+      allow update: if isStaff() && memData().get('manager', false) == true
+        && resource.data.get('branches', []).hasAny(memData().get('branches', []))
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['scheduleName', 'jarvisId', 'updatedAt', 'updatedBy'])
+        && request.resource.data.get('scheduleName', '') is string && request.resource.data.get('scheduleName', '').size() <= 20
+        && request.resource.data.get('jarvisId', '') is string && request.resource.data.get('jarvisId', '').size() <= 120;
     }
     // 직원 생일: JP People에서 대표 화면이 자동으로 맞춤(이름·월일·원만). 같은 원 사람 + 대표가 봄
     match /portalBirthdays/{id} {
@@ -222,8 +228,8 @@ service cloud.firestore {
     }
     // 자비스 업로더 허용 목록: 직원 계정의 '자비스 아이디'를 대표 화면이 모아 저장. 업로더 서버(jarvis-bot)는 이것만 읽음
     match /portalJarvisAllow/{id} {
-      allow read: if isAdmin() || (signedIn() && email() == 'jarvis-bot@jarada-jpone.firebaseapp.com');
-      allow write: if isAdmin() && request.resource.data.keys().hasOnly(['ids', 'at', 'by'])
+      allow read: if isAdmin() || (signedIn() && email() == 'jarvis-bot@jarada-jpone.firebaseapp.com') || (isStaff() && memData().get('manager', false) == true);
+      allow write: if (isAdmin() || (isStaff() && memData().get('manager', false) == true)) && request.resource.data.keys().hasOnly(['ids', 'at', 'by'])
         && request.resource.data.ids is list && request.resource.data.ids.size() <= 300;
     }
     // 홈 카드 배치: 문서 ID = 본인 이메일, 본인만 (t = 교사 카드, m = 관리자 카드 순서·폭)

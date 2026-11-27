@@ -1660,7 +1660,7 @@ async function enter(user){
   if (!TABS.some(t => t.id === state.tab)) state.tab = "home";
 
   $("whoEmail").textContent = member ? `${member.name} (${user.email})` : (user.email || "");
-  $("membersBtn").classList.toggle("hidden", !state.isAdmin);
+  $("membersBtn").classList.toggle("hidden", !state.isAdmin && !anyMgr());
   $("boot")?.remove();
   $("login").classList.add("hidden");
   window.JPLogin?.hide();
@@ -2605,7 +2605,7 @@ function closedDaysFor(b){
 let jvAllowLast = null;
 function syncJarvisAllowSoon(){ clearTimeout(syncJarvisAllowSoon.t); syncJarvisAllowSoon.t = setTimeout(syncJarvisAllow, 1500); }
 async function syncJarvisAllow(){
-  if (DEMO || !state.isAdmin || !state.loaded.members) return;
+  if (DEMO || !(state.isAdmin || anyMgr()) || !state.loaded.members) return;
   const ids = [...new Set(state.members.filter(m => m.active !== false).flatMap(m => jvIds(m.jarvisId)))].sort();
   const json = JSON.stringify(ids); if (json === jvAllowLast) return;
   try {
@@ -4777,6 +4777,32 @@ function memUpdate(id, patch){
 const memChecks = (name, sel, label = "") => `<span class="mem-br" role="group" aria-label="${esc(label)} 소속 원">${BRANCH_KEYS.map(b =>
   `<label><input type="checkbox" ${name} value="${b}" ${sel.includes(b) ? "checked" : ""}>${SHORT[b]}</label>`).join("")}</span>`;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+/* 원장·부원장·실장: 자기 원 선생님의 '스케줄 이름'·'자비스 아이디'만 (다른 칸은 대표만) */
+function staffIdsDialog(){
+  const bs = mgrBranches(); if (!bs.length) return;
+  const list = state.members.filter(m => m.active !== false && memBranches(m).some(b => bs.includes(b))).sort((a, b) => (a.name || "").localeCompare(b.name || "", "ko"));
+  openForm({
+    title: "선생님 아이디",
+    fields: `<p class="hint">내가 맡은 원 선생님의 <b>스케줄 이름</b>과 <b>자비스 아이디</b>를 넣어요. 칸을 벗어나면 바로 저장돼요.<br>
+      · 스케줄 이름: 스케줄 매니저 시간표에 적힌 이름이 직원 이름과 다를 때만 (홈의 '오늘 내 수업'·'선생님별 오늘'이 이걸로 찾아요)<br>
+      · 자비스 아이디: 넣으면 그 선생님이 자비스 업로더를 쓸 수 있어요. 두 원을 다니면 쉼표로 여러 개 (예: minsu01, minsu_bp)<br>
+      로그인 허용 · 관리자 지정 · 소속 원은 대표만 바꿀 수 있어요.</p>
+      <div class="mem-wrap"><table class="mem-t"><thead><tr><th>이름</th><th>원</th><th>스케줄 이름</th><th>자비스 아이디</th></tr></thead><tbody>
+      ${list.map(m => `<tr><td><b>${esc(m.name || m.id)}</b></td><td>${esc(memBranches(m).map(b => SHORT[b]).join("·"))}</td>
+        <td><input type="text" class="mem-jv" data-sid-sn="${esc(m.id)}" value="${esc(m.scheduleName || "")}" maxlength="20" placeholder="${esc(m.name || "-")}" aria-label="${esc(m.name)} 스케줄 이름"></td>
+        <td><input type="text" class="mem-jv" data-sid-jv="${esc(m.id)}" value="${esc(m.jarvisId || "")}" maxlength="120" placeholder="-" aria-label="${esc(m.name)} 자비스 아이디 (여러 개면 쉼표로)"></td></tr>`).join("") || `<tr><td colspan="4" class="hint">맡은 원에 등록된 선생님이 없어요.</td></tr>`}
+      </tbody></table></div>`,
+    saveLabel: "닫기", async onSave(){ return true; }
+  });
+  $("dlg").classList.add("wide");
+  $("dlgBody").addEventListener("change", async e => {
+    const t = e.target, id = t.dataset.sidSn || t.dataset.sidJv; if (!id) return;
+    try {
+      if (t.dataset.sidSn !== undefined) { const v = t.value.trim().slice(0, 20); await DB.update("members", id, { scheduleName: v }); toast("스케줄 이름을 저장했어요."); }
+      else { const v = jvIds(t.value).join(", ").slice(0, 120); t.value = v; await DB.update("members", id, { jarvisId: v }); toast("자비스 아이디를 저장했어요. 1분 안에 업로더에 반영돼요."); }
+    } catch (err) { toast("저장하지 못했어요. 보안 규칙이 아직 게시되지 않았을 수 있어요."); console.warn(err); }
+  });
+}
 function membersDialog(){
   if (!state.isAdmin) return;
   openForm({
@@ -5173,7 +5199,7 @@ function memImportPreview(people){
     }
   });
 }
-$("membersBtn").addEventListener("click", membersDialog);
+$("membersBtn").addEventListener("click", () => state.isAdmin ? membersDialog() : staffIdsDialog());
 
 /* =====================================================================
    대시보드 (예전 이름: 운영지표)
