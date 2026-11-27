@@ -34,7 +34,8 @@ service cloud.firestore {
     // 기획안 권한: 자료 담당자(따로 정하지 않으면 관리자) · 매뉴얼 승인자(대표 + 체크한 사람)
     function memData()      { return get(memberPath()).data; }
     function isCurator()    { return isAdmin() || (isStaff() && memData().get('curator', memData().get('manager', false)) == true); }
-    function isApprover()   { return isAdmin() || (isStaff() && memData().get('approver', false) == true); }
+    // 2026-11: 매뉴얼 승인자를 따로 두지 않음 — 팀장 이상(자료 담당 = curator, 기본은 관리자)이 매뉴얼도 바로 쓰고 고침
+    function isApprover()   { return isCurator(); }
     function isFolderAdmin() { return isAdmin() || (isStaff() && get(memberPath()).data.get('manager', false) == true); }
     function validBranch(b) { return b in ['all', 'pyeongchon', 'banpo', 'daechi']; }
     function canSee(b)      { return isAdmin() || isWideStaff() || b == 'all' || isMyBranch(b); }

@@ -1265,10 +1265,11 @@ const canPost = () => state.isAdmin || !state.member || !!state.member.manager;
 const canEditPost = it => canPost() && canEdit(it);
 // '관리자 이상' 자료를 보는 사람: 대표 + 관리자(원장·부원장·실장)
 const canFolder = () => state.isAdmin || !!state.member?.manager;
-// 기획안 권한 — 자료 담당자: 자료실 검토·게시·분류 정리, 매뉴얼 작성(승인 요청). 따로 정하지 않으면 관리자가 자료 담당자
-//              매뉴얼 승인자: 공식 매뉴얼 승인·개정·폐지. 대표 + 직원 계정에서 체크한 사람
+// 권한 — 팀장 이상(직원 계정의 '팀장 이상' 체크 = curator, 따로 정하지 않으면 관리자): 자료실 검토·게시·수정·옮기기, 매뉴얼 쓰기·수정·옮기기(바로 게시)
+//        일반 선생님 · 원 공용 계정: 자료실에 자료 올리기(검토 요청), 매뉴얼은 읽기·수정 요청만
 const isCurator = () => state.isAdmin || (state.member ? (state.member.curator ?? !!state.member.manager) === true : false);
-const isApprover = () => state.isAdmin || state.member?.approver === true;
+// 2026-11: '매뉴얼 승인'은 따로 두지 않는다 — 팀장 이상(자료 담당 체크, 기본은 관리자)이 자료·매뉴얼을 쓰고 고치고 옮긴다
+const isApprover = () => isCurator();
 // 자료 수정·삭제: 대표, 자료 담당자(내 원 · 공통), 올린 사람(게시 전까지)
 const canEditFile = f => state.isAdmin || (isCurator() && (canEdit(f) || f.branch === "all")) || (f.createdBy === myEmail() && fStatus(f) !== "published");
 const LEVELS = [["all", "모두"], ["mgr", "관리자 이상"], ["admin", "대표만"]];
@@ -2455,7 +2456,7 @@ const HC = {
   M5: { t:"오늘의 체크 포인트", f(){ return { body: checkListHTML() }; } },
   M6: { t:"대시보드 숫자", f(){ return { act:`<button type="button" class="btn btn-ghost btn-sm" data-act="go" data-tab="kpi">자세히</button>`, body:`<div class="kpis">${METRICS.map(kpiCard).join("")}</div>` }; } },
   M7: { t:"필독 확인 안 한 선생님", f(){
-      if (!isCurator() && !isApprover()) return { body:`<p class="empty">자료 담당자 · 승인자에게만 보여요.</p>` };
+      if (!isCurator() && !isApprover()) return { body:`<p class="empty">팀장 이상에게만 보여요.</p>` };
       const L = state.manuals.filter(m => m.pinned && (m.status || "published") === "published" && visible(m)).map(m => {
         const v = m.ackVer || 1, done = new Set((state.acks || []).filter(a => a.manualId === m.id && a.version >= v).map(a => a.email));
         const yet = state.members.filter(x => x.active !== false && (m.branch === "all" || memBranches(x).includes(m.branch)) && !done.has(x.id));
@@ -3800,7 +3801,7 @@ function filesPageHTML(){
             <td class="c-ed">${fStatus(f) === "published" ? favBtn("f:" + f.id, fileTitle(f)) : ""}${canEditFile(f) ? `<button type="button" class="mini" data-act="file-edit" data-id="${esc(f.id)}">수정</button>${isCurator() ? `<button type="button" class="mini" data-act="file-move" data-id="${esc(f.id)}" title="다른 분류나 업무매뉴얼로 옮기기">옮기기</button>` : ""}<button type="button" class="mini danger" data-act="file-del" data-id="${esc(f.id)}">삭제</button>` : ""}</td>
           </tr>`; }).join("")}</tbody></table>`
       : `<p class="empty">${state.folder === "_review" ? "검토할 자료가 없어요." : state.folder === "_fav" ? "★를 눌러 자주 찾는 자료를 모아 두세요." : state.folder === "_mine" ? "아직 올린 자료가 없어요." : "이 분류에는 아직 자료가 없어요."}</p>`}
-      <p class="fnote">직원이 올린 자료는 자료 담당자가 확인한 뒤 게시돼요. 게시는 공식 업무 기준으로 정했다는 뜻이 아니에요.</p>`}
+      <p class="fnote">직원이 올린 자료는 팀장 이상이 확인한 뒤 게시돼요. 게시는 공식 업무 기준으로 정했다는 뜻이 아니에요.</p>`}
     </section>
   </div>`;
 }
@@ -3848,7 +3849,7 @@ function fileView(f){
           ${u ? `<a href="${esc(u)}" download="${esc(f.name || "")}" target="_blank" rel="noopener">받기</a>` : `<span class="nofile">샘플</span>`}</li>`; }).join("")}</ul></details>` : ""}
       ${attHTML(f)}
       ${st === "published" || cur ? `<div class="kb-acts">${st === "published" ? `${favBtn("f:" + f.id)}<button type="button" class="icon-btn" data-kb="req">수정 요청</button>` : ""}${cur ? `<button type="button" class="icon-btn" data-kb="move" title="다른 분류나 업무매뉴얼로 옮겨요">📂 위치 옮기기</button>` : ""}</div>` : ""}
-      ${cur && st === "pending" ? `<div class="kb-review"><h3 class="vh">자료 담당자 확인</h3>
+      ${cur && st === "pending" ? `<div class="kb-review"><h3 class="vh">팀장 이상 확인</h3>
         <ul class="kb-q"><li>다른 직원에게 도움이 되나요?</li><li>이미 있는 자료와 겹치지 않나요?</li><li>개인정보·공유 권한에 문제가 없나요?</li></ul>
         ${isCase ? `<div class="kb-case"><b>아동 사례 확인</b> (모두 확인해야 게시돼요)
           ${["이름·연락처·학교 등 식별정보를 지웠어요", "얼굴·이름표·작품 서명을 확인했어요", "주변 정보만으로 아이를 알아볼 수 없어요", "사진·영상의 공유 범위를 확인했어요"].map(t => `<label class="chk"><input type="checkbox" name="caseOk"> ${t}</label>`).join("")}
@@ -3923,8 +3924,8 @@ function moveDialog(kind, it){
   const sync = () => { const to = f.querySelector("[name=to]:checked").value;
     f.querySelectorAll("[data-to]").forEach(x => x.hidden = x.dataset.to !== to);
     $("mvNote").textContent = (to === "manual") === !isFile ? "같은 곳 안에서 분류만 바꿔요."
-      : to === "manual" ? (apr ? "매뉴얼로 바로 게시돼요. 본문·첨부 파일은 그대로 옮겨지고, 자료실에서는 빠져요." : "매뉴얼 승인 요청으로 올라가요(승인자가 게시). 본문·첨부 파일은 그대로 옮겨지고, 자료실에서는 빠져요.")
-      : `자료실에 ${cur ? "바로 게시돼요" : "검토 요청으로 올라가요(자료 담당자가 게시)"}. 본문과 파일(PDF·첨부)은 그대로 옮겨지고, 매뉴얼에서는 빠져요.${it.pinned ? " 필독 확인 기록은 자료실에서는 쓰지 않아요." : ""}`; };
+      : to === "manual" ? (apr ? "매뉴얼로 바로 게시돼요. 본문·첨부 파일은 그대로 옮겨지고, 자료실에서는 빠져요." : "매뉴얼 승인 요청으로 올라가요. 본문·첨부 파일은 그대로 옮겨지고, 자료실에서는 빠져요.")
+      : `자료실에 ${cur ? "바로 게시돼요" : "검토 요청으로 올라가요(팀장 이상이 게시)"}. 본문과 파일(PDF·첨부)은 그대로 옮겨지고, 매뉴얼에서는 빠져요.${it.pinned ? " 필독 확인 기록은 자료실에서는 쓰지 않아요." : ""}`; };
   f.addEventListener("change", e => { if (e.target.name === "to") sync(); });
   sync();
 }
@@ -4014,7 +4015,7 @@ function fileForm(f, files = [], keep = null){
       </div>
       <div class="row2">${fSelect("공유 범위", "branch", brOpts.map(b => [b, scopeLabel(b)]), brOpts.includes(br0) ? br0 : "all")}${levelOpts().length > 1 ? fSelect("볼 수 있는 사람", "level", levelOpts(), f?.level || "all") : ""}</div>
       <div class="fld"><span>저장</span><div class="man-type" role="radiogroup">${modes.map(([k, l]) => `<label><input type="radio" name="mode" value="${k}" ${mode0 === k ? "checked" : ""}>${l}</label>`).join("")}</div>
-        <small class="hint">${cur ? "자료 담당자가 올린 자료는 바로 게시돼요." : "자료 담당자가 확인한 뒤 게시돼요. 분류가 애매하면 임시저장하고 나중에 고쳐도 돼요."}</small></div>
+        <small class="hint">${cur ? "팀장 이상이 올린 자료는 바로 게시돼요." : "팀장 이상이 확인한 뒤 게시돼요. 분류가 애매하면 임시저장하고 나중에 고쳐도 돼요."}</small></div>
       ${f ? "" : fWriter()}`,
     saveLabel: f ? "저장" : "올리기",
     async onSave(form){
@@ -4049,7 +4050,7 @@ function fileForm(f, files = [], keep = null){
       if (f) await DB.update("files", id, d);
       else await DB.addWithId("files", id, { versions: [], ...d });
       if (removedAtt.length) DB.dropFiles(removedAtt).catch(() => {});
-      toast(d.status === "published" ? "게시했어요." : d.status === "draft" ? "임시저장했어요. '내가 올린 자료'에서 이어서 고칠 수 있어요." : "검토를 요청했어요. 자료 담당자가 확인하면 게시돼요.");
+      toast(d.status === "published" ? "게시했어요." : d.status === "draft" ? "임시저장했어요. '내가 올린 자료'에서 이어서 고칠 수 있어요." : "검토를 요청했어요. 팀장 이상이 확인하면 게시돼요.");
     },
     onDelete: f && canEditFile(f) && (() => fileDrop(f)), deleteLabel: "자료 삭제"
   });
@@ -4126,7 +4127,7 @@ async function fileDelete(f){
 function reqForm(kind, targetId, targetTitle){
   openForm({
     title: "수정 요청",
-    fields: `<p class="hint"><b>${esc(targetTitle)}</b>에서 고치면 좋을 점을 적어 주세요. ${kind === "manual" ? "매뉴얼 승인자" : "자료 담당자"}가 확인해요.</p>
+    fields: `<p class="hint"><b>${esc(targetTitle)}</b>에서 고치면 좋을 점을 적어 주세요. 팀장 이상이 확인해요.</p>
       ${fArea("요청 내용", "text", "", 'required rows="4" maxlength="1000" placeholder="예: 3번 순서가 지금과 달라요. 요즘은 결제 매니저에서 먼저 확인해요."')}`,
     saveLabel: "요청 보내기",
     async onSave(form){
@@ -4424,13 +4425,13 @@ function manualForm(m){
   const t0 = src ? manType(src) : "text", cats = manCatList();
   const published = (m?.status || (m ? "published" : "")) === "published";
   let pdf = null;
-  const modes = apr ? [["publish", published ? "바로 게시" : "승인하고 게시"], ["save", published ? "개정안으로 저장" : "임시저장"]]
+  const modes = apr ? [["publish", "바로 게시"], ["save", published ? "개정안으로 저장" : "임시저장"]]
     : [["request", "승인 요청"], ...(published ? [] : [["save", "임시저장"]])];
   const relFiles = state.files.filter(f => fStatus(f) === "published").sort((a, b) => fileTitle(a).localeCompare(fileTitle(b)));
   const relSel = new Set(src?.related || []);
   openForm({
     title: m ? (published && !apr ? "개정안 쓰기" : "매뉴얼 수정") : "매뉴얼 쓰기",
-    fields: `${published && !apr ? `<p class="hint">게시된 매뉴얼은 바로 바뀌지 않아요. 개정안으로 올라가고 매뉴얼 승인자가 승인하면 바뀌어요.</p>` : ""}
+    fields: `${published && !apr ? `<p class="hint">게시된 매뉴얼은 바로 바뀌지 않아요. 개정안으로 올라가요.</p>` : ""}
       ${fText("제목", "title", src?.title, 'required maxlength="100" placeholder="예: 첫 수업 날 교사 체크리스트"')}
       ${fText("한 줄 설명 <small>목록에 보여요</small>", "summary", src?.summary || "", 'maxlength="120" placeholder="언제, 누가 보는 매뉴얼인지"')}
       <div class="row2">${fSelect("분류", "cat", cats.length ? cats : [["", "분류 없음"]], src?.cat && cats.some(c => c[0] === src.cat) ? src.cat : (cats.some(c => c[0] === state.manCat) ? state.manCat : cats[0]?.[0] || ""))}${fBranch("manuals", src?.branch)}</div>
@@ -4480,7 +4481,7 @@ function manualForm(m){
         const status = mode === "publish" ? "published" : mode === "request" ? "pending" : "draft";
         await DB.addWithId("manuals", id, { ...d, status, version: 1, ackVer: 1, editor: writerName(), ...(status === "published" ? { approvedBy: writerName(), approvedAt: Date.now() } : {}) });
         state.openManual = id; state.manCat = status === "published" ? "all" : "_work";
-        toast(status === "published" ? "매뉴얼을 게시했어요." : status === "pending" ? "승인을 요청했어요. 매뉴얼 승인자가 확인하면 게시돼요." : "임시저장했어요.");
+        toast(status === "published" ? "매뉴얼을 게시했어요." : status === "pending" ? "승인을 요청했어요." : "임시저장했어요.");
       } else if (published){
         const reack = !!form.elements.reack?.checked;
         if (apr && mode === "publish"){
@@ -4491,7 +4492,7 @@ function manualForm(m){
           toast(reack ? "개정해서 게시했어요. 필독 대상자에게 다시 확인을 받아요." : "개정해서 게시했어요.");
         } else {
           await DB.update("manuals", m.id, { pending: { ...d, reack, by: writerName(), byEmail: myEmail(), at: Date.now() } }, true);   // 게시된 내용은 그대로라 수정일을 바꾸지 않음
-          toast(apr ? "개정안으로 저장했어요." : "개정안을 올렸어요. 매뉴얼 승인자가 승인하면 바뀌어요.");
+          toast(apr ? "개정안으로 저장했어요." : "개정안을 올렸어요.");
         }
       } else {
         const status = mode === "publish" ? "published" : mode === "request" ? "pending" : "draft";
@@ -4901,7 +4902,7 @@ function membersDialog(){
         원 공용 계정(네이버 메일)도 지금처럼 쓸 수 있어요.
         소속 원은 여러 개 고를 수 있어요(겸임). 세 원을 모두 고르면 모든 원을 보고 쓸 수 있어요.
         <b>관리자</b>(원장·부원장·실장)는 워크허브에서 소속 원 업무를 배정하고 결과를 확인해요.
-        <b>자료 담당</b>은 자료실 자료를 검토·게시하고 매뉴얼을 써서 승인 요청해요(따로 정하지 않으면 관리자). <b>매뉴얼 승인</b>은 공식 매뉴얼을 승인·개정해요(대표는 항상). 매출·미납액과 이 직원 계정 화면은 대표만 봐요.</p>
+        <b>팀장 이상</b>은 자료실·업무매뉴얼을 쓰고 고치고 옮겨요(관리자는 기본으로 체크, 팀장은 여기서 체크). 일반 선생님·원 공용 계정은 자료실에 자료를 올리면 팀장 이상이 확인해서 게시해요. 매출·미납액과 이 직원 계정 화면은 대표만 봐요.</p>
       <div class="kb-acts"><button type="button" class="btn btn-ghost btn-sm" id="memImport">JP People에서 불러오기</button>
         <button type="button" class="btn btn-ghost btn-sm" id="memSync">앱에 명단 보내기</button><small class="hint">스케줄·결제·재료 앱의 '들어올 수 있는 사람'을 이 명단으로 맞춰요</small></div>
       <div class="mem-wrap" id="memList"></div>
@@ -4955,7 +4956,6 @@ function membersDialog(){
       if (t.dataset.memActive) await memUpdate(t.dataset.memActive, { active: t.checked });
       if (t.dataset.memMgr) await memUpdate(t.dataset.memMgr, { manager: t.checked });
       if (t.dataset.memCur) await memUpdate(t.dataset.memCur, { curator: t.checked });
-      if (t.dataset.memApr) await memUpdate(t.dataset.memApr, { approver: t.checked });
     } catch (err) { formErr("바꾸지 못했어요. " + (err.code || "")); }
   });
 }
@@ -4963,14 +4963,13 @@ function renderMemList(){
   const box = $("memList"); if (!box) return;
   const first = m => { const bs = memBranches(m); return isAllThree(bs) ? -1 : BRANCH_KEYS.indexOf(bs[0]); };
   const list = [...state.members].sort((a,b) => first(a) - first(b) || (a.name || "").localeCompare(b.name || ""));
-  box.innerHTML = list.length ? `<table class="mtable"><thead><tr><th>이름</th><th>구글 이메일</th><th>원</th><th>관리자</th><th title="자료실 검토·게시, 매뉴얼 작성">자료 담당</th><th title="공식 매뉴얼 승인·개정">매뉴얼 승인</th><th title="스케줄 매니저 시간표에 적힌 이 선생님 이름 (직원 계정 이름과 다를 때만)">스케줄 이름</th><th title="자비스(관찰일지) 로그인 아이디. 원마다 아이디가 다르면 쉼표로 여러 개 — JP ONE 홈 '관찰일지' 카드가 이 아이디로 올린 반을 찾아요">자비스 아이디</th><th>로그인</th><th></th></tr></thead><tbody>
+  box.innerHTML = list.length ? `<table class="mtable"><thead><tr><th>이름</th><th>구글 이메일</th><th>원</th><th>관리자</th><th title="자료실·매뉴얼 쓰기·수정·옮기기 (관리자는 기본으로 체크)">팀장 이상</th><th title="스케줄 매니저 시간표에 적힌 이 선생님 이름 (직원 계정 이름과 다를 때만)">스케줄 이름</th><th title="자비스(관찰일지) 로그인 아이디. 원마다 아이디가 다르면 쉼표로 여러 개 — JP ONE 홈 '관찰일지' 카드가 이 아이디로 올린 반을 찾아요">자비스 아이디</th><th>로그인</th><th></th></tr></thead><tbody>
     ${list.map(m => `<tr class="${m.active === false ? "off" : ""}">
       <td>${esc(m.name || "")}${m.source === "people" ? "<small>JP People</small>" : ""}</td>
       <td class="em">${esc(m.id)}</td>
       <td>${memChecks(`data-mem-br="${esc(m.id)}"`, memBranches(m), m.name)}${isAllThree(memBranches(m)) ? "<small>3개 원 전체</small>" : ""}</td>
       <td><input type="checkbox" data-mem-mgr="${esc(m.id)}" ${m.manager ? "checked" : ""} aria-label="${esc(m.name)} 워크허브 관리자" title="워크허브에서 자기 원 업무를 배정하고 확인해요"></td>
-      <td><input type="checkbox" data-mem-cur="${esc(m.id)}" ${(m.curator ?? !!m.manager) ? "checked" : ""} aria-label="${esc(m.name)} 자료 담당자" title="자료실 자료를 검토·게시하고 매뉴얼을 써서 승인 요청해요"></td>
-      <td><input type="checkbox" data-mem-apr="${esc(m.id)}" ${m.approver ? "checked" : ""} aria-label="${esc(m.name)} 매뉴얼 승인자" title="공식 매뉴얼을 승인·개정해요"></td>
+      <td><input type="checkbox" data-mem-cur="${esc(m.id)}" ${(m.curator ?? !!m.manager) ? "checked" : ""} aria-label="${esc(m.name)} 팀장 이상" title="자료실·업무매뉴얼을 쓰고 고치고 옮겨요"></td>
       <td><input type="text" class="mem-jv" data-mem-sn="${esc(m.id)}" value="${esc(m.scheduleName || "")}" maxlength="20" placeholder="${esc(m.name || "-")}" aria-label="${esc(m.name)} 스케줄 이름"></td>
       <td><input type="text" class="mem-jv" data-mem-jv="${esc(m.id)}" value="${esc(m.jarvisId || "")}" maxlength="120" placeholder="-" title="두 원을 다니면 쉼표로 여러 개 (예: minsu01, minsu_banpo)" aria-label="${esc(m.name)} 자비스 아이디 (여러 개면 쉼표로)"></td>
       <td><input type="checkbox" data-mem-active="${esc(m.id)}" ${m.active !== false ? "checked" : ""} aria-label="${esc(m.name)} 로그인 허용"></td>
