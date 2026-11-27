@@ -1422,6 +1422,16 @@ function seed(){
 /* ========= 데이터 저장소 =========
    Firebase가 연결되면 Firestore, 아니면(미리보기) 이 브라우저 안에만 저장.
    화면 코드는 둘 중 무엇인지 몰라도 되도록 같은 함수(watch/add/update/remove)를 씀 */
+/* Firestore는 배열 안에 배열을 저장하지 못한다 (invalid-argument). 평가 기준표 rubric [[항목, 배점], …] 은
+   저장할 때 [{n, p}, …] 로 바꾸고, 읽을 때 다시 [[항목, 배점], …] 으로 돌린다 (화면 코드는 그대로) */
+function fsOut(o){
+  if (o && Array.isArray(o.rubric) && o.rubric.some(Array.isArray)) o = { ...o, rubric: o.rubric.map(r => Array.isArray(r) ? { n: String(r[0] ?? ""), p: Number(r[1]) || 0 } : r) };
+  return o;
+}
+function fsIn(o){
+  if (o && Array.isArray(o.rubric) && o.rubric.some(r => r && !Array.isArray(r) && typeof r === "object")) o.rubric = o.rubric.map(r => Array.isArray(r) ? r : [r.n, r.p]);
+  return o;
+}
 const DB = (() => {
   const MEM_KEY = "portal.demo.v2";
   const subs = {};
@@ -1450,13 +1460,13 @@ const DB = (() => {
       const { F, db } = fb;
       let q = F.collection(db, COLL[name]);
       if (W) { q = W.length ? F.query(q, ...W.map(w => F.where(...w))) : q;
-        return F.onSnapshot(q, snap => cb(snap.docs.map(d => ({ id: d.id, ...d.data() }))), err => toast(`${COLL_LABEL[name]}을(를) 불러오지 못했어요. (${err.code})`)); }
+        return F.onSnapshot(q, snap => cb(snap.docs.map(d => fsIn({ id: d.id, ...d.data() }))), err => toast(`${COLL_LABEL[name]}을(를) 불러오지 못했어요. (${err.code})`)); }
       // 원 계정은 "모든 원 + 우리 원" 문서만 요청 (보안 규칙이 이 조건을 요구함)
       // 운영지표·상담 현황은 원별 문서만 있어서 보안 규칙이 '모든 원'(all)을 허용하지 않음 → 내 원만 요청해야 거절되지 않음
       const own = state.myBranches.length ? state.myBranches : ["none"];
       if (!state.wide && name !== "members") q = F.query(q, F.where("branch", "in", ["kpi", "counsel"].includes(name) ? own : ["all", ...own]));
       if (A.length) q = F.query(q, ...A.map(w => F.where(...w)));
-      return F.onSnapshot(q, snap => cb(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
+      return F.onSnapshot(q, snap => cb(snap.docs.map(d => fsIn({ id: d.id, ...d.data() }))),
         err => toast(`${COLL_LABEL[name]}을(를) 불러오지 못했어요. (${err.code})`));
     },
     /* 문서 ID를 정해서 한 번만 만듦(이미 있으면 그대로). 루틴 업무가 두 번 생기지 않게 */
@@ -1469,19 +1479,19 @@ const DB = (() => {
     async add(name, data){
       const doc = { ...data, at: Date.now(), createdBy: state.user.email, writer: writerName() };
       if (DEMO){ ensure(); const id = uid(); mem[name].push({ id, ...doc }); save(); emit(name); return id; }
-      const ref = await fb.F.addDoc(fb.F.collection(fb.db, COLL[name]), { ...doc, createdAt: fb.F.serverTimestamp() });
+      const ref = await fb.F.addDoc(fb.F.collection(fb.db, COLL[name]), fsOut({ ...doc, createdAt: fb.F.serverTimestamp() }));
       return ref.id;
     },
     async update(name, id, patch, quiet){   // quiet: 수정일·수정자를 바꾸지 않음(자동 정리용)
       const p = quiet ? { ...patch } : { ...patch, updatedAt: Date.now(), updatedBy: state.user.email };
       if (DEMO){ ensure(); const it = mem[name].find(x => x.id === id); if (it) Object.assign(it, p); save(); emit(name); return; }
-      await fb.F.updateDoc(fb.F.doc(fb.db, COLL[name], id), p);
+      await fb.F.updateDoc(fb.F.doc(fb.db, COLL[name], id), fsOut(p));
     },
     async set(name, id, data){
       const doc = { ...data, id: undefined };
       delete doc.id;
       if (DEMO){ ensure(); mem[name] = mem[name].filter(x => x.id !== id).concat([{ id, ...doc }]); save(); emit(name); return; }
-      await fb.F.setDoc(fb.F.doc(fb.db, COLL[name], id), doc);
+      await fb.F.setDoc(fb.F.doc(fb.db, COLL[name], id), fsOut(doc));
     },
     /* 직원 계정 한 명 읽기 (로그인할 때 본인 것만) */
     async getMember(email){
